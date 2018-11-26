@@ -1,0 +1,10 @@
+[package]
+name = "firma"
+version = "0.1.0"
+authors = ["Riccardo Casatta <riccardo@casatta.it>"]
+
+[dependencies]
+bitcoin = { path = "../rust-bitcoin" }
+hex = "=0.3.2"
+bitcoin-bech32 = "0.8.0"
+
