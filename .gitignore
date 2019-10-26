@@ -1,2 +1,6 @@
 /target
 **/*.rs.bk
+.idea/
+*~
+data/
+firma.iml

@@ -2,9 +2,37 @@
 name = "firma"
 version = "0.1.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
+edition = "2018"
+default-run = "firma"
 
 [dependencies]
-bitcoin = { path = "../rust-bitcoin" }
 hex = "=0.3.2"
-bitcoin-bech32 = "0.8.0"
+bech32 = "0.7.1"
+bitcoin = "0.20.0"
+bitcoin_hashes = "0.7.1"
+secp256k1 = "0.15.5"
+base64 = "0.10.1"
+num-bigint = "0.2.2"
+qrcode = "0.11.0"
+structopt = "0.2.18"
+log = "0.4"
+serde = { version = "=1.0.98", features = [ "derive" ] }
+serde_json = "1.0.40"
 
+[dev-dependencies]
+miniscript = "0.10.0"
+
+[[bin]]
+name = "firma"
+path = "src/firma/main.rs"
+
+[[bin]]
+name = "dice"
+path = "src/dice/main.rs"
+
+[[bin]]
+name = "qr"
+path = "src/qr/main.rs"
+
+[profile.release]
+lto = true
