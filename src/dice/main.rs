@@ -2,12 +2,12 @@ use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use firma::MasterKeyJson;
 use num_bigint::BigUint;
-use secp256k1::constants::CURVE_ORDER;
 use secp256k1::Secp256k1;
 use std::fs;
 use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::path::PathBuf;
 use structopt::StructOpt;
+use std::str::FromStr;
 
 /// Dice generate a bitcoin master key in bip32
 #[derive(StructOpt, Debug)]
@@ -24,14 +24,22 @@ struct Opt {
     /// Number of faces of the dice
     #[structopt(short, long)]
     faces: u32,
+
+    /// Number of bits of entropy
+    #[structopt(short, long, default_value = "256")]
+    bits: Bits,
 }
 
-fn n() -> BigUint {
-    BigUint::from_bytes_be(&CURVE_ORDER[..])
+#[derive(Debug)]
+enum Bits {
+    _128,
+    _192,
+    _256,
 }
 
 pub fn main() {
     let opt = Opt::from_args();
+    println!("{:?}", opt);
     if opt.output.exists() {
         println!(
             "Output file {:?} exists, exiting to avoid unwanted override. Run --help.",
@@ -43,9 +51,11 @@ pub fn main() {
         "Creating Master Private Key for {} with a {}-sided dice",
         opt.network, opt.faces
     );
+    let bits = &format!("{:?}", opt.bits)[1..];
+    let max: BigUint = opt.bits.into();
 
-    let count: u32 = required_dice_launches(opt.faces, &n());
-    println!("Need {} dice launches", count);
+    let count: u32 = required_dice_launches(opt.faces, &max);
+    println!("Need {} dice launches to achieve {} bits of entropy", count, bits);
 
     let launches: Vec<u32> = ask_launches(count, opt.faces);
     println!("Launches: {:?}", launches);
@@ -99,8 +109,6 @@ fn required_dice_launches(faces: u32, max: &BigUint) -> u32 {
 fn calculate_key(launches: &[u32], faces: u32, network: Network) -> MasterKeyJson {
     let acc = multiply_dice_launches(&launches, faces);
 
-    assert!(acc < n());
-
     let sec = acc.to_bytes_be();
     let secp = Secp256k1::signing_only();
 
@@ -148,10 +156,43 @@ fn ask_number(question: &str, min: u32, max: u32) -> u32 {
     }
 }
 
+impl From<Bits> for BigUint {
+    fn from(bits: Bits) -> Self {
+        let one = BigUint::from(1u32);
+        match bits {
+            Bits::_128 => one << 128,
+            Bits::_192 => one << 192,
+            Bits::_256 => one << 256,
+        }
+    }
+}
+
+impl FromStr for Bits {
+    type Err = io::Error;
+
+    fn from_str(s: & str) -> Result<Self, Self::Err> {
+        match s {
+            "128" => Ok(Bits::_128),
+            "192" => Ok(Bits::_192),
+            "256" => Ok(Bits::_256),
+            _ => Err(io::Error::new(io::ErrorKind::InvalidInput,
+                format!("{} not in (128, 192, 256)", s),
+            )),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
     use num_bigint::BigUint;
+
+    #[test]
+    fn test_bits() {
+        let bits: Bits = "128".parse().unwrap();
+        let number: BigUint = bits.into();
+        assert_eq!("340282366920938463463374607431768211456",format!("{}",number));
+    }
 
     #[test]
     fn test_required_dice_launches() {
@@ -162,13 +203,14 @@ mod tests {
         assert_eq!(required_dice_launches(6, &BigUint::from(36u32)), 2);
         assert_eq!(required_dice_launches(6, &BigUint::from(37u32)), 2);
         assert_eq!(required_dice_launches(256, &BigUint::from(7u32)), 0);
-        assert_eq!(required_dice_launches(256, &n()), 31);
-        assert_eq!(required_dice_launches(8, &n()), 85);
-        assert_eq!(required_dice_launches(6, &n()), 99);
-
-        let n2 = n() * 2u32;
-        assert!(BigUint::from(6u32).modpow(&BigUint::from(99u32), &n2) < n());
-        assert!(BigUint::from(6u32).modpow(&BigUint::from(100u32), &n2) > n());
+        let n: BigUint = Bits::_256.into();
+        assert_eq!(required_dice_launches(256, &n), 32);
+        assert_eq!(required_dice_launches(8, &n), 85);
+        assert_eq!(required_dice_launches(6, &n), 99);
+        let n: BigUint = Bits::_128.into();
+        assert_eq!(required_dice_launches(256, &n), 16);
+        let n: BigUint = Bits::_192.into();
+        assert_eq!(required_dice_launches(256, &n), 24);
     }
 
     #[test]
