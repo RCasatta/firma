@@ -1,25 +1,41 @@
 # Firma
 
+**WARNING - Early stage software, do not use with real bitcoins.**
+
 Firma is a [psbt](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) (Partially Signed Bitcoin Transaction) [signer](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#signer).
 
 ## High level process:
 
 #### Setup
 
-* One ore more extented private keys `xpriv` are created on one or more off-line devices.
-* Corresponfing extended public keys `xpub` are brought together and imported on a (on-line) Bitcoin core node in Watch-Only mode. The node could create addresses to receive bitcoins.
+* Create one ore more extended private keys `xpriv` on one or more off-line devices.
+* Group together corresponding extended public keys `xpub` and import these on a (on-line) Bitcoin core node in watch-only mode.
 
 #### Usage
 
-* Transactions could be created from the Bitcoin core node and exported in PSBT format.
-* PSBT is brought to offline devices which can check the transaction and by using the `xpriv` could sign the PSBT
-* One or more PSBT are brought back to the node which can combine and finalize them as complete transaction.
+##### Receiving
+
+* The Bitcoin core node could create addresses to receive bitcoins.
+
+##### Spending
+
+* Create the transaction from the Bitcoin core node and export it in PSBT format.
+* Bring PSBT to offline devices, check the transaction, if everything looks correct, sign the PSBT with the `xpriv`.
+* Bring all the PSBT back to the node which can combine and finalize these as complete transaction.
+
+## TODOs
+
+Project is at early stage of development, to contribute, have a look at the [issues](https://github.com/RCasatta/firma/issues).
 
 ## Requirements
 
-to build executables you need [rust](https://www.rust-lang.org/).
+You need [Bitcoin core 0.18.1](https://bitcoincore.org/)
+
+To build executables you need [rust](https://www.rust-lang.org/).
 
 ```
+git clone https://github.com/RCasatta/firma/
+cd firma
 cargo build
 ```
 
@@ -35,7 +51,7 @@ Use `sudo apt install jq` or equivalent for your distro to install if needed.
 ## Create Master Key (optional)
 
 This step  create a master key using a dice to provide randomness.
-You can skip this step if you already have a master key (`xpub...`) or you want to generate it in another way.
+You can skip this step if you already have a master key (`xpriv and corresponding xpub`) or you want to generate it in another way.
 
 ```
 $ cargo run --bin dice -- --faces 6
@@ -134,6 +150,7 @@ $ TX=$(bitcoin-cli -${NETWORK} -rpcwallet=${WALLET} finalizepsbt $SIGNED_PSBT | 
 $ bitcoin-cli -${NETWORK} -rpcwallet=${WALLET} sendrawtransaction $TX
 e0b4ba5736f6795d69267bd10db979805bdc97ee10257b6d42b954dbc90d06c0
 ```
+View tx [e0b4ba5736f6795d69267bd10db979805bdc97ee10257b6d42b954dbc90d06c0](https://blockstream.info/testnet/tx/e0b4ba5736f6795d69267bd10db979805bdc97ee10257b6d42b954dbc90d06c0)
 
 # p2wsh (2of2 multisig)
 
@@ -252,5 +269,7 @@ $ bitcoin-cli -${NETWORK} -rpcwallet=${WALLET} sendrawtransaction $TX
 bitcoin-cli -${NETWORK} -rpcwallet=${WALLET} sendrawtransaction $TX
 58da6c2774c41077474a2512c8f17220910d7d41a6dfff58a7a74b8e914a4b3b
 ```
+
+View tx [58da6c2774c41077474a2512c8f17220910d7d41a6dfff58a7a74b8e914a4b3b](https://blockstream.info/testnet/tx/58da6c2774c41077474a2512c8f17220910d7d41a6dfff58a7a74b8e914a4b3b)
 
 
