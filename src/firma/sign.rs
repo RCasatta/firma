@@ -264,7 +264,8 @@ pub fn pretty_print(psbt: &PartiallySignedTransaction, network: Network) {
             "#{} {} {} {}",
             i,
             hex::encode(&output.script_pubkey.as_bytes()),
-            script_to_address(&output.script_pubkey, network)
+            Address::from_script(&output.script_pubkey, network)
+                .map(|e| e.to_string())
                 .unwrap_or_else(|| "unknown address".into()),
             output.value
         );
@@ -279,14 +280,6 @@ pub fn pretty_print(psbt: &PartiallySignedTransaction, network: Network) {
     info!("absolute fee      : {:>6} satoshi", fee);
     info!("unsigned tx       : {:>6} vbyte", tx_vbytes);
     info!("unsigned fee rate : {:>6.0} sat/vbyte", fee_rate)
-}
-
-pub fn script_to_address(script: &Script, network: Network) -> Option<String> {
-    if script.is_p2pk() || script.is_p2sh() || script.is_v0_p2wpkh() || script.is_v0_p2wsh() {
-        Some(Address::from_script(script, network).unwrap().to_string())
-    } else {
-        None
-    }
 }
 
 #[cfg(test)]
