@@ -208,6 +208,25 @@ fn sign_psbt(
     }
 }
 
+fn estimate_weight(psbt: &PartiallySignedTransaction) -> usize {
+    let unsigned_weight = psbt.global.unsigned_tx.get_weight();
+    let mut spending_weight = 0usize;
+
+    for input in psbt.inputs.iter() {
+        let (script, factor) = match (&input.redeem_script, &input.witness_script) {
+            (Some(redeem_script), None) => (redeem_script, 4),
+            (_, Some(witness_script)) => (witness_script, 1), // factor=1 for segwit discount
+            _ => panic!("both redeem and witness script are None"),
+        };
+
+        //TODO signature are less in NofM where N<M
+        let current = script.len() + extract_pub_keys(script).len() * 72; // using 72 as average signature size
+        spending_weight += current * factor;
+    }
+
+    unsigned_weight + spending_weight
+}
+
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
     Builder::new()
         .push_opcode(opcodes::all::OP_DUP)
@@ -274,12 +293,16 @@ pub fn pretty_print(psbt: &PartiallySignedTransaction, network: Network) {
     // TODO show privacy analysis like blockstream.info
     // TODO calculate real sizes by looking inside psbt
     let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
+
     let tx_vbytes = psbt.global.unsigned_tx.get_weight() / 4;
-    let fee_rate = fee as f64 / tx_vbytes as f64;
+    let estimated_tx_vbytes = estimate_weight(&psbt) / 4;
+    let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
+
     info!("");
-    info!("absolute fee      : {:>6} satoshi", fee);
-    info!("unsigned tx       : {:>6} vbyte", tx_vbytes);
-    info!("unsigned fee rate : {:>6.0} sat/vbyte", fee_rate)
+    info!("absolute fee       : {:>6} satoshi", fee);
+    info!("unsigned tx        : {:>6} vbyte", tx_vbytes);
+    info!("estimated tx       : {:>6} vbyte", estimated_tx_vbytes);
+    info!("estimated fee rate : {:>6.0} sat/vbyte", estimated_fee_rate);
 }
 
 #[cfg(test)]
@@ -351,5 +374,4 @@ mod tests {
         );*/
         // TODO wait integration of descriptor with master keys
     }
-
 }

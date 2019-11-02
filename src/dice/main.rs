@@ -6,8 +6,8 @@ use secp256k1::Secp256k1;
 use std::fs;
 use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::path::PathBuf;
-use structopt::StructOpt;
 use std::str::FromStr;
+use structopt::StructOpt;
 
 /// Dice generate a bitcoin master key in bip32
 #[derive(StructOpt, Debug)]
@@ -55,7 +55,10 @@ pub fn main() {
     let max: BigUint = opt.bits.into();
 
     let count: u32 = required_dice_launches(opt.faces, &max);
-    println!("Need {} dice launches to achieve {} bits of entropy", count, bits);
+    println!(
+        "Need {} dice launches to achieve {} bits of entropy",
+        count, bits
+    );
 
     let launches: Vec<u32> = ask_launches(count, opt.faces);
     println!("Launches: {:?}", launches);
@@ -170,12 +173,13 @@ impl From<Bits> for BigUint {
 impl FromStr for Bits {
     type Err = io::Error;
 
-    fn from_str(s: & str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "128" => Ok(Bits::_128),
             "192" => Ok(Bits::_192),
             "256" => Ok(Bits::_256),
-            _ => Err(io::Error::new(io::ErrorKind::InvalidInput,
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
                 format!("{} not in (128, 192, 256)", s),
             )),
         }
@@ -191,7 +195,10 @@ mod tests {
     fn test_bits() {
         let bits: Bits = "128".parse().unwrap();
         let number: BigUint = bits.into();
-        assert_eq!("340282366920938463463374607431768211456",format!("{}",number));
+        assert_eq!(
+            "340282366920938463463374607431768211456",
+            format!("{}", number)
+        );
     }
 
     #[test]
