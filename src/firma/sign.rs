@@ -13,12 +13,9 @@ use secp256k1::{Message, PublicKey, Secp256k1, SignOnly};
 use std::error::Error;
 use std::fs;
 use std::str::FromStr;
+type PSBT = PartiallySignedTransaction;
 
-pub fn start(
-    opt: &Opt,
-    psbt: &mut PartiallySignedTransaction,
-    json: &mut PsbtJson,
-) -> Result<(), Box<dyn Error>> {
+pub fn start(opt: &Opt, psbt: &mut PSBT, json: &mut PsbtJson) -> Result<(), Box<dyn Error>> {
     if !opt.decode && opt.key.is_none() {
         info!("--key <file> or --decode must be used");
         std::process::exit(-1);
@@ -142,11 +139,7 @@ fn sign(
     }
 }
 
-fn sign_psbt(
-    psbt: &mut PartiallySignedTransaction,
-    xpriv: &ExtendedPrivKey,
-    derivations: Option<u32>,
-) {
+fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) {
     let secp = &Secp256k1::signing_only();
     let tx = &psbt.global.unsigned_tx;
     for (i, mut input) in psbt.inputs.iter_mut().enumerate() {
@@ -209,7 +202,7 @@ fn sign_psbt(
     }
 }
 
-fn estimate_weight(psbt: &PartiallySignedTransaction) -> usize {
+fn estimate_weight(psbt: &PSBT) -> usize {
     let unsigned_weight = psbt.global.unsigned_tx.get_weight();
     let mut spending_weight = 0usize;
 
@@ -229,8 +222,8 @@ fn estimate_weight(psbt: &PartiallySignedTransaction) -> usize {
 
 fn expected_signatures(script: &Script) -> usize {
     let bytes = script.as_bytes();
-    if bytes.last()  == Some(&opcodes::all::OP_CHECKSIG.into_u8()) {
-        bytes[0] as usize  // if multisig NofM return N
+    if bytes.last() == Some(&opcodes::all::OP_CHECKSIG.into_u8()) {
+        bytes[0] as usize // if multisig NofM return N
     } else {
         extract_pub_keys(script).len()
     }
@@ -246,17 +239,17 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
         .into_script()
 }
 
-pub fn psbt_from_base64(s: &str) -> Result<PartiallySignedTransaction, Box<dyn Error>> {
+pub fn psbt_from_base64(s: &str) -> Result<PSBT, Box<dyn Error>> {
     let bytes = base64::decode(s)?;
     let psbt = deserialize(&bytes)?;
     Ok(psbt)
 }
 
-pub fn psbt_to_base64(psbt: &PartiallySignedTransaction) -> String {
+pub fn psbt_to_base64(psbt: &PSBT) -> String {
     base64::encode(&serialize(psbt))
 }
 
-pub fn pretty_print(psbt: &PartiallySignedTransaction, network: Network) {
+pub fn pretty_print(psbt: &PSBT, network: Network) {
     let mut input_values: Vec<u64> = vec![];
     let mut output_values: Vec<u64> = vec![];
     info!("");
@@ -320,55 +313,50 @@ mod tests {
     use firma::{MasterKeyJson, PsbtJson};
     use std::str::FromStr;
 
-    //TODO change parameter to PSBT struct instead of string
-    fn test_sign(psbt_to_sign: &str, psbt_signed: &str, xpriv: &str) {
-        let mut psbt_to_sign = psbt_from_base64(psbt_to_sign).unwrap();
-        let psbt_signed = psbt_from_base64(psbt_signed).unwrap();
+    fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xpriv: &str) {
         let xpriv = ExtendedPrivKey::from_str(xpriv).unwrap();
-        sign_psbt(&mut psbt_to_sign, &xpriv, Some(10u32));
+        sign_psbt(psbt_to_sign, &xpriv, Some(10u32));
         assert_eq!(psbt_to_sign, psbt_signed);
+    }
+
+    fn extract_psbt(bytes: &[u8]) -> (PSBT, PSBT, String) {
+        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
+        let psbt_to_sign = psbt_from_base64(&expected.psbt).unwrap();
+        let psbt_signed = psbt_from_base64(expected.signed_psbt.as_ref().unwrap()).unwrap();
+        (
+            psbt_to_sign,
+            psbt_signed,
+            expected.signed_psbt.unwrap().clone(),
+        )
     }
 
     #[test]
     fn test_psbt() {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
-        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
+        let (mut psbt_to_sign, psbt_signed, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(&expected.psbt, &expected.signed_psbt.unwrap(), &key.xpriv);
+        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
-        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
+        let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(
-            &expected.psbt,
-            expected.signed_psbt.as_ref().unwrap(),
-            &key.xpriv,
-        );
-        let mut psbt1 = psbt_from_base64(expected.signed_psbt.as_ref().unwrap()).unwrap();
+        test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
-        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
+        let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(
-            &expected.psbt,
-            expected.signed_psbt.as_ref().unwrap(),
-            &key.xpriv,
-        );
-        let psbt2 = psbt_from_base64(expected.signed_psbt.as_ref().unwrap()).unwrap();
+        test_sign(&mut psbt_to_sign, &psbt2, &key.xpriv);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.signed.json");
-        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
+        let (_, psbt_complete, psbt_signed_complete) = extract_psbt(bytes);
+
         psbt1.merge(psbt2).unwrap();
 
-        assert_eq!(
-            psbt1,
-            psbt_from_base64(expected.signed_psbt.as_ref().unwrap()).unwrap()
-        );
-
-        assert_eq!(psbt_to_base64(&psbt1), expected.signed_psbt.unwrap())
+        assert_eq!(psbt1, psbt_complete);
+        assert_eq!(psbt_to_base64(&psbt1), psbt_signed_complete)
     }
 
     #[test]
