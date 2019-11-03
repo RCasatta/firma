@@ -66,6 +66,7 @@ fn sign(
     let my_fing = xpriv.fingerprint(secp);
 
     // temp code for handling psbt generated from core without the knowledge there is a master key
+    // possibly initialize hd_keypaths instead of this if branch
     if input.hd_keypaths.is_empty() && input.witness_script.is_some() {
         let mut keys = vec![];
         for i in 0..=1 {
@@ -218,13 +219,21 @@ fn estimate_weight(psbt: &PartiallySignedTransaction) -> usize {
             (_, Some(witness_script)) => (witness_script, 1), // factor=1 for segwit discount
             _ => panic!("both redeem and witness script are None"),
         };
-
         //TODO signature are less in NofM where N<M
-        let current = script.len() + extract_pub_keys(script).len() * 72; // using 72 as average signature size
+        let current = script.len() + expected_signatures(script) * 72; // using 72 as average signature size
         spending_weight += current * factor;
     }
 
     unsigned_weight + spending_weight
+}
+
+fn expected_signatures(script: &Script) -> usize {
+    let bytes = script.as_bytes();
+    if bytes.last()  == Some(&opcodes::all::OP_CHECKSIG.into_u8()) {
+        bytes[0] as usize  // if multisig NofM return N
+    } else {
+        extract_pub_keys(script).len()
+    }
 }
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
@@ -291,7 +300,6 @@ pub fn pretty_print(psbt: &PartiallySignedTransaction, network: Network) {
         output_values.push(output.value);
     }
     // TODO show privacy analysis like blockstream.info
-    // TODO calculate real sizes by looking inside psbt
     let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
 
     let tx_vbytes = psbt.global.unsigned_tx.get_weight() / 4;
@@ -312,6 +320,7 @@ mod tests {
     use firma::{MasterKeyJson, PsbtJson};
     use std::str::FromStr;
 
+    //TODO change parameter to PSBT struct instead of string
     fn test_sign(psbt_to_sign: &str, psbt_signed: &str, xpriv: &str) {
         let mut psbt_to_sign = psbt_from_base64(psbt_to_sign).unwrap();
         let psbt_signed = psbt_from_base64(psbt_signed).unwrap();
