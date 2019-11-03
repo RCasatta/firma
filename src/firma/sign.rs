@@ -330,6 +330,13 @@ mod tests {
         )
     }
 
+    fn perc_diff_with_core(psbt: &PSBT, core: usize) -> bool {
+        let esteem = (estimate_weight(psbt) / 4) as f64;
+        let core = core as f64;
+        let perc = ((esteem-core)/ esteem).abs();
+        perc < 0.1  // TODO reduce this 10% by improving estimation of the bip tx
+    }
+
     #[test]
     fn test_psbt() {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
@@ -337,12 +344,14 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv);
+        assert!( perc_diff_with_core(&psbt_to_sign, 462) ); // 462 is estimated_vsize from analyzepsbt
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
         let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv);
+        assert!( perc_diff_with_core(&psbt_to_sign, 192) );
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
         let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes);
