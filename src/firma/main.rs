@@ -10,6 +10,9 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use bitcoin::util::psbt::PartiallySignedTransaction;
+
+type PSBT = PartiallySignedTransaction;
 
 pub mod sign;
 
@@ -54,12 +57,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("cannot initialize logging");
     debug!("{:#?}", opt);
     let json = fs::read_to_string(&opt.file).unwrap();
-    let initial_json: PsbtJson = serde_json::from_str(&json).unwrap();
-    let mut json = initial_json.clone();
+    let mut json: PsbtJson = serde_json::from_str(&json).unwrap();
     debug!("{:#?}", json);
 
     let mut psbt = psbt_from_base64(&json.psbt)?;
     debug!("{:#?}", psbt);
+
+    let initial_partial_sigs = get_partial_sigs(&psbt);
+
     if opt.decode {
         pretty_print(&psbt, opt.network)
     } else {
@@ -70,22 +75,13 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         sign::start(&opt, &mut psbt, &mut json)?;
 
-        let mut only_partial_sigs = vec![];
-        for input in psbt.inputs.iter() {
-            for pair in input.get_pairs().unwrap().iter() {
-                if pair.key.type_value == 2u8 {
-                    let vec = serialize(pair);
-                    debug!("partial sig pair {}", hex::encode(&vec));
-                    only_partial_sigs.extend(vec);
-                }
-            }
+        let partial_sigs = get_partial_sigs(&psbt);
+
+        if !partial_sigs.is_empty() {
+            json.only_sigs = Some(base64::encode(&partial_sigs));
         }
 
-        if !only_partial_sigs.is_empty() {
-            json.only_sigs = Some(base64::encode(&only_partial_sigs));
-        }
-
-        if initial_json != json {
+        if initial_partial_sigs != partial_sigs {
             fs::write(&opt.file, serde_json::to_string_pretty(&json).unwrap())
                 .unwrap_or_else(|_| panic!("Unable to write {:?}", &opt.file));
             info!("\nAdded signatures, wrote {:?}", &opt.file);
@@ -95,6 +91,20 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     Ok(())
+}
+
+fn get_partial_sigs(psbt: &PSBT) -> Vec<u8> {
+    let mut only_partial_sigs = vec![];
+    for input in psbt.inputs.iter() {
+        for pair in input.get_pairs().unwrap().iter() {
+            if pair.key.type_value == 2u8 {
+                let vec = serialize(pair);
+                debug!("partial sig pair {}", hex::encode(&vec));
+                only_partial_sigs.extend(vec);
+            }
+        }
+    }
+    only_partial_sigs
 }
 
 struct SimpleLogger;
