@@ -63,9 +63,9 @@ fn sign(
     let my_fing = xpriv.fingerprint(secp);
 
     // temp code for handling psbt generated from core without the knowledge there is a master key
-    // possibly initialize hd_keypaths instead of this if branch
     if input.hd_keypaths.is_empty() && input.witness_script.is_some() {
-        let mut keys = vec![];
+        let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
+
         for i in 0..=1 {
             let derivation_path = DerivationPath::from_str(&format!("m/{}", i)).unwrap();
             let first = xpriv.derive_priv(&secp, &derivation_path).unwrap();
@@ -73,13 +73,21 @@ fn sign(
                 let derivation_path = DerivationPath::from_str(&format!("m/{}", j)).unwrap();
                 let derived = first.derive_priv(&secp, &derivation_path).unwrap();
                 let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
-                keys.push((derived.private_key, derived_pubkey.public_key));
+
+                if  script_keys.contains(&derived_pubkey.public_key.key) {
+                    let complete_derivation_path = DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
+                    input.hd_keypaths.insert(derived_pubkey.public_key.clone(), (xpriv.fingerprint(&secp), complete_derivation_path));
+                }
             }
         }
-        let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
-        let manually_derived_key = keys.iter().find(|el| script_keys.contains(&el.1.key));
+    }
 
-        if let Some((privkey, pubkey)) = manually_derived_key {
+    for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
+        if fing == &my_fing {
+            let privkey = xpriv.derive_priv(&secp, &child).unwrap();
+            let derived_pubkey = PublicKey::from_secret_key(&secp, &privkey.private_key.key);
+            assert_eq!(pubkey.key, derived_pubkey);
+
             let (hash, sighash) = if is_witness {
                 (
                     SighashComponents::new(tx).sighash_all(
@@ -87,7 +95,7 @@ fn sign(
                         script,
                         input.clone().witness_utxo.unwrap().value,
                     ),
-                    SigHashType::All,
+                    input.sighash_type.unwrap_or(SigHashType::All),
                 ) // TODO how to handle other sighash type?
             } else {
                 let sighash = input.sighash_type.unwrap();
@@ -98,45 +106,14 @@ fn sign(
             };
             let signature = secp.sign(
                 &Message::from_slice(&hash.into_inner()[..]).unwrap(),
-                &privkey.key,
+                &privkey.private_key.key,
             );
             let mut signature = signature.serialize_der().to_vec();
             signature.push(sighash.as_u32() as u8); // TODO how to properly do this?
             input.partial_sigs.insert(pubkey.clone(), signature);
         }
-    } else {
-        for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
-            if fing == &my_fing {
-                let privkey = xpriv.derive_priv(&secp, &child).unwrap();
-                let derived_pubkey = PublicKey::from_secret_key(&secp, &privkey.private_key.key);
-                assert_eq!(pubkey.key, derived_pubkey);
-
-                let (hash, sighash) = if is_witness {
-                    (
-                        SighashComponents::new(tx).sighash_all(
-                            &tx.input[input_index],
-                            script,
-                            input.clone().witness_utxo.unwrap().value,
-                        ),
-                        input.sighash_type.unwrap_or(SigHashType::All),
-                    ) // TODO how to handle other sighash type?
-                } else {
-                    let sighash = input.sighash_type.unwrap();
-                    (
-                        tx.signature_hash(input_index, &script, sighash.as_u32()),
-                        sighash,
-                    )
-                };
-                let signature = secp.sign(
-                    &Message::from_slice(&hash.into_inner()[..]).unwrap(),
-                    &privkey.private_key.key,
-                );
-                let mut signature = signature.serialize_der().to_vec();
-                signature.push(sighash.as_u32() as u8); // TODO how to properly do this?
-                input.partial_sigs.insert(pubkey.clone(), signature);
-            }
-        }
     }
+
 }
 
 fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) {
