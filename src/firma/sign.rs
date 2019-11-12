@@ -199,12 +199,21 @@ fn estimate_weight(psbt: &PSBT) -> usize {
 
 fn expected_signatures(script: &Script) -> usize {
     let bytes = script.as_bytes();
-    if bytes.last() == Some(&opcodes::all::OP_CHECKSIG.into_u8()) {
-        bytes[0] as usize // if multisig NofM return N
+    if bytes.len() > 1 && bytes.last().unwrap() == &opcodes::all::OP_CHECKMULTISIG.into_u8() {
+        read_pushnum(bytes[0]).map(|el| el as usize).unwrap_or(0usize)
     } else {
         extract_pub_keys(script).len()
     }
 }
+
+fn read_pushnum(value: u8) -> Option<u8> {
+    if value >= opcodes::all::OP_PUSHNUM_1.into_u8() && value <= opcodes::all::OP_PUSHNUM_16.into_u8() {
+        Some(value-opcodes::all::OP_PUSHNUM_1.into_u8()+1)
+    } else {
+        None
+    }
+}
+
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
     Builder::new()
