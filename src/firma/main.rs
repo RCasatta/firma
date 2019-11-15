@@ -1,5 +1,6 @@
 use bitcoin::consensus::serialize;
 use bitcoin::util::psbt::Map;
+use bitcoin::util::psbt::PartiallySignedTransaction;
 use bitcoin::Network;
 use firma::PsbtJson;
 use log::{debug, info};
@@ -10,7 +11,6 @@ use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use bitcoin::util::psbt::PartiallySignedTransaction;
 
 type PSBT = PartiallySignedTransaction;
 

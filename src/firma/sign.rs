@@ -3,13 +3,15 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::{Builder, Instruction::PushBytes};
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::bip143::SighashComponents;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
+use bitcoin::util::key;
 use bitcoin::util::psbt::{Input, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
 use bitcoin_hashes::Hash;
 use firma::{MasterKeyJson, PsbtJson};
 use log::{debug, info};
 use secp256k1::{Message, PublicKey, Secp256k1, SignOnly};
+use std::collections::BTreeMap;
 use std::error::Error;
 use std::fs;
 use std::str::FromStr;
@@ -74,9 +76,13 @@ fn sign(
                 let derived = first.derive_priv(&secp, &derivation_path).unwrap();
                 let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
 
-                if  script_keys.contains(&derived_pubkey.public_key.key) {
-                    let complete_derivation_path = DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
-                    input.hd_keypaths.insert(derived_pubkey.public_key.clone(), (xpriv.fingerprint(&secp), complete_derivation_path));
+                if script_keys.contains(&derived_pubkey.public_key.key) {
+                    let complete_derivation_path =
+                        DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
+                    input.hd_keypaths.insert(
+                        derived_pubkey.public_key.clone(),
+                        (xpriv.fingerprint(&secp), complete_derivation_path),
+                    );
                 }
             }
         }
@@ -113,12 +119,12 @@ fn sign(
             input.partial_sigs.insert(pubkey.clone(), signature);
         }
     }
-
 }
 
 fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) {
     let secp = &Secp256k1::signing_only();
     let tx = &psbt.global.unsigned_tx;
+
     for (i, mut input) in psbt.inputs.iter_mut().enumerate() {
         debug!("{} {:?}", i, input);
         match input.non_witness_utxo.clone() {
@@ -200,20 +206,23 @@ fn estimate_weight(psbt: &PSBT) -> usize {
 fn expected_signatures(script: &Script) -> usize {
     let bytes = script.as_bytes();
     if bytes.len() > 1 && bytes.last().unwrap() == &opcodes::all::OP_CHECKMULTISIG.into_u8() {
-        read_pushnum(bytes[0]).map(|el| el as usize).unwrap_or(0usize)
+        read_pushnum(bytes[0])
+            .map(|el| el as usize)
+            .unwrap_or(0usize)
     } else {
         extract_pub_keys(script).len()
     }
 }
 
 fn read_pushnum(value: u8) -> Option<u8> {
-    if value >= opcodes::all::OP_PUSHNUM_1.into_u8() && value <= opcodes::all::OP_PUSHNUM_16.into_u8() {
-        Some(value-opcodes::all::OP_PUSHNUM_1.into_u8()+1)
+    if value >= opcodes::all::OP_PUSHNUM_1.into_u8()
+        && value <= opcodes::all::OP_PUSHNUM_16.into_u8()
+    {
+        Some(value - opcodes::all::OP_PUSHNUM_1.into_u8() + 1)
     } else {
         None
     }
 }
-
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
     Builder::new()
@@ -235,9 +244,20 @@ pub fn psbt_to_base64(psbt: &PSBT) -> String {
     base64::encode(&serialize(psbt))
 }
 
+pub fn derivation_paths(
+    hd_keypaths: &BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>,
+) -> String {
+    let mut vec = vec![];
+    for (_, (_, path)) in hd_keypaths.iter() {
+        vec.push(format!("{:?}", path));
+    }
+    vec.join(", ")
+}
+
 pub fn pretty_print(psbt: &PSBT, network: Network) {
     let mut input_values: Vec<u64> = vec![];
     let mut output_values: Vec<u64> = vec![];
+
     info!("");
 
     let vouts: Vec<usize> = psbt
@@ -260,20 +280,25 @@ pub fn pretty_print(psbt: &PSBT, network: Network) {
     info!("\ninputs [# prevout:vout value]:");
     for (i, input) in transaction.input.iter().enumerate() {
         info!(
-            "#{} {}:{} {}",
-            i, input.previous_output.txid, input.previous_output.vout, input_values[i],
+            "#{} {}:{} ({}) {}",
+            i,
+            input.previous_output.txid,
+            input.previous_output.vout,
+            derivation_paths(&psbt.inputs[i].hd_keypaths),
+            input_values[i],
         );
     }
     info!("\noutputs [# script address amount]:");
     for (i, output) in transaction.output.iter().enumerate() {
         // TODO calculate if it is mine
         info!(
-            "#{} {} {} {}",
+            "#{} {} {} ({}) {}",
             i,
             hex::encode(&output.script_pubkey.as_bytes()),
             Address::from_script(&output.script_pubkey, network)
                 .map(|e| e.to_string())
                 .unwrap_or_else(|| "unknown address".into()),
+            derivation_paths(&psbt.outputs[i].hd_keypaths),
             output.value
         );
         output_values.push(output.value);
@@ -319,8 +344,8 @@ mod tests {
     fn perc_diff_with_core(psbt: &PSBT, core: usize) -> bool {
         let esteem = (estimate_weight(psbt) / 4) as f64;
         let core = core as f64;
-        let perc = ((esteem-core)/ esteem).abs();
-        perc < 0.1  // TODO reduce this 10% by improving estimation of the bip tx
+        let perc = ((esteem - core) / esteem).abs();
+        perc < 0.1 // TODO reduce this 10% by improving estimation of the bip tx
     }
 
     #[test]
@@ -330,14 +355,14 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv);
-        assert!( perc_diff_with_core(&psbt_to_sign, 462) ); // 462 is estimated_vsize from analyzepsbt
+        assert!(perc_diff_with_core(&psbt_to_sign, 462)); // 462 is estimated_vsize from analyzepsbt
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
         let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
         let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv);
-        assert!( perc_diff_with_core(&psbt_to_sign, 192) );
+        assert!(perc_diff_with_core(&psbt_to_sign, 192));
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
         let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes);
