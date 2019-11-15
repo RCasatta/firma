@@ -10,8 +10,8 @@ use bitcoin::{Address, Network, Script, SigHashType, Transaction};
 use bitcoin_hashes::Hash;
 use firma::{MasterKeyJson, PsbtJson};
 use log::{debug, info};
-use secp256k1::{Message, PublicKey, Secp256k1, SignOnly};
-use std::collections::BTreeMap;
+use secp256k1::{Message, Secp256k1, SignOnly};
+use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs;
 use std::str::FromStr;
@@ -40,12 +40,12 @@ pub fn start(opt: &Opt, psbt: &mut PSBT, json: &mut PsbtJson) -> Result<(), Box<
     Ok(())
 }
 
-fn extract_pub_keys(script: &Script) -> Vec<PublicKey> {
+fn extract_pub_keys(script: &Script) -> Vec<key::PublicKey> {
     let mut result = vec![];
     for instruct in script.iter(false) {
         if let PushBytes(a) = instruct {
             if a.len() == 33 {
-                result.push(PublicKey::from_slice(&a).unwrap());
+                result.push(key::PublicKey::from_slice(&a).unwrap());
             }
         }
     }
@@ -59,39 +59,14 @@ fn sign(
     input: &mut Input,
     xpriv: &ExtendedPrivKey,
     secp: &Secp256k1<SignOnly>,
-    derivations: Option<u32>,
 ) {
     let is_witness = input.non_witness_utxo.is_none();
     let my_fing = xpriv.fingerprint(secp);
 
-    // temp code for handling psbt generated from core without the knowledge there is a master key
-    if input.hd_keypaths.is_empty() && input.witness_script.is_some() {
-        let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
-
-        for i in 0..=1 {
-            let derivation_path = DerivationPath::from_str(&format!("m/{}", i)).unwrap();
-            let first = xpriv.derive_priv(&secp, &derivation_path).unwrap();
-            for j in 0..=derivations.unwrap_or(1000) {
-                let derivation_path = DerivationPath::from_str(&format!("m/{}", j)).unwrap();
-                let derived = first.derive_priv(&secp, &derivation_path).unwrap();
-                let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
-
-                if script_keys.contains(&derived_pubkey.public_key.key) {
-                    let complete_derivation_path =
-                        DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
-                    input.hd_keypaths.insert(
-                        derived_pubkey.public_key.clone(),
-                        (xpriv.fingerprint(&secp), complete_derivation_path),
-                    );
-                }
-            }
-        }
-    }
-
     for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
         if fing == &my_fing {
             let privkey = xpriv.derive_priv(&secp, &child).unwrap();
-            let derived_pubkey = PublicKey::from_secret_key(&secp, &privkey.private_key.key);
+            let derived_pubkey = secp256k1::PublicKey::from_secret_key(&secp, &privkey.private_key.key);
             assert_eq!(pubkey.key, derived_pubkey);
 
             let (hash, sighash) = if is_witness {
@@ -123,6 +98,9 @@ fn sign(
 
 fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) {
     let secp = &Secp256k1::signing_only();
+
+    init_hd_keypath_if_absent(psbt, xpriv, derivations, secp);
+
     let tx = &psbt.global.unsigned_tx;
 
     for (i, mut input) in psbt.inputs.iter_mut().enumerate() {
@@ -145,10 +123,10 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                             redeem_script.to_p2sh(),
                             "script_pubkey does not match the redeem script converted to p2sh"
                         );
-                        sign(tx, &redeem_script, i, &mut input, xpriv, secp, derivations);
+                        sign(tx, &redeem_script, i, &mut input, xpriv, secp);
                     }
                     None => {
-                        sign(tx, &script_pubkey, i, &mut input, xpriv, secp, derivations);
+                        sign(tx, &script_pubkey, i, &mut input, xpriv, secp);
                     }
                 };
             }
@@ -167,7 +145,7 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                 if script.is_v0_p2wpkh() {
                     let script = to_p2pkh(&script.as_bytes()[2..]);
                     assert!(script.is_p2pkh(), "it is not a p2pkh script");
-                    sign(tx, &script, i, &mut input, xpriv, secp, derivations);
+                    sign(tx, &script, i, &mut input, xpriv, secp);
                 } else {
                     let wit_script = input
                         .clone()
@@ -178,7 +156,65 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                         wit_script.to_v0_p2wsh(),
                         "script and witness script to v0 p2wsh doesn't match"
                     );
-                    sign(tx, &wit_script, i, &mut input, xpriv, secp, derivations);
+                    sign(tx, &wit_script, i, &mut input, xpriv, secp);
+                }
+            }
+        }
+    }
+}
+
+fn init_hd_keypath_if_absent(psbt: &mut PartiallySignedTransaction, xpriv: &ExtendedPrivKey, derivations: Option<u32>, secp: &Secp256k1<SignOnly>) {
+    // temp code for handling psbt generated from core without hd paths
+    let mut have_hd_keypaths = true;
+    for input in psbt.inputs.iter() {
+        if input.hd_keypaths.is_empty() {
+            have_hd_keypaths = false;
+        }
+    }
+    for output in psbt.outputs.iter() {
+        if output.hd_keypaths.is_empty() {
+            have_hd_keypaths = false;
+        }
+    }
+    if !have_hd_keypaths {
+        info!("Provided PSBT does not contain HD key paths, trying to deduce them...");
+        let mut keys = HashMap::new();
+        for i in 0..=1 {
+            let derivation_path = DerivationPath::from_str(&format!("m/{}", i)).unwrap();
+            let first = xpriv.derive_priv(&secp, &derivation_path).unwrap();
+            for j in 0..=derivations.unwrap_or(1000) {
+                let derivation_path = DerivationPath::from_str(&format!("m/{}", j)).unwrap();
+                let derived = first.derive_priv(&secp, &derivation_path).unwrap();
+                let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
+                let complete_derivation_path = DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
+                keys.insert(derived_pubkey.public_key, (xpriv.fingerprint(&secp), complete_derivation_path));
+            }
+        }
+
+        for input in psbt.inputs.iter_mut() {
+            if input.witness_script.is_some() {
+                let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
+                for key in script_keys {
+                    if keys.contains_key(&key) {
+                        input.hd_keypaths.insert(
+                            key.clone(),
+                            keys.get(&key).unwrap().clone(),
+                        );
+                    }
+                }
+            }
+        }
+
+        for output in psbt.outputs.iter_mut() {
+            if output.witness_script.is_some() {
+                let script_keys = extract_pub_keys(output.witness_script.as_ref().unwrap());
+                for key in script_keys {
+                    if keys.contains_key(&key) {
+                        output.hd_keypaths.insert(
+                            key.clone(),
+                            keys.get(&key).unwrap().clone(),
+                        );
+                    }
                 }
             }
         }
