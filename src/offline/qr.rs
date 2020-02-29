@@ -10,7 +10,7 @@ use structopt::StructOpt;
 /// qr
 #[derive(StructOpt, Debug)]
 #[structopt(name = "qr")]
-struct Opt {
+pub struct QrOptions {
     /// json index
     #[structopt(short, long)]
     index: Option<String>,
@@ -23,12 +23,11 @@ struct Opt {
     file: PathBuf,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    let opt = Opt::from_args();
+pub fn show(opt: &QrOptions) -> Result<(), Box<dyn Error>> {
     let json = fs::read_to_string(&opt.file)?;
     let initial_json: Value = serde_json::from_str(&json)?;
 
-    let value = match opt.index {
+    let value = match opt.index.clone() {
         Some(val) => initial_json
             .get(val.clone())
             .unwrap_or_else(|| panic!("Can't find key `{}` in the json", val)),

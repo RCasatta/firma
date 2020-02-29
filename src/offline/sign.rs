@@ -1,23 +1,132 @@
-use crate::Opt;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::{Builder, Instruction::PushBytes};
 use bitcoin::consensus::{deserialize, serialize};
+use bitcoin::hashes::Hash;
+use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::key;
+use bitcoin::util::psbt::Map;
 use bitcoin::util::psbt::{Input, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
-use bitcoin_hashes::Hash;
 use firma::{MasterKeyJson, PsbtJson};
 use log::{debug, info};
-use secp256k1::{Message, Secp256k1, SignOnly};
+use log::{Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs;
+use std::path::PathBuf;
 use std::str::FromStr;
+use structopt::StructOpt;
+
 type PSBT = PartiallySignedTransaction;
 
-pub fn start(opt: &Opt, psbt: &mut PSBT, json: &mut PsbtJson) -> Result<(), Box<dyn Error>> {
+/// Firma is a signer of Partially Signed Bitcoin Transaction (PSBT).
+#[derive(StructOpt, Debug)]
+#[structopt(name = "firma")]
+pub struct SignOptions {
+    /// Verbose mode (-v, -vv, -vvv, etc.)
+    #[structopt(short, long, parse(from_occurrences))]
+    verbose: u8,
+
+    /// Decode a PSBT and print informations
+    #[structopt(short, long)]
+    decode: bool,
+
+    /// File containing the master key (xpriv...)
+    #[structopt(short, long, parse(from_os_str))]
+    key: Option<PathBuf>,
+
+    /// Network (bitcoin, testnet, regtest)
+    #[structopt(short, long, default_value = "testnet")]
+    network: Network,
+
+    /// derivations to consider if psbt doesn't contain HD paths
+    #[structopt(short, long, default_value = "1000")]
+    total_derivations: u32,
+
+    /// PSBT json file
+    file: PathBuf,
+}
+
+pub fn start(opt: &SignOptions) -> Result<(), Box<dyn Error>> {
+    debug!("{:#?}", opt);
+    let json = fs::read_to_string(&opt.file).unwrap();
+    let mut json: PsbtJson = serde_json::from_str(&json).unwrap();
+    debug!("{:#?}", json);
+
+    let mut psbt = psbt_from_base64(&json.psbt)?;
+    debug!("{:#?}", psbt);
+
+    let initial_partial_sigs = get_partial_sigs(&psbt);
+
+    if opt.decode {
+        pretty_print(&psbt, opt.network)
+    } else {
+        if json.signed_psbt.is_some() || json.only_sigs.is_some() {
+            info!("The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data");
+            return Ok(());
+        }
+
+        start_psbt(&opt, &mut psbt, &mut json)?;
+
+        let partial_sigs = get_partial_sigs(&psbt);
+
+        if !partial_sigs.is_empty() {
+            json.only_sigs = Some(base64::encode(&partial_sigs));
+        }
+
+        if initial_partial_sigs != partial_sigs {
+            fs::write(&opt.file, serde_json::to_string_pretty(&json).unwrap())
+                .unwrap_or_else(|_| panic!("Unable to write {:?}", &opt.file));
+            info!("\nAdded signatures, wrote {:?}", &opt.file);
+        } else {
+            info!("\nNo signature added");
+        }
+    }
+
+    Ok(())
+}
+
+fn get_partial_sigs(psbt: &PSBT) -> Vec<u8> {
+    let mut only_partial_sigs = vec![];
+    for input in psbt.inputs.iter() {
+        for pair in input.get_pairs().unwrap().iter() {
+            if pair.key.type_value == 2u8 {
+                let vec = serialize(pair);
+                debug!("partial sig pair {}", hex::encode(&vec));
+                only_partial_sigs.extend(vec);
+            }
+        }
+    }
+    only_partial_sigs
+}
+
+pub struct SimpleLogger;
+
+impl log::Log for SimpleLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= log::max_level()
+    }
+
+    fn log(&self, record: &Record) {
+        if self.enabled(record.metadata()) {
+            if record.level() <= Level::Warn {
+                println!("{} - {}", record.level(), record.args());
+            } else {
+                println!("{}", record.args());
+            }
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+pub fn start_psbt(
+    opt: &SignOptions,
+    psbt: &mut PSBT,
+    json: &mut PsbtJson,
+) -> Result<(), Box<dyn Error>> {
     if !opt.decode && opt.key.is_none() {
         info!("--key <file> or --decode must be used");
         std::process::exit(-1);
@@ -66,7 +175,8 @@ fn sign(
     for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
         if fing == &my_fing {
             let privkey = xpriv.derive_priv(&secp, &child).unwrap();
-            let derived_pubkey = secp256k1::PublicKey::from_secret_key(&secp, &privkey.private_key.key);
+            let derived_pubkey =
+                secp256k1::PublicKey::from_secret_key(&secp, &privkey.private_key.key);
             assert_eq!(pubkey.key, derived_pubkey);
 
             let (hash, sighash) = if is_witness {
@@ -163,7 +273,12 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
     }
 }
 
-fn init_hd_keypath_if_absent(psbt: &mut PartiallySignedTransaction, xpriv: &ExtendedPrivKey, derivations: Option<u32>, secp: &Secp256k1<SignOnly>) {
+fn init_hd_keypath_if_absent(
+    psbt: &mut PartiallySignedTransaction,
+    xpriv: &ExtendedPrivKey,
+    derivations: Option<u32>,
+    secp: &Secp256k1<SignOnly>,
+) {
     // temp code for handling psbt generated from core without hd paths
     let mut have_hd_keypaths = true;
     for input in psbt.inputs.iter() {
@@ -186,8 +301,12 @@ fn init_hd_keypath_if_absent(psbt: &mut PartiallySignedTransaction, xpriv: &Exte
                 let derivation_path = DerivationPath::from_str(&format!("m/{}", j)).unwrap();
                 let derived = first.derive_priv(&secp, &derivation_path).unwrap();
                 let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
-                let complete_derivation_path = DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
-                keys.insert(derived_pubkey.public_key, (xpriv.fingerprint(&secp), complete_derivation_path));
+                let complete_derivation_path =
+                    DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
+                keys.insert(
+                    derived_pubkey.public_key,
+                    (xpriv.fingerprint(&secp), complete_derivation_path),
+                );
             }
         }
 
@@ -196,10 +315,9 @@ fn init_hd_keypath_if_absent(psbt: &mut PartiallySignedTransaction, xpriv: &Exte
                 let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
                 for key in script_keys {
                     if keys.contains_key(&key) {
-                        input.hd_keypaths.insert(
-                            key.clone(),
-                            keys.get(&key).unwrap().clone(),
-                        );
+                        input
+                            .hd_keypaths
+                            .insert(key.clone(), keys.get(&key).unwrap().clone());
                     }
                 }
             }
@@ -210,10 +328,9 @@ fn init_hd_keypath_if_absent(psbt: &mut PartiallySignedTransaction, xpriv: &Exte
                 let script_keys = extract_pub_keys(output.witness_script.as_ref().unwrap());
                 for key in script_keys {
                     if keys.contains_key(&key) {
-                        output.hd_keypaths.insert(
-                            key.clone(),
-                            keys.get(&key).unwrap().clone(),
-                        );
+                        output
+                            .hd_keypaths
+                            .insert(key.clone(), keys.get(&key).unwrap().clone());
                     }
                 }
             }
@@ -287,6 +404,8 @@ pub fn derivation_paths(
     for (_, (_, path)) in hd_keypaths.iter() {
         vec.push(format!("{:?}", path));
     }
+    vec.sort();
+    vec.dedup();
     vec.join(", ")
 }
 
