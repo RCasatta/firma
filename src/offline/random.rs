@@ -2,7 +2,7 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use firma::{name_to_path, save, MasterKeyJson};
-use log::{debug, error, info};
+use log::info;
 use rand::Rng;
 use std::error::Error;
 use structopt::StructOpt;
@@ -16,7 +16,7 @@ pub struct RandomOptions {
     key_name: String,
 }
 
-pub fn start(datadir: &str, network: &Network, opt: &RandomOptions) -> Result<(), Box<dyn Error>> {
+pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<(), Box<dyn Error>> {
     let output = name_to_path(datadir, &opt.key_name, "key.json");
     if output.exists() {
         return Err(format!(
@@ -27,7 +27,7 @@ pub fn start(datadir: &str, network: &Network, opt: &RandomOptions) -> Result<()
     }
     let secp = Secp256k1::signing_only();
     let sec = rand::thread_rng().gen::<[u8; 32]>();
-    let xpriv = ExtendedPrivKey::new_master(*network, &sec)?;
+    let xpriv = ExtendedPrivKey::new_master(network, &sec)?;
     let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
     let master_key = MasterKeyJson {

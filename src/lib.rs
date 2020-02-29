@@ -40,6 +40,7 @@ pub struct WalletIndexes {
     pub change: u32,
 }
 
+// TODO use cookie
 #[derive(StructOpt, Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct DaemonOpts {
     /// Bitcoin node rpc url
@@ -123,4 +124,9 @@ pub fn save(master_key: &MasterKeyJson, output: &PathBuf) -> String {
         .unwrap_or_else(|_| panic!("Unable to write {:?}", output));
 
     format!("{:?}", output)
+}
+
+pub fn read_psbt(path: &Path) -> PsbtJson {
+    let json = fs::read_to_string(path).unwrap();
+    serde_json::from_str(&json).unwrap()
 }

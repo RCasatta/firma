@@ -5,9 +5,7 @@ use firma::{name_to_path, save, MasterKeyJson};
 use log::{debug, info};
 use num_bigint::BigUint;
 use std::error::Error;
-use std::fs;
 use std::io::{self, BufRead, Lines, StdinLock, Write};
-use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -35,7 +33,7 @@ enum Bits {
     _256,
 }
 
-pub fn roll(datadir: &str, network: &Network, opt: &DiceOptions) -> Result<(), Box<dyn Error>> {
+pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<(), Box<dyn Error>> {
     debug!("{:?}", opt);
     let output = name_to_path(datadir, &opt.key_name, "key.json");
     if output.exists() {
@@ -102,13 +100,13 @@ fn required_dice_launches(faces: u32, max: &BigUint) -> u32 {
     }
 }
 
-fn calculate_key(launches: &[u32], faces: u32, network: &Network) -> MasterKeyJson {
+fn calculate_key(launches: &[u32], faces: u32, network: Network) -> MasterKeyJson {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let secp = Secp256k1::signing_only();
 
-    let xpriv = ExtendedPrivKey::new_master(*network, &sec).unwrap();
+    let xpriv = ExtendedPrivKey::new_master(network, &sec).unwrap();
     let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
     MasterKeyJson {

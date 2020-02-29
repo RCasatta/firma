@@ -4,7 +4,7 @@ use crate::random::RandomOptions;
 use crate::sign::SignOptions;
 use bitcoin::Network;
 use firma::init_logger;
-use log::{debug, error, info};
+use log::debug;
 use std::error::Error;
 use structopt::StructOpt;
 
@@ -17,7 +17,7 @@ mod sign;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-offline")]
 struct FirmaOfflineCommands {
-    /// Verbose mode (-v, -vv, -vvv, etc.)
+    /// Verbose mode (-v)
     #[structopt(short, long, parse(from_occurrences))]
     verbose: u8,
 
@@ -48,11 +48,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("{:?}", cmd);
 
     match cmd.subcommand {
-        FirmaOfflineSubcommands::Dice(opt) => dice::roll(&cmd.firma_datadir, &cmd.network, &opt)?,
+        FirmaOfflineSubcommands::Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt)?,
         FirmaOfflineSubcommands::Sign(opt) => sign::start(&opt)?,
         FirmaOfflineSubcommands::Qr(opt) => qr::show(&opt)?,
         FirmaOfflineSubcommands::Random(opt) => {
-            random::start(&cmd.firma_datadir, &cmd.network, &opt)?
+            random::start(&cmd.firma_datadir, cmd.network, &opt)?
         }
     }
 

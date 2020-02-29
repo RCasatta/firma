@@ -1,14 +1,16 @@
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::{Address, Amount, Network};
+use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use bitcoincore_rpc::json::{
     ImportMultiOptions, ImportMultiRequest, WalletCreateFundedPsbtOptions,
 };
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use firma::{init_logger, name_to_path, DaemonOpts, WalletIndexes, WalletJson};
+use firma::{init_logger, name_to_path, read_psbt, DaemonOpts, WalletIndexes, WalletJson};
 use log::{debug, info};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
+use std::path::Path;
 use structopt::StructOpt;
 
 /// firma-online is an helper tool to use with bitcoin core, it allows to:
@@ -18,7 +20,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-online")]
 struct FirmaOnlineCommands {
-    /// Verbose mode (-v, -vv, -vvv, etc.)
+    /// Verbose mode (-v)
     #[structopt(short, long, parse(from_occurrences))]
     verbose: u8,
 
@@ -76,8 +78,11 @@ pub struct RescanOptions {
 
 #[derive(StructOpt, Debug)]
 pub struct CreateTxOptions {
+    /// address of the recipient
     #[structopt(long)]
     address: Address,
+
+    /// amount with unit eg "5000 sat" or "1.1 btc", use quotes.
     #[structopt(long)]
     amount: Amount,
 }
@@ -128,7 +133,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         )?,
         FirmaOnlineSubcommands::GetAddress(opt) => get_address(
             &client,
-            &cmd.network,
+            cmd.network,
             &cmd.firma_datadir,
             &cmd.wallet_name,
             &opt.index,
@@ -137,7 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .map(|_| ())?,
         FirmaOnlineSubcommands::CreateTx(opt) => create_tx(
             &client,
-            &cmd.network,
+            cmd.network,
             &cmd.firma_datadir,
             &cmd.wallet_name,
             &opt,
@@ -152,7 +157,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn get_address(
     client: &Client,
-    network: &Network,
+    network: Network,
     datadir: &str,
     wallet_name: &str,
     cmd_index: &Option<u32>,
@@ -168,10 +173,15 @@ fn get_address(
             None => (index_json.main, wallet.main_descriptor),
         }
     };
+    let address_type = match is_change {
+        true => "change",
+        false => "external",
+    };
 
+    info!("Creating {} address at index {}", address_type, index);
     let addresses = client.derive_addresses(&descriptor, [index, index])?;
     let address = &addresses[0];
-    if &address.network != network {
+    if address.network != network {
         return Err("address returned is not on the same network as given".into());
     }
     info!("{}", address);
@@ -199,6 +209,7 @@ fn create_wallet(
 ) -> Result<(), Box<dyn Error>> {
     opt.validate(&network)?;
 
+    //TODO read xpub from files instead of strings
     let mut descriptors = vec![];
     for i in 0..=1 {
         let mut xpub_paths = vec![];
@@ -285,7 +296,7 @@ impl CreateWalletOptions {
 
 fn create_tx(
     client: &Client,
-    network: &Network,
+    network: Network,
     datadir: &str,
     wallet_name: &str,
     opt: &CreateTxOptions,
@@ -308,8 +319,10 @@ fn create_tx(
         &None,
         true,
     )?);
-    let b = client.wallet_create_funded_psbt(&[], &outputs, None, Some(options), Some(true));
-    debug!("wallet_create_funded_psbt {:?}", b);
+    let b = client.wallet_create_funded_psbt(&[], &outputs, None, Some(options), Some(true))?;
+    info!("wallet_create_funded_psbt {:#?}", b);
+
+    save_psbt(b)?;
 
     Ok(())
 }
@@ -321,7 +334,13 @@ fn balance(client: &Client) -> Result<(), Box<dyn Error>> {
 }
 
 fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<(), Box<dyn Error>> {
-    let combined = client.combine_psbt(&opt.psbts)?;
+    let mut psbts = vec![];
+    for psbt_file in opt.psbts.iter() {
+        let path = Path::new(psbt_file);
+        let json = read_psbt(path.into());
+        psbts.push(json.signed_psbt.expect("signed_psbt not found"));
+    }
+    let combined = client.combine_psbt(&psbts)?;
     debug!("combined {:?}", combined);
 
     let finalized = client.finalize_psbt(&combined, true)?;
@@ -376,6 +395,22 @@ fn save_index(
     wallet_name: &str,
 ) -> Result<(), Box<dyn Error>> {
     let path = name_to_path(datadir, wallet_name, "indexes.json");
+    info!("Saving index data in {:?}", path);
     fs::write(path, serde_json::to_string_pretty(indexes)?)?;
+
     Ok(())
+}
+
+fn save_psbt(psbt: WalletCreateFundedPsbtResult) -> Result<(), Box<dyn Error>> {
+    let mut count = 0;
+    loop {
+        let filename = format!("psbt.{}.json", count);
+        let path = Path::new(&filename);
+        if !path.exists() {
+            info!("Saving psbt in {:?}", path);
+            fs::write(path, serde_json::to_string_pretty(&psbt)?)?;
+            return Ok(());
+        }
+        count += 1;
+    }
 }

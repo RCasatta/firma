@@ -9,7 +9,7 @@ use bitcoin::util::key;
 use bitcoin::util::psbt::Map;
 use bitcoin::util::psbt::{Input, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
-use firma::{MasterKeyJson, PsbtJson};
+use firma::{read_psbt, MasterKeyJson, PsbtJson};
 use log::{debug, info};
 use log::{Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
@@ -55,8 +55,7 @@ pub struct SignOptions {
 
 pub fn start(opt: &SignOptions) -> Result<(), Box<dyn Error>> {
     debug!("{:#?}", opt);
-    let json = fs::read_to_string(&opt.file).unwrap();
-    let mut json: PsbtJson = serde_json::from_str(&json).unwrap();
+    let mut json = read_psbt(&opt.file);
     debug!("{:#?}", json);
 
     let mut psbt = psbt_from_base64(&json.psbt)?;
@@ -132,10 +131,12 @@ pub fn start_psbt(
     json: &mut PsbtJson,
 ) -> Result<(), Box<dyn Error>> {
     if !opt.decode && opt.key.is_none() {
+        //TODO move decode to own subcommand
         info!("--key <file> or --decode must be used");
         std::process::exit(-1);
     }
 
+    //TODO read key from .firma
     let xpriv = fs::read_to_string(opt.key.as_ref().unwrap())
         .unwrap_or_else(|_| panic!("Unable to read file {:?}", &opt.key));
 
@@ -397,7 +398,7 @@ pub fn psbt_from_base64(s: &str) -> Result<PSBT, Box<dyn Error>> {
     Ok(psbt)
 }
 
-pub fn psbt_to_base64(psbt: &PSBT) -> String {
+pub fn _psbt_to_base64(psbt: &PSBT) -> String {
     base64::encode(&serialize(psbt))
 }
 
