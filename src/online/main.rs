@@ -1,7 +1,9 @@
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::{Address, Amount, Network};
+use bitcoincore_rpc::json::{
+    ImportMultiOptions, ImportMultiRequest, WalletCreateFundedPsbtOptions,
+};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use bitcoincore_rpc::json::{ImportMultiOptions, ImportMultiRequest, WalletCreateFundedPsbtOptions};
 use firma::{init_logger, name_to_path, DaemonOpts, WalletIndexes, WalletJson};
 use log::{debug, info};
 use std::collections::HashMap;
@@ -104,11 +106,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             cmd.daemon_opts.rpcpassword.clone(),
         ),
     )?;
-    let result = client.get_blockchain_info();
+    let result = client.get_blockchain_info()?;
 
     debug!("{:?}", result);
 
-    match result.unwrap().chain.as_ref() {
+    match result.chain.as_ref() {
         "main" => assert_eq!(Network::Bitcoin, cmd.network),
         "test" => assert_eq!(Network::Testnet, cmd.network),
         "regtest" => assert_eq!(Network::Regtest, cmd.network),

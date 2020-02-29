@@ -11,8 +11,10 @@ static LOGGER: SimpleLogger = SimpleLogger;
 pub struct MasterKeyJson {
     pub xpub: String,
     pub xpriv: String,
-    pub launches: String,
-    pub faces: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub launches: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub faces: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -114,4 +116,11 @@ impl log::Log for SimpleLogger {
     }
 
     fn flush(&self) {}
+}
+
+pub fn save(master_key: &MasterKeyJson, output: &PathBuf) -> String {
+    fs::write(output, serde_json::to_string_pretty(master_key).unwrap())
+        .unwrap_or_else(|_| panic!("Unable to write {:?}", output));
+
+    format!("{:?}", output)
 }

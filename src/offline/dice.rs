@@ -1,7 +1,8 @@
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
-use firma::{name_to_path, MasterKeyJson};
+use firma::{name_to_path, save, MasterKeyJson};
+use log::{debug, info};
 use num_bigint::BigUint;
 use std::error::Error;
 use std::fs;
@@ -16,11 +17,15 @@ use structopt::StructOpt;
 pub struct DiceOptions {
     /// Number of faces of the dice
     #[structopt(short, long)]
-    faces: u32,
+    faces: u32, //TODO only some dice are regular solid, enforce faces 2,6,8,20
 
     /// Number of bits of entropy
-    #[structopt(short, long, default_value = "256")]
+    #[structopt(short, long, default_value = "128")]
     bits: Bits,
+
+    /// Name of the key
+    #[structopt(short, long)]
+    key_name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -30,14 +35,9 @@ enum Bits {
     _256,
 }
 
-pub fn roll(
-    datadir: &str,
-    wallet_name: &str,
-    network: &Network,
-    opt: &DiceOptions,
-) -> Result<(), Box<dyn Error>> {
-    println!("{:?}", opt);
-    let output = name_to_path(datadir, wallet_name, "key.json");
+pub fn roll(datadir: &str, network: &Network, opt: &DiceOptions) -> Result<(), Box<dyn Error>> {
+    debug!("{:?}", opt);
+    let output = name_to_path(datadir, &opt.key_name, "key.json");
     if output.exists() {
         return Err(format!(
             "Output file {:?} exists, exiting to avoid unwanted override. Run --help.",
@@ -45,36 +45,29 @@ pub fn roll(
         )
         .into());
     }
-    println!(
-        "Creating Master Private Key for {} with a {}-sided dice",
-        network, opt.faces
+    info!(
+        "Creating Master Private Key for {} with a {}-sided dice, saving in {:?}",
+        network, opt.faces, output,
     );
     let bits = &format!("{:?}", opt.bits)[1..];
     let max: BigUint = opt.bits.clone().into();
 
     let count: u32 = required_dice_launches(opt.faces, &max);
-    println!(
+    info!(
         "Need {} dice launches to achieve {} bits of entropy",
         count, bits
     );
 
     let launches: Vec<u32> = ask_launches(count, opt.faces);
-    println!("Launches: {:?}", launches);
+    info!("Launches: {:?}", launches);
 
     let master_key = calculate_key(&launches, opt.faces, network);
-    println!("{:#?}", master_key);
+    info!("{:#?}", master_key);
 
     let filename = save(&master_key, &output);
-    println!("key saved in {}", filename);
+    info!("key saved in {}", filename);
 
     Ok(())
-}
-
-fn save(master_key: &MasterKeyJson, output: &PathBuf) -> String {
-    fs::write(output, serde_json::to_string_pretty(master_key).unwrap())
-        .unwrap_or_else(|_| panic!("Unable to write {:?}", output));
-
-    format!("{:?}", output)
 }
 
 fn ask_launches(count: u32, faces: u32) -> Vec<u32> {
@@ -121,8 +114,8 @@ fn calculate_key(launches: &[u32], faces: u32, network: &Network) -> MasterKeyJs
     MasterKeyJson {
         xpriv: xpriv.to_string(),
         xpub: xpub.to_string(),
-        faces,
-        launches: format!("{:?}", launches), // ugly, using a string to avoid going newline for every element
+        faces: Some(faces),
+        launches: Some(format!("{:?}", launches)), // ugly, using a string to avoid going newline for every element
     }
 }
 
@@ -144,17 +137,17 @@ fn ask_number(question: &str, min: u32, max: u32) -> u32 {
     let stdin = io::stdin();
     let mut stdin: Lines<StdinLock> = stdin.lock().lines();
     loop {
-        print!("{} [{}-{}]: ", question, min, max);
+        info!("{} [{}-{}]: ", question, min, max);
         io::stdout().flush().unwrap();
         let line = stdin.next().unwrap().unwrap().parse::<u32>();
         if let Ok(val) = line {
             if val >= min && val <= max {
                 return val;
             } else {
-                println!("Out of range");
+                info!("Out of range");
             }
         } else {
-            println!("Not a number");
+            info!("Not a number");
         }
     }
 }

@@ -37,6 +37,10 @@ pub struct SignOptions {
     #[structopt(short, long, parse(from_os_str))]
     key: Option<PathBuf>,
 
+    /// Name of the wallet
+    #[structopt(short, long)]
+    wallet_name: String,
+
     /// Network (bitcoin, testnet, regtest)
     #[structopt(short, long, default_value = "testnet")]
     network: Network,
