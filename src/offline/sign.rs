@@ -6,12 +6,10 @@ use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::key;
-use bitcoin::util::psbt::Map;
-use bitcoin::util::psbt::{Input, PartiallySignedTransaction};
+use bitcoin::util::psbt::{Input, Map, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
-use firma::{read_psbt, MasterKeyJson, PsbtJson};
-use log::{debug, info};
-use log::{Level, Metadata, Record};
+use firma::{read_psbt, PrivateMasterKeyJson, PsbtJson};
+use log::{debug, info, Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
 use std::error::Error;
 use std::fs;
@@ -20,6 +18,7 @@ use std::str::FromStr;
 use structopt::StructOpt;
 
 type PSBT = PartiallySignedTransaction;
+type Result<R> = std::result::Result<R, Box<dyn Error>>;
 
 /// Firma is a signer of Partially Signed Bitcoin Transaction (PSBT).
 #[derive(StructOpt, Debug)]
@@ -53,7 +52,7 @@ pub struct SignOptions {
     file: PathBuf,
 }
 
-pub fn start(opt: &SignOptions) -> Result<(), Box<dyn Error>> {
+pub fn start(opt: &SignOptions) -> Result<()> {
     debug!("{:#?}", opt);
     let mut json = read_psbt(&opt.file);
     debug!("{:#?}", json);
@@ -125,22 +124,18 @@ impl log::Log for SimpleLogger {
     fn flush(&self) {}
 }
 
-pub fn start_psbt(
-    opt: &SignOptions,
-    psbt: &mut PSBT,
-    json: &mut PsbtJson,
-) -> Result<(), Box<dyn Error>> {
+pub fn start_psbt(opt: &SignOptions, psbt: &mut PSBT, json: &mut PsbtJson) -> Result<()> {
     if !opt.decode && opt.key.is_none() {
-        //TODO move decode to own subcommand
+        // TODO move decode to own subcommand
         info!("--key <file> or --decode must be used");
         std::process::exit(-1);
     }
 
-    //TODO read key from .firma
+    // TODO read key from .firma
     let xpriv = fs::read_to_string(opt.key.as_ref().unwrap())
         .unwrap_or_else(|_| panic!("Unable to read file {:?}", &opt.key));
 
-    let xpriv: MasterKeyJson = serde_json::from_str(&xpriv).unwrap();
+    let xpriv: PrivateMasterKeyJson = serde_json::from_str(&xpriv).unwrap();
     let xpriv = ExtendedPrivKey::from_str(&xpriv.xpriv)?;
     assert_eq!(xpriv.network, opt.network);
     sign_psbt(psbt, &xpriv, Some(opt.total_derivations));
@@ -392,7 +387,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
         .into_script()
 }
 
-pub fn psbt_from_base64(s: &str) -> Result<PSBT, Box<dyn Error>> {
+pub fn psbt_from_base64(s: &str) -> Result<PSBT> {
     let bytes = base64::decode(s)?;
     let psbt = deserialize(&bytes)?;
     Ok(psbt)
@@ -417,8 +412,6 @@ pub fn derivation_paths(
 pub fn pretty_print(psbt: &PSBT, network: Network) {
     let mut input_values: Vec<u64> = vec![];
     let mut output_values: Vec<u64> = vec![];
-
-    info!("");
 
     let vouts: Vec<usize> = psbt
         .global

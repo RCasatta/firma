@@ -48,16 +48,17 @@ cargo test
 
 # Creating a 2of2 multisig wallet p2wsh
 
-During the following step we are going to create a multisig wallet 2of2 in testnet and we are going to sign and broadcast a transaction. It is required a synced bitcoin node.
-First steps we are going to create the master keys
+During the following step we are going to create a multisig wallet 2of2 in testnet and we are going to sign and broadcast a transaction. 
+It is required a synced bitcoin node.
+
+In the first steps we are going to create two master keys.
 
 ## Create Master Key with dice
 
 This step creates a master key using a dice to provide randomness.
-You can skip this step if you already have a master key (`xpriv and corresponding xpub`) or you want to generate it in another way.
 
 ```
-$ firma-offline dice --key-name dice--faces 6
+$ firma-offline dice --key-name dice --faces 6
 Creating Master Private Key for testnet with a 6-sided dice, saving in "$HOME/.firma/dice.key.json"
 Need 49 dice launches to achieve 128 bits of entropy
 1st of 49 launch [1-6]: 
@@ -68,7 +69,8 @@ Need 49 dice launches to achieve 128 bits of entropy
 49th of 49 launch [1-6]: 
 4
 
-key saved in "$HOME/.firma/dice.key.json"
+Saving "$HOME/.firma/testnet/dice-PRIVATE.json"
+Saving "$HOME/.firma/testnet/dice-public.json"
 ```
 
 ```json
@@ -86,113 +88,112 @@ This step creates a master key using the machine random number generator.
 
 ```
 $ firma-offline random --key-name random
-key saved in "/Users/casatta/.firma/random.key.json"
+Saving "$HOME/.firma/testnet/random-PRIVATE.json"
+Saving "$HOME/.firma/testnet/random-public.json"
 ```
 
 ```json
 {
-  "xpub": "tpubD6NzVbkrYhZ4XGqKPC1AE2hfEKHTeMfrsjEhE1jUeGX8YWUQDtYreQSfG6DiV6MbyhKHUjG7BxFuYdGbjRyMHG6hbKQ8kS3s4BRmMFFtZdm",
-  "xpriv": "tprv8ZgxMBicQKsPdooXVYLZpd3YfHmXV2UxJRduwVhBDziji2DdbVjGTupo5xLKrUEyy6Tx52sFMqt7Vn6j6rZGHt4YaBfVd5DNVFTXyDa34vk"
+  "xpub": "tpubD6NzVbkrYhZ4Xz3UW47QhZBejbwrU4khTztuBoN8tpANN7Mu4St3cWgSUkrZc8v9FbFZaLwCDPHo8gKW3R1GqNTADCSrHpGkAVMyEKUbz4q",
+  "xpriv": "tprv8ZgxMBicQKsPeX1gcQSpJ9XYAaRvJjZnthJ7uHKqUYMyXd78S44TS24aJbDALQ1KPNjNHHi6Yn8AAQ9ccC1WyAPWxwfHiYJQ7EVjsu3y8BU"
 }
 ```
 
-# Create the multisig wallet
+# Create the 2of2 multisig wallet
 
-For the example we have are using the two master_key created in the previous step. 
-In this example, for simplicity, we assume everything is on the same machine, which is not the configuration desired for this tool.
-
-```
-$ XPUB1=$(cat $HOME/.firma/dice.key.json | jq -r .xpub)
-$ XPUB2=$(cat $HOME/.firma/random.key.json | jq -r .xpub)
-$ firma-online --url http://127.0.0.1:8332 --rpcuser user --rpcpassword password --wallet-name firma-test create-wallet -r 2 --xpub $XPUB1 --xpub $XPUB2
-Saving wallet data in "/Users/casatta/.firma/firma-test.descriptor.json"
-```
-
-Create a new address from the just generated wallet
+For the example we are using the two master_key created in the previous step. From the offline machines 
+copy `$HOME/.firma/testnet/dice-public.json` and `$HOME/.firma/testnet/random-public.json` to the 
+online machine. 
+`COOKIE_FILE` must point to the bitcoin node cookie file
 
 ```
-$ firma-online --url http://127.0.0.1:18332 --rpcuser user --rpcpassword password --wallet-name firma-test get-address
+$ firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub $HOME/.firma/testnet/dice-public.json --xpub $HOME/.firma/testnet/random-public.json
+Saving wallet data in "$HOME/.firma/testnet/firma-wallet/descriptor.json"
+Saving index data in "$HOME/.firma/testnet/firma-wallet/indexes.json"
+```
+
+## Create a receiving address
+
+Create a new address from the just generated wallet. Bitcoin node parameters are not needed anymore since have been saved in `$HOME/.firma/testnet/firma-wallet/descriptor.json`
+
+```
+$ firma-online --wallet-name firma-wallet get-address
 Creating external address at index 0
-tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x
-Saving index data in "/Users/casatta/.firma/firma-test.indexes.json"
+tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwkzv
+Saving index data in "$HOME/.firma/firma-wallet.indexes.json"
 ```
 
-Send some funds to `tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x`
+Send some funds to `tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwkzv`
 
-Create the PSBT
+## Create the PSBT
+
+After funds receive a confirmation we can create the PSBT specifiying the recipient and the amount
 
 ```
-$ firma-online --url http://127.0.0.1:18332 --rpcuser user --rpcpassword password --wallet-name firma-test create-tx --address 2N3T3fgZrs5AC6JtAviqbUyE5J3tu5qGzyv --amount "5000 sat"
-Creating change address at index 0
-tb1q8wyxjuqmesqjsycy5pcf08cfg2gpv76z4xywjypnzlt4zy73fq8qe8c366
-Saving index data in "/Users/casatta/.firma/firma-test.indexes.json"
+$ firma-online --wallet-name firma-wallet create-tx --address tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x --amount "5234 sat"
+Creating change address at index 1
+tb1qlslqmvz0knudef3g445rmgvemq4maj9jyg8t0ekd2mng5znkxzhsrnfan6
+Saving index data in "$HOME/.firma/testnet/firma-wallet/indexes.json"
 wallet_create_funded_psbt WalletCreateFundedPsbtResult {
-    psbt: "cHNidP8BAH4CAAAAATc+zuW+joVQNSZWVnzLdWSvvxyAe7/XBwerfYDZdhJYAQAAAAD+////AogTAAAAAAAAF6kUb+2iU5GanSPvfMV1PCoLiE+pFTyHUAUAAAAAAAAiACA7iGlwG8wBKBMEoHCXnwlCkBZ7QqmI6RAzF9dRE9FIDgAAAAAAAQErECcAAAAAAAAiACAXderUGs76FNLVNNYnLaYQzDWFXQ3kyrD1waP4lJIZiQEFR1IhA1F1geEIeO8QiqbaNhzHQbFk7EcGB36quM8C2465Mll7IQKZ/vODMP+p3UJZJkyrp5Jgps2LkWDR7c7cbHRIOYJYt1KuIgYCmf7zgzD/qd1CWSZMq6eSYKbNi5Fg0e3O3Gx0SDmCWLcM+LP4/AAAAAAAAAAAIgYDUXWB4Qh47xCKpto2HMdBsWTsRwYHfqq4zwLbjrkyWXsMrMIuFgAAAAAAAAAAAAABAUdSIQPYrcxrYDoQrJyB50WuOoTTTs6L0jm5i564H0wStX3XDCECZ1doOPsamvlOMeszupHha5mwnN20I0GyUmuzxvuoDD1SriICAmdXaDj7Gpr5TjHrM7qR4WuZsJzdtCNBslJrs8b7qAw9DPiz+PwBAAAAAAAAACICA9itzGtgOhCsnIHnRa46hNNOzovSObmLnrgfTBK1fdcMDKzCLhYBAAAAAAAAAAA=",
-    fee: Amount(3640 satoshi),
+    psbt: "cHNidP8BAIkCAAAAAQVA/hgjlczjqQNXAOrYFB6A1DDi2wKtNeEwqZUbNi0jAQAAAAD+////AnIUAAAAAAAAIgAgF3Xq1BrO+hTS1TTWJy2mEMw1hV0N5Mqw9cGj+JSSGYkrRQAAAAAAACIAIPw+DbBPtPjcpiitaD2hmdgrvsiyIg635s1W5ooKdjCvAAAAAAABASteWgAAAAAAACIAIAT+2afFx1nt8KmOklHrXto5j6xEHG633VLXppcsjBVBAQVHUiEDUXWB4Qh47xCKpto2HMdBsWTsRwYHfqq4zwLbjrkyWXshA6TTyJX+H1fHr5WESfNhUa0y9qF/L0RiXdjriThsre8gUq4iBgNRdYHhCHjvEIqm2jYcx0GxZOxHBgd+qrjPAtuOuTJZewyswi4WAAAAAAAAAAAiBgOk08iV/h9Xx6+VhEnzYVGtMvahfy9EYl3Y64k4bK3vIAw0YJNMAAAAAAAAAAAAAAEBR1IhA4A+BIno9JcanXaxLzE8maixH/PtiqT+l59202amEHK5IQJHbVNsy+rKmbMOmqwYYVl/uVoQN//Is7yAXr2sBckqPlKuIgICR21TbMvqypmzDpqsGGFZf7laEDf/yLO8gF69rAXJKj4MNGCTTAEAAAABAAAAIgIDgD4Eiej0lxqddrEvMTyZqLEf8+2KpP6Xn3bTZqYQcrkMrMIuFgEAAAABAAAAAA==",
+    fee: Amount(193 satoshi),
     change_position: 1,
 }
-Saving psbt in "psbt.0.json"
-```
-TODO: the fee is too high, depends from the settings of bitcoin-core
-TODO: use a bech32 address as recipient with a non rounded amount
-
-Simulate the distribution of the PSBT to the two nodes.
-```
-cp psbt.0.json psbt.0.A.json
-cp psbt.0.json psbt.0.B.json
+Saving psbt in "psbt-0.json"
 ```
 
-Sign from node A
+Copy `psbt-0.json` to the two offline nodes as `psbt-0-A.json` and `psbt-0-B.json`.
+Copy on the offline nodes also the wallet descriptor `$HOME/.firma/testnet/firma-wallet/descriptor.json`
+
+## Sign from node A
 
 ```
-$ firma-offline sign psbt.0.A.json --wallet-name firma-test --key /Users/casatta/.firma/dice.key.json 
+$ firma-offline sign psbt-0-A.json --wallet-name firma-wallet --key $HOME/.firma/testnet/dice-PRIVATE.json
 Provided PSBT does not contain HD key paths, trying to deduce them...
 
-
 inputs [# prevout:vout value]:
-#0 581276d9807dab0707d7bf7b801cbfaf6475cb7c5656263550858ebee5ce3e37:1 (m/0/0) 10000
+#0 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 (m/0/0) 23134
 
 outputs [# script address amount]:
-#0 a9146feda253919a9d23ef7cc5753c2a0b884fa9153c87 2N3T3fgZrs5AC6JtAviqbUyE5J3tu5qGzyv () 5000
-#1 00203b8869701bcc01281304a070979f094290167b42a988e9103317d75113d1480e tb1q8wyxjuqmesqjsycy5pcf08cfg2gpv76z4xywjypnzlt4zy73fq8qe8c366 (m/1/0) 2807
+#0 00201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f894921989 tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x () 5234
+#1 0020fc3e0db04fb4f8dca628ad683da199d82bbec8b2220eb7e6cd56e68a0a7630af tb1qlslqmvz0knudef3g445rmgvemq4maj9jyg8t0ekd2mng5znkxzhsrnfan6 (m/1/1) 17707
 
-absolute fee       :   2193 satoshi
-unsigned tx        :    126 vbyte
-estimated tx       :    179 vbyte
-estimated fee rate :     12 sat/vbyte
+absolute fee       :    193 satoshi
+unsigned tx        :    137 vbyte
+estimated tx       :    190 vbyte
+estimated fee rate :      1 sat/vbyte
 
 Added signatures, wrote "psbt.0.A.json"
 ```
 
-Sign from node B
+## Sign from node B
 
 ```
-$ firma-offline sign psbt.0.B.json --wallet-name firma-test --key /Users/casatta/.firma/random.key.json 
+$ firma-offline sign psbt-0-B.json --wallet-name firma-wallet --key $HOME/.firma/testnet/random-PRIVATE.json
 Provided PSBT does not contain HD key paths, trying to deduce them...
 
-
 inputs [# prevout:vout value]:
-#0 581276d9807dab0707d7bf7b801cbfaf6475cb7c5656263550858ebee5ce3e37:1 (m/0/0) 10000
+#0 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 (m/0/0) 23134
 
 outputs [# script address amount]:
-#0 a9146feda253919a9d23ef7cc5753c2a0b884fa9153c87 2N3T3fgZrs5AC6JtAviqbUyE5J3tu5qGzyv () 5000
-#1 00203b8869701bcc01281304a070979f094290167b42a988e9103317d75113d1480e tb1q8wyxjuqmesqjsycy5pcf08cfg2gpv76z4xywjypnzlt4zy73fq8qe8c366 (m/1/0) 2807
+#0 00201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f894921989 tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x () 5234
+#1 0020fc3e0db04fb4f8dca628ad683da199d82bbec8b2220eb7e6cd56e68a0a7630af tb1qlslqmvz0knudef3g445rmgvemq4maj9jyg8t0ekd2mng5znkxzhsrnfan6 (m/1/1) 17707
 
-absolute fee       :   2193 satoshi
-unsigned tx        :    126 vbyte
-estimated tx       :    179 vbyte
-estimated fee rate :     12 sat/vbyte
+absolute fee       :    193 satoshi
+unsigned tx        :    137 vbyte
+estimated tx       :    190 vbyte
+estimated fee rate :      1 sat/vbyte
 
-Added signatures, wrote "psbt.0.B.json"
+Added signatures, wrote "psbt-0-B.json"
 ```
 
-Combine, finalize and send TX
+## Combine, finalize and send TX
 
 ```
-$ firma-online --url http://127.0.0.1:18332 --rpcuser user --rpcpassword password --wallet-name firma-test send-tx --psbt psbt.0.A.json --psbt psbt.0.B.json 
-txid 08d18db081dbbbeacfd0482e3b69cc9ee221af14539e5cb0c5d190d9471ebab9
+$ firma-online --wallet-name firma-wallet send-tx --psbt psbt-0-A.json --psbt psbt-0-B.json 
+txid 7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122
 ```
 
-View tx [08d18db081dbbbeacfd0482e3b69cc9ee221af14539e5cb0c5d190d9471ebab9](https://blockstream.info/testnet/tx/08d18db081dbbbeacfd0482e3b69cc9ee221af14539e5cb0c5d190d9471ebab9)
+View tx [7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122](https://blockstream.info/testnet/tx/7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122)
 
 

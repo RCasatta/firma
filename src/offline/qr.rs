@@ -7,6 +7,8 @@ use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+type Result<R> = std::result::Result<R, Box<dyn Error>>;
+
 /// qr
 #[derive(StructOpt, Debug)]
 #[structopt(name = "qr")]
@@ -23,7 +25,7 @@ pub struct QrOptions {
     file: PathBuf,
 }
 
-pub fn show(opt: &QrOptions) -> Result<(), Box<dyn Error>> {
+pub fn show(opt: &QrOptions) -> Result<()> {
     let json = fs::read_to_string(&opt.file)?;
     let initial_json: Value = serde_json::from_str(&json)?;
 

@@ -1,17 +1,19 @@
+use crate::FirmaOnlineSubcommands::*;
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::{Address, Amount, Network};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
-use bitcoincore_rpc::json::{
-    ImportMultiOptions, ImportMultiRequest, WalletCreateFundedPsbtOptions,
-};
+use bitcoincore_rpc::json::*;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use firma::{init_logger, name_to_path, read_psbt, DaemonOpts, WalletIndexes, WalletJson};
+use firma::*;
 use log::{debug, info};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use structopt::StructOpt;
+
+type Result<R> = std::result::Result<R, Box<dyn Error>>;
 
 /// firma-online is an helper tool to use with bitcoin core, it allows to:
 /// * Create a watch-only multisig wallet
@@ -24,20 +26,8 @@ struct FirmaOnlineCommands {
     #[structopt(short, long, parse(from_occurrences))]
     verbose: u8,
 
-    /// Network (bitcoin, testnet, regtest)
-    #[structopt(short, long, default_value = "testnet")]
-    network: Network,
-
-    /// Name of the wallet
-    #[structopt(short, long)]
-    wallet_name: String,
-
-    /// Directory where wallet info are saved
-    #[structopt(short, long, default_value = "~/.firma/")]
-    firma_datadir: String,
-
     #[structopt(flatten)]
-    daemon_opts: DaemonOpts,
+    context: Context,
 
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
     subcommand: FirmaOnlineSubcommands,
@@ -61,7 +51,10 @@ pub struct CreateWalletOptions {
 
     /// Extended Public Keys (xpub) that are composing the wallet
     #[structopt(short, long = "xpub")]
-    xpubs: Vec<ExtendedPubKey>,
+    xpubs: Vec<PathBuf>,
+
+    #[structopt(flatten)]
+    daemon_opts: DaemonOpts,
 }
 
 #[derive(StructOpt, Debug)]
@@ -76,6 +69,7 @@ pub struct RescanOptions {
     start_from: Option<usize>,
 }
 
+// TODO consider using Vec<BitcoinUri> with address and amount in a single string to support sending to multiple recipient
 #[derive(StructOpt, Debug)]
 pub struct CreateTxOptions {
     /// address of the recipient
@@ -96,60 +90,43 @@ pub struct SendTxOptions {
     dry_run: bool,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let cmd = FirmaOnlineCommands::from_args();
-
     init_logger(cmd.verbose);
-
     debug!("{:?}", cmd);
+    let context = &cmd.context;
 
-    let url_with_wallet = format!("{}/wallet/{}", cmd.daemon_opts.url, cmd.wallet_name);
+    let daemon_opts = match &cmd.subcommand {
+        CreateWallet(ref opt) => opt.daemon_opts.clone(),
+        _ => {
+            let (wallet, _) = cmd.context.load_wallet_and_index()?;
+            wallet.daemon_opts.clone()
+        },
+    };
+
+    let url_with_wallet = format!("{}/wallet/{}", daemon_opts.url, context.wallet_name);
     let client = Client::new(
         url_with_wallet,
-        Auth::UserPass(
-            cmd.daemon_opts.rpcuser.clone(),
-            cmd.daemon_opts.rpcpassword.clone(),
-        ),
+        Auth::CookieFile(daemon_opts.cookie_file.clone()),
     )?;
     let result = client.get_blockchain_info()?;
 
     debug!("{:?}", result);
 
     match result.chain.as_ref() {
-        "main" => assert_eq!(Network::Bitcoin, cmd.network),
-        "test" => assert_eq!(Network::Testnet, cmd.network),
-        "regtest" => assert_eq!(Network::Regtest, cmd.network),
+        "main" => assert_eq!(Network::Bitcoin, context.network),
+        "test" => assert_eq!(Network::Testnet, context.network),
+        "regtest" => assert_eq!(Network::Regtest, context.network),
         _ => return Err("Unrecognized network".into()),
     };
 
     match cmd.subcommand {
-        FirmaOnlineSubcommands::CreateWallet(opt) => create_wallet(
-            &client,
-            &cmd.network,
-            &cmd.firma_datadir,
-            &cmd.wallet_name,
-            &cmd.daemon_opts,
-            &opt,
-        )?,
-        FirmaOnlineSubcommands::GetAddress(opt) => get_address(
-            &client,
-            cmd.network,
-            &cmd.firma_datadir,
-            &cmd.wallet_name,
-            &opt.index,
-            false,
-        )
-        .map(|_| ())?,
-        FirmaOnlineSubcommands::CreateTx(opt) => create_tx(
-            &client,
-            cmd.network,
-            &cmd.firma_datadir,
-            &cmd.wallet_name,
-            &opt,
-        )?,
-        FirmaOnlineSubcommands::SendTx(opt) => send_tx(&client, &opt)?,
-        FirmaOnlineSubcommands::Balance => balance(&client)?,
-        FirmaOnlineSubcommands::Rescan(opt) => rescan(&client, &opt)?,
+        CreateWallet(ref opt) => create_wallet(&client, &cmd.context, &daemon_opts, opt)?,
+        GetAddress(ref opt) => get_address(&client, &cmd.context, &opt.index, false).map(|_| ())?,
+        CreateTx(ref opt) => create_tx(&client, &cmd.context, opt)?,
+        SendTx(opt) => send_tx(&client, &opt)?,
+        Balance => balance(&client)?,
+        Rescan(opt) => rescan(&client, &opt)?,
     }
 
     Ok(())
@@ -157,13 +134,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn get_address(
     client: &Client,
-    network: Network,
-    datadir: &str,
-    wallet_name: &str,
+    context: &Context,
     cmd_index: &Option<u32>,
     is_change: bool,
-) -> Result<Address, Box<dyn Error>> {
-    let (wallet, mut index_json) = load_wallet_and_index(datadir, wallet_name)?;
+) -> Result<Address> {
+    let (wallet, mut index_json) = context.load_wallet_and_index()?;
 
     let (index, descriptor) = if is_change {
         (index_json.change, wallet.change_descriptor)
@@ -181,18 +156,18 @@ fn get_address(
     info!("Creating {} address at index {}", address_type, index);
     let addresses = client.derive_addresses(&descriptor, [index, index])?;
     let address = &addresses[0];
-    if address.network != network {
+    if address.network != context.network {
         return Err("address returned is not on the same network as given".into());
     }
     info!("{}", address);
 
     if is_change {
         index_json.change += 1;
-        save_index(&index_json, datadir, wallet_name)?;
+        context.save_index(&index_json)?;
     } else {
         if cmd_index.is_none() {
             index_json.main += 1;
-            save_index(&index_json, datadir, wallet_name)?;
+            context.save_index(&index_json)?;
         }
     }
 
@@ -201,19 +176,18 @@ fn get_address(
 
 fn create_wallet(
     client: &Client,
-    network: &Network,
-    datadir: &str,
-    wallet_name: &str,
+    context: &Context,
     daemon_opts: &DaemonOpts,
     opt: &CreateWalletOptions,
-) -> Result<(), Box<dyn Error>> {
-    opt.validate(&network)?;
+) -> Result<()> {
+    opt.validate(&context.network)?;
 
-    //TODO read xpub from files instead of strings
+    let xpubs = read_xpubs_files(&opt.xpubs)?;
+
     let mut descriptors = vec![];
     for i in 0..=1 {
         let mut xpub_paths = vec![];
-        for xpub in opt.xpubs.iter() {
+        for xpub in xpubs.iter() {
             let xpub_path = format!("{}/{}/*", xpub, i);
             xpub_paths.push(xpub_path)
         }
@@ -227,7 +201,7 @@ fn create_wallet(
     dbg!(&main_descriptor);
     dbg!(&change_descriptor);
 
-    client.create_wallet(wallet_name, Some(true))?;
+    client.create_wallet(&context.wallet_name, Some(true))?;
 
     let mut multi_request: ImportMultiRequest = Default::default();
     multi_request.range = Some((0, 1000)); //TODO should be a parameter
@@ -250,24 +224,24 @@ fn create_wallet(
     //import_multi_result Ok([ImportMultiResult { success: true, warnings: [], error: None }, ImportMultiResult { success: true, warnings: [], error: None }])
 
     let wallet = WalletJson {
-        name: wallet_name.to_string(),
+        name: context.wallet_name.to_string(),
         main_descriptor,
         change_descriptor,
         daemon_opts: daemon_opts.clone(),
     };
-    let indexes = WalletIndexes {
+    let indexes = WalletIndexesJson {
         main: 0u32,
         change: 0u32,
     };
 
-    save_wallet(&wallet, datadir, wallet_name)?;
-    save_index(&indexes, datadir, wallet_name)?;
+    context.save_wallet(&wallet)?;
+    context.save_index(&indexes)?;
 
     Ok(())
 }
 
 impl CreateWalletOptions {
-    fn validate(&self, network: &Network) -> Result<(), Box<dyn Error>> {
+    fn validate(&self, network: &Network) -> Result<()> {
         if self.r == 0 {
             return Err("required signatures cannot be 0".into());
         }
@@ -280,12 +254,13 @@ impl CreateWalletOptions {
             return Err("required signatures cannot be greater than the number of xpubs".into());
         }
 
-        for xpub in self.xpubs.iter() {
+        let xpubs = read_xpubs_files(&self.xpubs)?;
+        for xpub in xpubs.iter() {
             if network != &xpub.network {
                 return Err("detected xpub of another network".into());
             }
 
-            if self.xpubs.iter().filter(|xpub2| *xpub2 == xpub).count() > 1 {
+            if xpubs.iter().filter(|xpub2| *xpub2 == xpub).count() > 1 {
                 return Err("Cannot use same xpub twice".into());
             }
         }
@@ -294,31 +269,14 @@ impl CreateWalletOptions {
     }
 }
 
-fn create_tx(
-    client: &Client,
-    network: Network,
-    datadir: &str,
-    wallet_name: &str,
-    opt: &CreateTxOptions,
-) -> Result<(), Box<dyn Error>> {
-    //bitcoin-cli -${NETWORK} -rpcwallet=${WALLET} walletcreatefundedpsbt
-    // '[]' '[{"tb1qrxye2d9e5qgsg0qd647rl7drs8p4ytzlylr2ggceppd4djj58gws84d0gv":0.0012345}]'
-    // 0 '{"includeWatching":true, "changeAddress":"tb1qmkzvhdr23alghczwyaj0p2zxvs73ysxene09c53yl0ven2xfwc5q82artm"}' true> psbt_2.txt
-
+fn create_tx(client: &Client, context: &Context, opt: &CreateTxOptions) -> Result<()> {
     let mut outputs = HashMap::new();
     outputs.insert(opt.address.to_string(), opt.amount);
     debug!("{:?}", outputs);
 
     let mut options: WalletCreateFundedPsbtOptions = Default::default();
     options.include_watching = Some(true);
-    options.change_address = Some(get_address(
-        client,
-        network,
-        datadir,
-        wallet_name,
-        &None,
-        true,
-    )?);
+    options.change_address = Some(get_address(client, context, &None, true)?);
     let b = client.wallet_create_funded_psbt(&[], &outputs, None, Some(options), Some(true))?;
     info!("wallet_create_funded_psbt {:#?}", b);
 
@@ -327,13 +285,13 @@ fn create_tx(
     Ok(())
 }
 
-fn balance(client: &Client) -> Result<(), Box<dyn Error>> {
+fn balance(client: &Client) -> Result<()> {
     let balance = client.get_balance(Some(0), Some(true))?;
     info!("{}", balance);
     Ok(())
 }
 
-fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<(), Box<dyn Error>> {
+fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
     let mut psbts = vec![];
     for psbt_file in opt.psbts.iter() {
         let path = Path::new(psbt_file);
@@ -354,57 +312,15 @@ fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn rescan(client: &Client, opt: &RescanOptions) -> Result<(), Box<dyn Error>> {
+fn rescan(client: &Client, opt: &RescanOptions) -> Result<()> {
     client.rescan_blockchain(opt.start_from)?;
     Ok(())
 }
 
-fn load_wallet_and_index(
-    datadir: &str,
-    wallet_name: &str,
-) -> Result<(WalletJson, WalletIndexes), Box<dyn Error>> {
-    let wallet_path = name_to_path(datadir, wallet_name, "descriptor.json");
-    let wallet = fs::read(wallet_path)?;
-    let wallet = serde_json::from_slice(&wallet)?;
-
-    let indexes_path = name_to_path(datadir, wallet_name, "indexes.json");
-    let indexes = fs::read(indexes_path)?;
-    let indexes = serde_json::from_slice(&indexes)?;
-
-    Ok((wallet, indexes))
-}
-
-fn save_wallet(
-    wallet: &WalletJson,
-    datadir: &str,
-    wallet_name: &str,
-) -> Result<(), Box<dyn Error>> {
-    let path = name_to_path(datadir, wallet_name, "descriptor.json");
-    if path.exists() {
-        return Err("wallet already exist, I am not going to overwrite".into());
-    }
-    info!("Saving wallet data in {:?}", path);
-
-    fs::write(path, serde_json::to_string_pretty(wallet)?)?;
-    Ok(())
-}
-
-fn save_index(
-    indexes: &WalletIndexes,
-    datadir: &str,
-    wallet_name: &str,
-) -> Result<(), Box<dyn Error>> {
-    let path = name_to_path(datadir, wallet_name, "indexes.json");
-    info!("Saving index data in {:?}", path);
-    fs::write(path, serde_json::to_string_pretty(indexes)?)?;
-
-    Ok(())
-}
-
-fn save_psbt(psbt: WalletCreateFundedPsbtResult) -> Result<(), Box<dyn Error>> {
+fn save_psbt(psbt: WalletCreateFundedPsbtResult) -> Result<()> {
     let mut count = 0;
     loop {
-        let filename = format!("psbt.{}.json", count);
+        let filename = format!("psbt-{}.json", count);
         let path = Path::new(&filename);
         if !path.exists() {
             info!("Saving psbt in {:?}", path);
@@ -413,4 +329,14 @@ fn save_psbt(psbt: WalletCreateFundedPsbtResult) -> Result<(), Box<dyn Error>> {
         }
         count += 1;
     }
+}
+
+fn read_xpubs_files(paths: &Vec<PathBuf>) -> Result<Vec<ExtendedPubKey>> {
+    let mut xpubs = vec![];
+    for xpub_path in paths.iter() {
+        let content = fs::read(xpub_path)?;
+        let json: PublicMasterKeyJson = serde_json::from_slice(&content)?;
+        xpubs.push(ExtendedPubKey::from_str(&json.xpub)?);
+    }
+    Ok(xpubs)
 }

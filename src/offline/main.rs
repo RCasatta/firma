@@ -8,6 +8,8 @@ use log::debug;
 use std::error::Error;
 use structopt::StructOpt;
 
+type Result<R> = std::result::Result<R, Box<dyn Error>>;
+
 mod dice;
 mod qr;
 mod random;
@@ -41,7 +43,7 @@ enum FirmaOfflineSubcommands {
     Qr(QrOptions),
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<()> {
     let cmd = FirmaOfflineCommands::from_args();
 
     init_logger(cmd.verbose);

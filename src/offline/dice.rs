@@ -1,7 +1,7 @@
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
-use firma::{name_to_path, save, MasterKeyJson};
+use firma::*;
 use log::{debug, info};
 use num_bigint::BigUint;
 use std::error::Error;
@@ -9,13 +9,15 @@ use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::str::FromStr;
 use structopt::StructOpt;
 
+type Result<R> = std::result::Result<R, Box<dyn Error>>;
+
 /// Dice generate a bitcoin master key in bip32
 #[derive(StructOpt, Debug)]
 #[structopt(name = "dice")]
 pub struct DiceOptions {
     /// Number of faces of the dice
     #[structopt(short, long)]
-    faces: u32, //TODO only some dice are regular solid, enforce faces 2,6,8,20
+    faces: u32, // TODO only some dice are regular solid, enforce faces 2,6,8,20
 
     /// Number of bits of entropy
     #[structopt(short, long, default_value = "128")]
@@ -33,19 +35,13 @@ enum Bits {
     _256,
 }
 
-pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<(), Box<dyn Error>> {
+pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<()> {
     debug!("{:?}", opt);
-    let output = name_to_path(datadir, &opt.key_name, "key.json");
-    if output.exists() {
-        return Err(format!(
-            "Output file {:?} exists, exiting to avoid unwanted override. Run --help.",
-            &output
-        )
-        .into());
-    }
+    let (private_file, public_file) = generate_key_filenames(datadir, network, &opt.key_name)?;
+
     info!(
-        "Creating Master Private Key for {} with a {}-sided dice, saving in {:?}",
-        network, opt.faces, output,
+        "Creating Master Private Key for {} with a {}-sided dice",
+        network, opt.faces,
     );
     let bits = &format!("{:?}", opt.bits)[1..];
     let max: BigUint = opt.bits.clone().into();
@@ -57,13 +53,12 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<(), Bo
     );
 
     let launches: Vec<u32> = ask_launches(count, opt.faces);
-    info!("Launches: {:?}", launches);
 
     let master_key = calculate_key(&launches, opt.faces, network);
-    info!("{:#?}", master_key);
+    info!("{}", serde_json::to_string_pretty(&master_key)?);
 
-    let filename = save(&master_key, &output);
-    info!("key saved in {}", filename);
+    save_private(&master_key, &private_file);
+    save_public(&master_key.into(), &public_file);
 
     Ok(())
 }
@@ -100,7 +95,7 @@ fn required_dice_launches(faces: u32, max: &BigUint) -> u32 {
     }
 }
 
-fn calculate_key(launches: &[u32], faces: u32, network: Network) -> MasterKeyJson {
+fn calculate_key(launches: &[u32], faces: u32, network: Network) -> PrivateMasterKeyJson {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
@@ -109,7 +104,7 @@ fn calculate_key(launches: &[u32], faces: u32, network: Network) -> MasterKeyJso
     let xpriv = ExtendedPrivKey::new_master(network, &sec).unwrap();
     let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
-    MasterKeyJson {
+    PrivateMasterKeyJson {
         xpriv: xpriv.to_string(),
         xpub: xpub.to_string(),
         faces: Some(faces),
@@ -164,7 +159,7 @@ impl From<Bits> for BigUint {
 impl FromStr for Bits {
     type Err = io::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "128" => Ok(Bits::_128),
             "192" => Ok(Bits::_192),
