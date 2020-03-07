@@ -154,7 +154,7 @@ fn get_address(
     };
 
     info!("Creating {} address at index {}", address_type, index);
-    let addresses = client.derive_addresses(&descriptor, [index, index])?;
+    let addresses = client.derive_addresses(&descriptor, Some([index, index]))?;
     let address = &addresses[0];
     if address.network != context.network {
         return Err("address returned is not on the same network as given".into());
@@ -301,7 +301,7 @@ fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
     let combined = client.combine_psbt(&psbts)?;
     debug!("combined {:?}", combined);
 
-    let finalized = client.finalize_psbt(&combined, true)?;
+    let finalized = client.finalize_psbt(&combined, Some(true))?;
     debug!("finalized {:?}", finalized);
 
     if !opt.dry_run {
@@ -313,7 +313,7 @@ fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
 }
 
 fn rescan(client: &Client, opt: &RescanOptions) -> Result<()> {
-    client.rescan_blockchain(opt.start_from)?;
+    client.rescan_blockchain(opt.start_from, None)?;
     Ok(())
 }
 

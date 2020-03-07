@@ -393,10 +393,6 @@ pub fn psbt_from_base64(s: &str) -> Result<PSBT> {
     Ok(psbt)
 }
 
-pub fn _psbt_to_base64(psbt: &PSBT) -> String {
-    base64::encode(&serialize(psbt))
-}
-
 pub fn derivation_paths(
     hd_keypaths: &BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>,
 ) -> String {
@@ -474,7 +470,7 @@ pub fn pretty_print(psbt: &PSBT, network: Network) {
 mod tests {
     use crate::sign::*;
     use bitcoin::util::bip32::ExtendedPrivKey;
-    use firma::{MasterKeyJson, PsbtJson};
+    use firma::{PrivateMasterKeyJson, PsbtJson};
     use std::str::FromStr;
 
     fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xpriv: &str) {
@@ -506,21 +502,21 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
         let (mut psbt_to_sign, psbt_signed, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
-        let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv);
         assert!(perc_diff_with_core(&psbt_to_sign, 462)); // 462 is estimated_vsize from analyzepsbt
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
         let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
-        let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv);
         assert!(perc_diff_with_core(&psbt_to_sign, 192));
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
         let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
-        let key: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
         test_sign(&mut psbt_to_sign, &psbt2, &key.xpriv);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.signed.json");
@@ -543,5 +539,9 @@ mod tests {
             "32aAVauGwencZwisuvd3anhhhQhNZQPyHv"
         );*/
         // TODO wait integration of descriptor with master keys
+    }
+
+    pub fn psbt_to_base64(psbt: &PSBT) -> String {
+        base64::encode(&serialize(psbt))
     }
 }

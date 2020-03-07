@@ -2,13 +2,32 @@
 
 **WARNING - Early stage software, do not use with real bitcoins.**
 
-Firma is a [psbt](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) (Partially Signed Bitcoin Transaction) [signer](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki#signer).
+Firma is a tool to create bitcoin multisig wallet with private keys stored on offline machines.
 
+It is based on:
+  * [bitcoin core](https://bitcoincore.org/)
+  * [psbt](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) (Partially Signed Bitcoin Transaction)
+  * [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin)
+  
 ## High level process:
+
+```
+                                      +---------------------+
++---------------------+               |+---------------------+
+|                     |     xpubs     ||                     |
+| online machine      | <------------ ||  offline machines   |
+|                     |               ||                     |
+| * bitcoin node      |     PSBT      ||  * firma-offline    |
+| * firma-online      | ------------> ||  * xpriv            |
+| * xpubs             | <------------ ||                     |
+|                     |               +|                     |
++---------------------+                +---------------------+
+```
+ 
 
 #### Setup
 
-* Create one ore more extended private keys `xpriv` on one or more off-line devices.
+* Create one ore more extended private keys `xprv` on one or more offline devices.
 * Group together corresponding extended public keys `xpub` and import these on a (on-line) Bitcoin core node in watch-only mode.
 
 #### Usage
@@ -20,12 +39,8 @@ Firma is a [psbt](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 ##### Spending
 
 * Create the transaction from the Bitcoin core node and export it in PSBT format.
-* Bring PSBT to offline devices, check the transaction, if everything looks correct, sign the PSBT with the `xpriv`.
+* Bring PSBT to offline devices, check the transaction, if everything looks correct, sign the PSBT with the `xprv`.
 * Bring all the PSBT back to the node which can combine and finalize these as complete transaction.
-
-## TODOs
-
-Project is at early stage of development, to contribute, have a look at the [issues](https://github.com/RCasatta/firma/issues).
 
 ## Requirements
 

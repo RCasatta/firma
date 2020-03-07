@@ -113,9 +113,10 @@ dependencies = [
 
 [[package]]
 name = "bitcoincore-rpc"
-version = "0.9.0"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "bitcoincore-rpc-json 0.9.0",
+ "bitcoincore-rpc-json 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpc 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -124,7 +125,8 @@ dependencies = [
 
 [[package]]
 name = "bitcoincore-rpc-json"
-version = "0.9.0"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitcoin 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -259,7 +261,7 @@ dependencies = [
  "base64 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bech32 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcoin 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bitcoincore-rpc 0.9.0",
+ "bitcoincore-rpc 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -941,6 +943,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 "checksum bitcoin 0.20.0 (registry+https://github.com/rust-lang/crates.io-index)" = "01337c65290ce0c948738d821aa9f87488ca6c2b0f02d672ef778f9ae54f22c8"
 "checksum bitcoin 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6a32c9d2fa897cfbb0db45d71e3d2838666194abc4828c0f994e4b5c3bf85ba4"
 "checksum bitcoin_hashes 0.7.4 (registry+https://github.com/rust-lang/crates.io-index)" = "aff017f894e94c11c7fab19c14d4cc5653b107ef9220fed69a7a84afc037342b"
+"checksum bitcoincore-rpc 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f41f59566728c0940ca4032d3b3c51089ddeed32f3b2071d80c285394861dc7"
+"checksum bitcoincore-rpc-json 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "42c8db224907013dc662cc5fecb35f853051dce42dd14d00dd82b42f4d82ff46"
 "checksum bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 "checksum blake2b_simd 0.5.9 (registry+https://github.com/rust-lang/crates.io-index)" = "b83b7baab1e671718d78204225800d6b170e648188ac7dc992e9d6bddf87d0c0"
 "checksum byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a7c3dd8985a7111efc5c80b44e23ecdd8c007de8ade3b96595387e812b957cf5"

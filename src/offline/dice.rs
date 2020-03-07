@@ -176,6 +176,8 @@ impl FromStr for Bits {
 mod tests {
     use crate::*;
     use num_bigint::BigUint;
+    use crate::dice::*;
+    use firma::PrivateMasterKeyJson;
 
     #[test]
     fn test_bits() {
@@ -226,11 +228,11 @@ mod tests {
         // priv1.key and priv2.key taken from https://github.com/tyler-smith/go-bip32/blob/master/bip32_test.go
 
         let bytes = include_bytes!("../../test_data/dice/priv1.key");
-        let expected: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
         assert_eq!(calculate_key(&vec![2], 2, Network::Bitcoin), expected);
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: MasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
         assert_eq!(
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9, 10, 1], 256, Network::Bitcoin),
             expected
