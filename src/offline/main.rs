@@ -3,11 +3,10 @@ use crate::qr::QrOptions;
 use crate::random::RandomOptions;
 use crate::sign::SignOptions;
 use bitcoin::Network;
-use firma::init_logger;
+use firma::{init_logger, Error};
 use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
-use firma::Error;
 
 type Result<R> = std::result::Result<R, Error>;
 
@@ -38,7 +37,6 @@ struct FirmaOfflineCommands {
 
 #[derive(StructOpt, Debug)]
 enum FirmaOfflineSubcommands {
-
     /// Create a Master Private Key (xprv) with entropy from dice launches
     Dice(DiceOptions),
 

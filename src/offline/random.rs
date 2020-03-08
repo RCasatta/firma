@@ -33,8 +33,8 @@ pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<()>
     };
 
     info!("{}", serde_json::to_string_pretty(&master_key)?);
-    save_private(&master_key, &private_file);
-    save_public(&master_key.into(), &public_file);
+    save_private(&master_key, &private_file)?;
+    save_public(&master_key.into(), &public_file)?;
 
     Ok(())
 }

@@ -1,11 +1,11 @@
 use bech32;
+use firma::Error;
 use qrcode::types::Color::{Dark, Light};
 use qrcode::QrCode;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
-use firma::Error;
 
 type Result<R> = std::result::Result<R, Error>;
 
@@ -41,18 +41,18 @@ pub fn show(opt: &QrOptions) -> Result<()> {
         format!("{}", value)
     };
 
-    print_qr(&string, opt.reverse);
+    print_qr(&string, opt.reverse)?;
 
     Ok(())
 }
 
-fn print_qr(value: &str, inverted: bool) {
+fn print_qr(value: &str, inverted: bool) -> Result<()> {
     let value = if bech32::decode(value).is_ok() {
         value.to_uppercase()
     } else {
         value.to_string()
     };
-    let qr_code = QrCode::new(value.as_bytes()).unwrap();
+    let qr_code = QrCode::new(value.as_bytes())?;
     let width = qr_code.width();
     let qr_code = qr_code.into_colors();
     let height = qr_code.len() / width;
@@ -85,4 +85,5 @@ fn print_qr(value: &str, inverted: bool) {
         );
     }
     println!("{}", value);
+    Ok(())
 }

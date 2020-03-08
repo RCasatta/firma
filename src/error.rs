@@ -1,18 +1,5 @@
-
 #[derive(Debug)]
 pub struct Error(pub String);
-
-impl From<bitcoincore_rpc::Error> for Error {
-    fn from(e: bitcoincore_rpc::Error) -> Error {
-        Error(e.to_string())
-    }
-}
-
-impl From<&str> for Error {
-    fn from(e: &str) -> Error {
-        Error(e.to_string())
-    }
-}
 
 impl From<String> for Error {
     fn from(e: String) -> Error {
@@ -20,38 +7,26 @@ impl From<String> for Error {
     }
 }
 
-impl From<serde_json::error::Error> for Error {
-    fn from(e: serde_json::error::Error) -> Error {
-        Error(e.to_string())
-    }
+macro_rules! impl_error {
+    ( $from:ty ) => {
+        impl std::convert::From<$from> for Error {
+            fn from(err: $from) -> Self {
+                Error(err.to_string())
+            }
+        }
+    };
 }
 
-impl From<std::io::Error> for Error {
-    fn from(e: std::io::Error) -> Error {
-        Error(e.to_string())
-    }
-}
-
-impl From<bitcoin::util::base58::Error> for Error {
-    fn from(e: bitcoin::util::base58::Error) -> Error {
-        Error(e.to_string())
-    }
-}
-
-impl From<bitcoin::util::bip32::Error> for Error {
-    fn from(e: bitcoin::util::bip32::Error) -> Error {
-        Error(e.to_string())
-    }
-}
-
-impl From<base64::DecodeError> for Error {
-    fn from(e: base64::DecodeError) -> Error {
-        Error(e.to_string())
-    }
-}
-
-impl From<bitcoin::consensus::encode::Error> for Error {
-    fn from(e: bitcoin::consensus::encode::Error) -> Error {
-        Error(e.to_string())
-    }
-}
+impl_error!(bitcoincore_rpc::Error);
+impl_error!(&str);
+impl_error!(serde_json::error::Error);
+impl_error!(std::io::Error);
+impl_error!(bitcoin::util::base58::Error);
+impl_error!(bitcoin::util::bip32::Error);
+impl_error!(base64::DecodeError);
+impl_error!(bitcoin::consensus::encode::Error);
+impl_error!(std::path::StripPrefixError);
+impl_error!(qrcode::types::QrError);
+impl_error!(bitcoin::util::key::Error);
+impl_error!(bitcoin::secp256k1::Error);
+impl_error!(bitcoin::util::psbt::Error);

@@ -34,7 +34,6 @@ struct FirmaOnlineCommands {
 
 #[derive(StructOpt, Debug)]
 enum FirmaOnlineSubcommands {
-
     /// Create a new watch-only wallet
     CreateWallet(CreateWalletOptions),
 
@@ -306,12 +305,11 @@ fn balance(client: &Client) -> Result<()> {
     Ok(())
 }
 
-
 fn list_coins(client: &Client) -> Result<()> {
     let mut list_coins = client.list_unspent(None, None, None, None, None)?;
     list_coins.sort_by(|a, b| a.amount.cmp(&b.amount));
     for utxo in list_coins.iter() {
-        info!("{}:{} {}", utxo.txid, utxo.vout, utxo.amount );
+        info!("{}:{} {}", utxo.txid, utxo.vout, utxo.amount);
     }
 
     Ok(())
@@ -321,7 +319,7 @@ fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
     let mut psbts = vec![];
     for psbt_file in opt.psbts.iter() {
         let path = Path::new(psbt_file);
-        let json = read_psbt(path.into());
+        let json = read_psbt(path.into())?;
         psbts.push(json.signed_psbt.expect("signed_psbt not found"));
     }
     let combined = client.combine_psbt(&psbts)?;

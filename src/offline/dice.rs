@@ -51,25 +51,25 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<()> {
         count, bits
     );
 
-    let launches: Vec<u32> = ask_launches(count, opt.faces);
+    let launches: Vec<u32> = ask_launches(count, opt.faces)?;
 
-    let master_key = calculate_key(&launches, opt.faces, network);
+    let master_key = calculate_key(&launches, opt.faces, network)?;
     info!("{}", serde_json::to_string_pretty(&master_key)?);
 
-    save_private(&master_key, &private_file);
-    save_public(&master_key.into(), &public_file);
+    save_private(&master_key, &private_file)?;
+    save_public(&master_key.into(), &public_file)?;
 
     Ok(())
 }
 
-fn ask_launches(count: u32, faces: u32) -> Vec<u32> {
+fn ask_launches(count: u32, faces: u32) -> Result<Vec<u32>> {
     let mut launches = vec![];
     for i in 1..=count {
         let question = format!("{}{} of {} launch", i, endish(i), count);
-        let val = ask_number(&question, 1, faces);
+        let val = ask_number(&question, 1, faces)?;
         launches.push(val);
     }
-    launches
+    Ok(launches)
 }
 
 fn multiply_dice_launches(launches: &[u32], base: u32) -> BigUint {
@@ -94,21 +94,21 @@ fn required_dice_launches(faces: u32, max: &BigUint) -> u32 {
     }
 }
 
-fn calculate_key(launches: &[u32], faces: u32, network: Network) -> PrivateMasterKeyJson {
+fn calculate_key(launches: &[u32], faces: u32, network: Network) -> Result<PrivateMasterKeyJson> {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let secp = Secp256k1::signing_only();
 
-    let xpriv = ExtendedPrivKey::new_master(network, &sec).unwrap();
+    let xpriv = ExtendedPrivKey::new_master(network, &sec)?;
     let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
-    PrivateMasterKeyJson {
+    Ok(PrivateMasterKeyJson {
         xpriv: xpriv.to_string(),
         xpub: xpub.to_string(),
         faces: Some(faces),
         launches: Some(format!("{:?}", launches)), // ugly, using a string to avoid going newline for every element
-    }
+    })
 }
 
 fn endish(i: u32) -> String {
@@ -125,16 +125,19 @@ fn endish(i: u32) -> String {
     .to_string()
 }
 
-fn ask_number(question: &str, min: u32, max: u32) -> u32 {
+fn ask_number(question: &str, min: u32, max: u32) -> Result<u32> {
     let stdin = io::stdin();
     let mut stdin: Lines<StdinLock> = stdin.lock().lines();
     loop {
         info!("{} [{}-{}]: ", question, min, max);
-        io::stdout().flush().unwrap();
-        let line = stdin.next().unwrap().unwrap().parse::<u32>();
+        io::stdout().flush()?;
+        let line = stdin
+            .next()
+            .ok_or_else(|| Error("stdin empty".into()))??
+            .parse::<u32>();
         if let Ok(val) = line {
             if val >= min && val <= max {
-                return val;
+                return Ok(val);
             } else {
                 info!("Out of range");
             }
@@ -174,18 +177,20 @@ impl FromStr for Bits {
 #[cfg(test)]
 mod tests {
     use crate::dice::*;
-    use crate::*;
+
+    use bitcoin::Network;
     use firma::PrivateMasterKeyJson;
     use num_bigint::BigUint;
 
     #[test]
-    fn test_bits() {
-        let bits: Bits = "128".parse().unwrap();
+    fn test_bits() -> Result<()> {
+        let bits: Bits = "128".parse()?;
         let number: BigUint = bits.into();
         assert_eq!(
             "340282366920938463463374607431768211456",
             format!("{}", number)
         );
+        Ok(())
     }
 
     #[test]
@@ -223,18 +228,19 @@ mod tests {
     }
 
     #[test]
-    fn test_master_from_dice() {
+    fn test_master_from_dice() -> Result<()> {
         // priv1.key and priv2.key taken from https://github.com/tyler-smith/go-bip32/blob/master/bip32_test.go
 
         let bytes = include_bytes!("../../test_data/dice/priv1.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        assert_eq!(calculate_key(&vec![2], 2, Network::Bitcoin), expected);
+        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        assert_eq!(calculate_key(&vec![2], 2, Network::Bitcoin)?, expected);
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
         assert_eq!(
-            calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9, 10, 1], 256, Network::Bitcoin),
+            calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9, 10, 1], 256, Network::Bitcoin)?,
             expected
         );
+        Ok(())
     }
 }

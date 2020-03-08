@@ -8,14 +8,13 @@ use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fing
 use bitcoin::util::key;
 use bitcoin::util::psbt::{Input, Map, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
-use firma::{read_psbt, PrivateMasterKeyJson, PsbtJson};
+use firma::{read_psbt, Error, PrivateMasterKeyJson, PsbtJson};
 use log::{debug, info, Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
-use firma::Error;
 
 type PSBT = PartiallySignedTransaction;
 type Result<R> = std::result::Result<R, Error>;
@@ -54,16 +53,16 @@ pub struct SignOptions {
 
 pub fn start(opt: &SignOptions) -> Result<()> {
     debug!("{:#?}", opt);
-    let mut json = read_psbt(&opt.file);
+    let mut json = read_psbt(&opt.file)?;
     debug!("{:#?}", json);
 
     let mut psbt = psbt_from_base64(&json.psbt)?;
     debug!("{:#?}", psbt);
 
-    let initial_partial_sigs = get_partial_sigs(&psbt);
+    let initial_partial_sigs = get_partial_sigs(&psbt)?;
 
     if opt.decode {
-        pretty_print(&psbt, opt.network)
+        pretty_print(&psbt, opt.network)?;
     } else {
         if json.signed_psbt.is_some() || json.only_sigs.is_some() {
             info!("The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data");
@@ -72,7 +71,7 @@ pub fn start(opt: &SignOptions) -> Result<()> {
 
         start_psbt(&opt, &mut psbt, &mut json)?;
 
-        let partial_sigs = get_partial_sigs(&psbt);
+        let partial_sigs = get_partial_sigs(&psbt)?;
 
         if !partial_sigs.is_empty() {
             json.only_sigs = Some(base64::encode(&partial_sigs));
@@ -90,10 +89,10 @@ pub fn start(opt: &SignOptions) -> Result<()> {
     Ok(())
 }
 
-fn get_partial_sigs(psbt: &PSBT) -> Vec<u8> {
+fn get_partial_sigs(psbt: &PSBT) -> Result<Vec<u8>> {
     let mut only_partial_sigs = vec![];
     for input in psbt.inputs.iter() {
-        for pair in input.get_pairs().unwrap().iter() {
+        for pair in input.get_pairs()?.iter() {
             if pair.key.type_value == 2u8 {
                 let vec = serialize(pair);
                 debug!("partial sig pair {}", hex::encode(&vec));
@@ -101,7 +100,7 @@ fn get_partial_sigs(psbt: &PSBT) -> Vec<u8> {
             }
         }
     }
-    only_partial_sigs
+    Ok(only_partial_sigs)
 }
 
 pub struct SimpleLogger;
@@ -132,14 +131,14 @@ pub fn start_psbt(opt: &SignOptions, psbt: &mut PSBT, json: &mut PsbtJson) -> Re
     }
 
     // TODO read key from .firma
-    let xpriv = fs::read_to_string(opt.key.as_ref().unwrap())
+    let xpriv = fs::read_to_string(opt.key.as_ref().ok_or_else(|| Error("key empty".into()))?)
         .unwrap_or_else(|_| panic!("Unable to read file {:?}", &opt.key));
 
-    let xpriv: PrivateMasterKeyJson = serde_json::from_str(&xpriv).unwrap();
+    let xpriv: PrivateMasterKeyJson = serde_json::from_str(&xpriv)?;
     let xpriv = ExtendedPrivKey::from_str(&xpriv.xpriv)?;
     assert_eq!(xpriv.network, opt.network);
-    sign_psbt(psbt, &xpriv, Some(opt.total_derivations));
-    pretty_print(psbt, xpriv.network);
+    sign_psbt(psbt, &xpriv, Some(opt.total_derivations))?;
+    pretty_print(psbt, xpriv.network)?;
 
     let signed_psbt = base64::encode(&serialize(psbt));
     if signed_psbt != json.psbt {
@@ -149,16 +148,16 @@ pub fn start_psbt(opt: &SignOptions, psbt: &mut PSBT, json: &mut PsbtJson) -> Re
     Ok(())
 }
 
-fn extract_pub_keys(script: &Script) -> Vec<key::PublicKey> {
+fn extract_pub_keys(script: &Script) -> Result<Vec<key::PublicKey>> {
     let mut result = vec![];
     for instruct in script.iter(false) {
         if let PushBytes(a) = instruct {
             if a.len() == 33 {
-                result.push(key::PublicKey::from_slice(&a).unwrap());
+                result.push(key::PublicKey::from_slice(&a)?);
             }
         }
     }
-    result
+    Ok(result)
 }
 
 fn sign(
@@ -168,13 +167,13 @@ fn sign(
     input: &mut Input,
     xpriv: &ExtendedPrivKey,
     secp: &Secp256k1<SignOnly>,
-) {
+) -> Result<()> {
     let is_witness = input.non_witness_utxo.is_none();
     let my_fing = xpriv.fingerprint(secp);
 
     for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
         if fing == &my_fing {
-            let privkey = xpriv.derive_priv(&secp, &child).unwrap();
+            let privkey = xpriv.derive_priv(&secp, &child)?;
             let derived_pubkey =
                 secp256k1::PublicKey::from_secret_key(&secp, &privkey.private_key.key);
             assert_eq!(pubkey.key, derived_pubkey);
@@ -184,19 +183,25 @@ fn sign(
                     SighashComponents::new(tx).sighash_all(
                         &tx.input[input_index],
                         script,
-                        input.clone().witness_utxo.unwrap().value,
+                        input
+                            .clone()
+                            .witness_utxo
+                            .ok_or_else(|| Error("witness_utxo is empty".into()))?
+                            .value,
                     ),
                     input.sighash_type.unwrap_or(SigHashType::All),
                 ) // TODO how to handle other sighash type?
             } else {
-                let sighash = input.sighash_type.unwrap();
+                let sighash = input
+                    .sighash_type
+                    .ok_or_else(|| Error("sighash_type is empty".into()))?;
                 (
                     tx.signature_hash(input_index, &script, sighash.as_u32()),
                     sighash,
                 )
             };
             let signature = secp.sign(
-                &Message::from_slice(&hash.into_inner()[..]).unwrap(),
+                &Message::from_slice(&hash.into_inner()[..])?,
                 &privkey.private_key.key,
             );
             let mut signature = signature.serialize_der().to_vec();
@@ -204,12 +209,13 @@ fn sign(
             input.partial_sigs.insert(pubkey.clone(), signature);
         }
     }
+    Ok(())
 }
 
-fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) {
+fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>) -> Result<()> {
     let secp = &Secp256k1::signing_only();
 
-    init_hd_keypath_if_absent(psbt, xpriv, derivations, secp);
+    init_hd_keypath_if_absent(psbt, xpriv, derivations, secp)?;
 
     let tx = &psbt.global.unsigned_tx;
 
@@ -233,10 +239,10 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                             redeem_script.to_p2sh(),
                             "script_pubkey does not match the redeem script converted to p2sh"
                         );
-                        sign(tx, &redeem_script, i, &mut input, xpriv, secp);
+                        sign(tx, &redeem_script, i, &mut input, xpriv, secp)?;
                     }
                     None => {
-                        sign(tx, &script_pubkey, i, &mut input, xpriv, secp);
+                        sign(tx, &script_pubkey, i, &mut input, xpriv, secp)?;
                     }
                 };
             }
@@ -255,7 +261,7 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                 if script.is_v0_p2wpkh() {
                     let script = to_p2pkh(&script.as_bytes()[2..]);
                     assert!(script.is_p2pkh(), "it is not a p2pkh script");
-                    sign(tx, &script, i, &mut input, xpriv, secp);
+                    sign(tx, &script, i, &mut input, xpriv, secp)?;
                 } else {
                     let wit_script = input
                         .clone()
@@ -266,11 +272,12 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
                         wit_script.to_v0_p2wsh(),
                         "script and witness script to v0 p2wsh doesn't match"
                     );
-                    sign(tx, &wit_script, i, &mut input, xpriv, secp);
+                    sign(tx, &wit_script, i, &mut input, xpriv, secp)?;
                 }
             }
         }
     }
+    Ok(())
 }
 
 fn init_hd_keypath_if_absent(
@@ -278,7 +285,7 @@ fn init_hd_keypath_if_absent(
     xpriv: &ExtendedPrivKey,
     derivations: Option<u32>,
     secp: &Secp256k1<SignOnly>,
-) {
+) -> Result<()> {
     // temp code for handling psbt generated from core without hd paths
     let outputs_empty = psbt.inputs.iter().any(|i| i.hd_keypaths.is_empty());
     let inputs_empty = psbt.outputs.iter().any(|o| o.hd_keypaths.is_empty());
@@ -287,14 +294,13 @@ fn init_hd_keypath_if_absent(
         info!("Provided PSBT does not contain all HD key paths, trying to deduce them...");
         let mut keys = HashMap::new();
         for i in 0..=1 {
-            let derivation_path = DerivationPath::from_str(&format!("m/{}", i)).unwrap();
-            let first = xpriv.derive_priv(&secp, &derivation_path).unwrap();
+            let derivation_path = DerivationPath::from_str(&format!("m/{}", i))?;
+            let first = xpriv.derive_priv(&secp, &derivation_path)?;
             for j in 0..=derivations.unwrap_or(1000) {
-                let derivation_path = DerivationPath::from_str(&format!("m/{}", j)).unwrap();
-                let derived = first.derive_priv(&secp, &derivation_path).unwrap();
+                let derivation_path = DerivationPath::from_str(&format!("m/{}", j))?;
+                let derived = first.derive_priv(&secp, &derivation_path)?;
                 let derived_pubkey = ExtendedPubKey::from_private(&secp, &derived);
-                let complete_derivation_path =
-                    DerivationPath::from_str(&format!("m/{}/{}", i, j)).unwrap();
+                let complete_derivation_path = DerivationPath::from_str(&format!("m/{}/{}", i, j))?;
                 keys.insert(
                     derived_pubkey.public_key,
                     (xpriv.fingerprint(&secp), complete_derivation_path),
@@ -303,34 +309,41 @@ fn init_hd_keypath_if_absent(
         }
 
         for input in psbt.inputs.iter_mut() {
-            if input.witness_script.is_some() {
-                let script_keys = extract_pub_keys(input.witness_script.as_ref().unwrap());
+            if let Some(ref witness_script) = input.witness_script {
+                let script_keys = extract_pub_keys(&witness_script)?;
                 for key in script_keys {
                     if keys.contains_key(&key) {
-                        input
-                            .hd_keypaths
-                            .insert(key.clone(), keys.get(&key).unwrap().clone());
+                        input.hd_keypaths.insert(
+                            key.clone(),
+                            keys.get(&key)
+                                .ok_or_else(|| Error("key not found".into()))?
+                                .clone(),
+                        );
                     }
                 }
             }
         }
 
         for output in psbt.outputs.iter_mut() {
-            if output.witness_script.is_some() {
-                let script_keys = extract_pub_keys(output.witness_script.as_ref().unwrap());
+            if let Some(ref witness_script) = output.witness_script {
+                let script_keys = extract_pub_keys(&witness_script)?;
                 for key in script_keys {
                     if keys.contains_key(&key) {
-                        output
-                            .hd_keypaths
-                            .insert(key.clone(), keys.get(&key).unwrap().clone());
+                        output.hd_keypaths.insert(
+                            key.clone(),
+                            keys.get(&key)
+                                .ok_or_else(|| Error("key not found".into()))?
+                                .clone(),
+                        );
                     }
                 }
             }
         }
     }
+    Ok(())
 }
 
-fn estimate_weight(psbt: &PSBT) -> usize {
+fn estimate_weight(psbt: &PSBT) -> Result<usize> {
     let unsigned_weight = psbt.global.unsigned_tx.get_weight();
     let mut spending_weight = 0usize;
 
@@ -341,22 +354,26 @@ fn estimate_weight(psbt: &PSBT) -> usize {
             _ => panic!("both redeem and witness script are None"),
         };
         //TODO signature are less in NofM where N<M
-        let current = script.len() + expected_signatures(script) * 72; // using 72 as average signature size
+        let current = script.len() + expected_signatures(script)? * 72; // using 72 as average signature size
         spending_weight += current * factor;
     }
 
-    unsigned_weight + spending_weight
+    Ok(unsigned_weight + spending_weight)
 }
 
-fn expected_signatures(script: &Script) -> usize {
+fn expected_signatures(script: &Script) -> Result<usize> {
     let bytes = script.as_bytes();
-    if bytes.len() > 1 && bytes.last().unwrap() == &opcodes::all::OP_CHECKMULTISIG.into_u8() {
-        read_pushnum(bytes[0])
-            .map(|el| el as usize)
-            .unwrap_or(0usize)
-    } else {
-        extract_pub_keys(script).len()
-    }
+    Ok(
+        if bytes.last().ok_or_else(|| Error("script empty".into()))?
+            == &opcodes::all::OP_CHECKMULTISIG.into_u8()
+        {
+            read_pushnum(bytes[0])
+                .map(|el| el as usize)
+                .unwrap_or(0usize)
+        } else {
+            extract_pub_keys(script)?.len()
+        },
+    )
 }
 
 fn read_pushnum(value: u8) -> Option<u8> {
@@ -397,7 +414,7 @@ pub fn derivation_paths(
     vec.join(", ")
 }
 
-pub fn pretty_print(psbt: &PSBT, network: Network) {
+pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
     let mut input_values: Vec<u64> = vec![];
     let mut output_values: Vec<u64> = vec![];
 
@@ -410,7 +427,15 @@ pub fn pretty_print(psbt: &PSBT, network: Network) {
         .collect();
     for (i, input) in psbt.inputs.iter().enumerate() {
         let val = match (&input.non_witness_utxo, &input.witness_utxo) {
-            (Some(val), None) => val.output.get(*vouts.get(i).unwrap()).unwrap().value,
+            (Some(val), None) => {
+                let vout = *vouts
+                    .get(i)
+                    .ok_or_else(|| Error("can't find vout".into()))?;
+                val.output
+                    .get(vout)
+                    .ok_or_else(|| Error("can't find value".into()))?
+                    .value
+            }
             (None, Some(val)) => val.value,
             _ => panic!("witness_utxo and non_witness_utxo are both None or both Some"),
         };
@@ -448,7 +473,7 @@ pub fn pretty_print(psbt: &PSBT, network: Network) {
     let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
 
     let tx_vbytes = psbt.global.unsigned_tx.get_weight() / 4;
-    let estimated_tx_vbytes = estimate_weight(&psbt) / 4;
+    let estimated_tx_vbytes = estimate_weight(&psbt)? / 4;
     let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
 
     info!("");
@@ -456,68 +481,80 @@ pub fn pretty_print(psbt: &PSBT, network: Network) {
     info!("unsigned tx        : {:>6} vbyte", tx_vbytes);
     info!("estimated tx       : {:>6} vbyte", estimated_tx_vbytes);
     info!("estimated fee rate : {:>6.0} sat/vbyte", estimated_fee_rate);
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::sign::*;
     use bitcoin::util::bip32::ExtendedPrivKey;
-    use firma::{PrivateMasterKeyJson, PsbtJson};
+    use firma::{Error, PrivateMasterKeyJson, PsbtJson};
     use std::str::FromStr;
 
-    fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xpriv: &str) {
-        let xpriv = ExtendedPrivKey::from_str(xpriv).unwrap();
-        sign_psbt(psbt_to_sign, &xpriv, Some(10u32));
+    fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xpriv: &str) -> Result<()> {
+        let xpriv = ExtendedPrivKey::from_str(xpriv)?;
+        sign_psbt(psbt_to_sign, &xpriv, Some(10u32))?;
         assert_eq!(psbt_to_sign, psbt_signed);
+        Ok(())
     }
 
-    fn extract_psbt(bytes: &[u8]) -> (PSBT, PSBT, String) {
-        let expected: PsbtJson = serde_json::from_slice(bytes).unwrap();
-        let psbt_to_sign = psbt_from_base64(&expected.psbt).unwrap();
-        let psbt_signed = psbt_from_base64(expected.signed_psbt.as_ref().unwrap()).unwrap();
-        (
+    fn extract_psbt(bytes: &[u8]) -> Result<(PSBT, PSBT, String)> {
+        let expected: PsbtJson = serde_json::from_slice(bytes)?;
+        let psbt_to_sign = psbt_from_base64(&expected.psbt)?;
+        let psbt_signed = psbt_from_base64(
+            expected
+                .signed_psbt
+                .as_ref()
+                .ok_or_else(|| Error("signed_psbt empty".into()))?,
+        )?;
+        Ok((
             psbt_to_sign,
             psbt_signed,
-            expected.signed_psbt.unwrap().clone(),
-        )
+            expected
+                .signed_psbt
+                .ok_or_else(|| Error("signed_psbt is empty".into()))?
+                .clone(),
+        ))
     }
 
-    fn perc_diff_with_core(psbt: &PSBT, core: usize) -> bool {
-        let esteem = (estimate_weight(psbt) / 4) as f64;
+    fn perc_diff_with_core(psbt: &PSBT, core: usize) -> Result<bool> {
+        let esteem = (estimate_weight(psbt)? / 4) as f64;
         let core = core as f64;
         let perc = ((esteem - core) / esteem).abs();
-        perc < 0.1 // TODO reduce this 10% by improving estimation of the bip tx
+        Ok(perc < 0.1) // TODO reduce this 10% by improving estimation of the bip tx
     }
 
     #[test]
-    fn test_psbt() {
+    fn test_psbt() -> Result<()> {
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
-        let (mut psbt_to_sign, psbt_signed, _) = extract_psbt(bytes);
+        let (mut psbt_to_sign, psbt_signed, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
-        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv);
-        assert!(perc_diff_with_core(&psbt_to_sign, 462)); // 462 is estimated_vsize from analyzepsbt
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv)?;
+        assert!(perc_diff_with_core(&psbt_to_sign, 462)?); // 462 is estimated_vsize from analyzepsbt
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
-        let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes);
+        let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
-        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv);
-        assert!(perc_diff_with_core(&psbt_to_sign, 192));
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv)?;
+        assert!(perc_diff_with_core(&psbt_to_sign, 192)?);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
-        let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes);
+        let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
-        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
-        test_sign(&mut psbt_to_sign, &psbt2, &key.xpriv);
+        let key: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        test_sign(&mut psbt_to_sign, &psbt2, &key.xpriv)?;
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.signed.json");
-        let (_, psbt_complete, psbt_signed_complete) = extract_psbt(bytes);
+        let (_, psbt_complete, psbt_signed_complete) = extract_psbt(bytes)?;
 
-        psbt1.merge(psbt2).unwrap();
+        psbt1.merge(psbt2)?;
 
         assert_eq!(psbt1, psbt_complete);
-        assert_eq!(psbt_to_base64(&psbt1), psbt_signed_complete)
+        assert_eq!(psbt_to_base64(&psbt1), psbt_signed_complete);
+
+        Ok(())
     }
 
     #[test]

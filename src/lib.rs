@@ -80,25 +80,25 @@ pub struct Context {
 }
 
 // from https://stackoverflow.com/questions/54267608/expand-tilde-in-rust-path-idiomatically
-fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Option<PathBuf> {
+fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
+        let mut home_dir =
+            dirs::home_dir().ok_or_else(|| Error("cannot retrieve home dir".into()))?;
         if p == Path::new("~") {
-            dirs::home_dir()
+            Ok(home_dir)
         } else {
-            dirs::home_dir().map(|mut h| {
-                if h == Path::new("/") {
-                    // Corner case: `h` root directory;
-                    // don't prepend extra `/`, just drop the tilde.
-                    p.strip_prefix("~").unwrap().to_path_buf()
-                } else {
-                    h.push(p.strip_prefix("~/").unwrap());
-                    h
-                }
-            })
+            if home_dir == Path::new("/").to_path_buf() {
+                // Corner case: `home_dir` root directory;
+                // don't prepend extra `/`, just drop the tilde.
+                Ok(p.strip_prefix("~")?.to_path_buf())
+            } else {
+                home_dir.push(p.strip_prefix("~/")?);
+                Ok(home_dir)
+            }
         }
     } else {
-        Some(p.to_path_buf())
+        Ok(p.to_path_buf())
     }
 }
 
@@ -133,7 +133,7 @@ impl log::Log for SimpleLogger {
 }
 
 impl Context {
-    pub fn path_for(&self, what: &str) -> PathBuf {
+    pub fn path_for(&self, what: &str) -> Result<PathBuf> {
         path_for(
             &self.firma_datadir,
             self.network,
@@ -143,7 +143,7 @@ impl Context {
     }
 
     pub fn save_wallet(&self, wallet: &WalletJson) -> Result<()> {
-        let path = self.path_for("descriptor");
+        let path = self.path_for("descriptor")?;
         if path.exists() {
             return Err("wallet already exist, I am not going to overwrite".into());
         }
@@ -154,7 +154,7 @@ impl Context {
     }
 
     pub fn save_index(&self, indexes: &WalletIndexesJson) -> Result<()> {
-        let path = self.path_for("indexes");
+        let path = self.path_for("indexes")?;
         info!("Saving index data in {:?}", path);
         fs::write(path, serde_json::to_string_pretty(indexes)?)?;
 
@@ -162,11 +162,11 @@ impl Context {
     }
 
     pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexesJson)> {
-        let wallet_path = self.path_for("descriptor");
+        let wallet_path = self.path_for("descriptor")?;
         let wallet = fs::read(wallet_path)?;
         let wallet = serde_json::from_slice(&wallet)?;
 
-        let indexes_path = self.path_for("indexes");
+        let indexes_path = self.path_for("indexes")?;
         let indexes = fs::read(indexes_path)?;
         let indexes = serde_json::from_slice(&indexes)?;
 
@@ -179,8 +179,8 @@ pub fn generate_key_filenames(
     network: Network,
     key_name: &str,
 ) -> Result<(PathBuf, PathBuf)> {
-    let private_file = path_for(&datadir, network, None, &format!("{}-PRIVATE", key_name));
-    let public_file = path_for(&datadir, network, None, &format!("{}-public", key_name));
+    let private_file = path_for(&datadir, network, None, &format!("{}-PRIVATE", key_name))?;
+    let public_file = path_for(&datadir, network, None, &format!("{}-public", key_name))?;
     if private_file.exists() || public_file.exists() {
         return Err(format!(
             "{:?} or {:?} already exists, exiting to avoid unwanted override. Run --help.",
@@ -192,22 +192,23 @@ pub fn generate_key_filenames(
     Ok((private_file, public_file))
 }
 
-fn save(value: String, output: &PathBuf) {
-    fs::write(output, value).expect(&format!("Unable to write {:?}", output));
+fn save(value: String, output: &PathBuf) -> Result<()> {
+    fs::write(output, value)?;
     info!("Saving {:?}", output);
+    Ok(())
 }
 
-pub fn save_public(public_key: &PublicMasterKeyJson, output: &PathBuf) {
-    save(serde_json::to_string_pretty(public_key).unwrap(), output);
+pub fn save_public(public_key: &PublicMasterKeyJson, output: &PathBuf) -> Result<()> {
+    save(serde_json::to_string_pretty(public_key)?, output)
 }
 
-pub fn save_private(private_key: &PrivateMasterKeyJson, output: &PathBuf) {
-    save(serde_json::to_string_pretty(private_key).unwrap(), output);
+pub fn save_private(private_key: &PrivateMasterKeyJson, output: &PathBuf) -> Result<()> {
+    save(serde_json::to_string_pretty(private_key)?, output)
 }
 
-pub fn read_psbt(path: &Path) -> PsbtJson {
-    let json = fs::read_to_string(path).unwrap();
-    serde_json::from_str(&json).unwrap()
+pub fn read_psbt(path: &Path) -> Result<PsbtJson> {
+    let json = fs::read_to_string(path)?;
+    Ok(serde_json::from_str(&json)?)
 }
 
 impl From<PrivateMasterKeyJson> for PublicMasterKeyJson {
@@ -216,16 +217,21 @@ impl From<PrivateMasterKeyJson> for PublicMasterKeyJson {
     }
 }
 
-fn path_for(datadir: &str, network: Network, wallet_name: Option<&str>, what: &str) -> PathBuf {
+fn path_for(
+    datadir: &str,
+    network: Network,
+    wallet_name: Option<&str>,
+    what: &str,
+) -> Result<PathBuf> {
     let mut path = PathBuf::from(datadir);
-    path = expand_tilde(path).unwrap();
+    path = expand_tilde(path)?;
     path.push(format!("{}", network));
     if let Some(wallet_name) = wallet_name {
         path.push(wallet_name);
     }
     if !path.exists() {
-        fs::create_dir(&path).unwrap();
+        fs::create_dir(&path)?;
     }
     path.push(&format!("{}.json", what));
-    path
+    Ok(path)
 }
