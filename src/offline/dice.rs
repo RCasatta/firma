@@ -131,10 +131,7 @@ fn ask_number(question: &str, min: u32, max: u32) -> Result<u32> {
     loop {
         info!("{} [{}-{}]: ", question, min, max);
         io::stdout().flush()?;
-        let line = stdin
-            .next()
-            .ok_or_else(|| Error("stdin empty".into()))??
-            .parse::<u32>();
+        let line = stdin.next().ok_or_else(err("stdin empty"))??.parse::<u32>();
         if let Ok(val) = line {
             if val >= min && val <= max {
                 return Ok(val);

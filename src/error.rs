@@ -1,6 +1,10 @@
 #[derive(Debug)]
 pub struct Error(pub String);
 
+pub fn err(str: &str) -> impl Fn() -> Error + '_ {
+    move || Error(str.into())
+}
+
 impl From<String> for Error {
     fn from(e: String) -> Error {
         Error(e)

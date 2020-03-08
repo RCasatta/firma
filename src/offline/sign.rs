@@ -8,7 +8,7 @@ use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fing
 use bitcoin::util::key;
 use bitcoin::util::psbt::{Input, Map, PartiallySignedTransaction};
 use bitcoin::{Address, Network, Script, SigHashType, Transaction};
-use firma::{read_psbt, Error, PrivateMasterKeyJson, PsbtJson};
+use firma::{err, read_psbt, Error, PrivateMasterKeyJson, PsbtJson};
 use log::{debug, info, Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
@@ -131,7 +131,7 @@ pub fn start_psbt(opt: &SignOptions, psbt: &mut PSBT, json: &mut PsbtJson) -> Re
     }
 
     // TODO read key from .firma
-    let xpriv = fs::read_to_string(opt.key.as_ref().ok_or_else(|| Error("key empty".into()))?)
+    let xpriv = fs::read_to_string(opt.key.as_ref().ok_or_else(err("key empty"))?)
         .unwrap_or_else(|_| panic!("Unable to read file {:?}", &opt.key));
 
     let xpriv: PrivateMasterKeyJson = serde_json::from_str(&xpriv)?;
@@ -186,7 +186,7 @@ fn sign(
                         input
                             .clone()
                             .witness_utxo
-                            .ok_or_else(|| Error("witness_utxo is empty".into()))?
+                            .ok_or_else(err("witness_utxo is empty"))?
                             .value,
                     ),
                     input.sighash_type.unwrap_or(SigHashType::All),
@@ -194,7 +194,7 @@ fn sign(
             } else {
                 let sighash = input
                     .sighash_type
-                    .ok_or_else(|| Error("sighash_type is empty".into()))?;
+                    .ok_or_else(err("sighash_type is empty"))?;
                 (
                     tx.signature_hash(input_index, &script, sighash.as_u32()),
                     sighash,
@@ -315,9 +315,7 @@ fn init_hd_keypath_if_absent(
                     if keys.contains_key(&key) {
                         input.hd_keypaths.insert(
                             key.clone(),
-                            keys.get(&key)
-                                .ok_or_else(|| Error("key not found".into()))?
-                                .clone(),
+                            keys.get(&key).ok_or_else(err("key not found"))?.clone(),
                         );
                     }
                 }
@@ -331,9 +329,7 @@ fn init_hd_keypath_if_absent(
                     if keys.contains_key(&key) {
                         output.hd_keypaths.insert(
                             key.clone(),
-                            keys.get(&key)
-                                .ok_or_else(|| Error("key not found".into()))?
-                                .clone(),
+                            keys.get(&key).ok_or_else(err("key not found"))?.clone(),
                         );
                     }
                 }
@@ -364,7 +360,7 @@ fn estimate_weight(psbt: &PSBT) -> Result<usize> {
 fn expected_signatures(script: &Script) -> Result<usize> {
     let bytes = script.as_bytes();
     Ok(
-        if bytes.last().ok_or_else(|| Error("script empty".into()))?
+        if bytes.last().ok_or_else(err("script empty"))?
             == &opcodes::all::OP_CHECKMULTISIG.into_u8()
         {
             read_pushnum(bytes[0])
@@ -428,12 +424,10 @@ pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
     for (i, input) in psbt.inputs.iter().enumerate() {
         let val = match (&input.non_witness_utxo, &input.witness_utxo) {
             (Some(val), None) => {
-                let vout = *vouts
-                    .get(i)
-                    .ok_or_else(|| Error("can't find vout".into()))?;
+                let vout = *vouts.get(i).ok_or_else(err("can't find vout"))?;
                 val.output
                     .get(vout)
-                    .ok_or_else(|| Error("can't find value".into()))?
+                    .ok_or_else(err("can't find value"))?
                     .value
             }
             (None, Some(val)) => val.value,
@@ -488,7 +482,7 @@ pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
 mod tests {
     use crate::sign::*;
     use bitcoin::util::bip32::ExtendedPrivKey;
-    use firma::{Error, PrivateMasterKeyJson, PsbtJson};
+    use firma::{PrivateMasterKeyJson, PsbtJson};
     use std::str::FromStr;
 
     fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xpriv: &str) -> Result<()> {
@@ -499,22 +493,11 @@ mod tests {
     }
 
     fn extract_psbt(bytes: &[u8]) -> Result<(PSBT, PSBT, String)> {
-        let expected: PsbtJson = serde_json::from_slice(bytes)?;
-        let psbt_to_sign = psbt_from_base64(&expected.psbt)?;
-        let psbt_signed = psbt_from_base64(
-            expected
-                .signed_psbt
-                .as_ref()
-                .ok_or_else(|| Error("signed_psbt empty".into()))?,
-        )?;
-        Ok((
-            psbt_to_sign,
-            psbt_signed,
-            expected
-                .signed_psbt
-                .ok_or_else(|| Error("signed_psbt is empty".into()))?
-                .clone(),
-        ))
+        let expect: PsbtJson = serde_json::from_slice(bytes)?;
+        let psbt_to_sign = psbt_from_base64(&expect.psbt)?;
+        let psbt_str = expect.signed_psbt.ok_or_else(err("signed_psbt is empty"))?;
+        let psbt_signed = psbt_from_base64(psbt_str.as_ref())?;
+        Ok((psbt_to_sign, psbt_signed, psbt_str.clone()))
     }
 
     fn perc_diff_with_core(psbt: &PSBT, core: usize) -> Result<bool> {
@@ -555,19 +538,6 @@ mod tests {
         assert_eq!(psbt_to_base64(&psbt1), psbt_signed_complete);
 
         Ok(())
-    }
-
-    #[test]
-    fn test_miniscript() {
-
-        //let desc = miniscript::Descriptor::<bitcoin::PublicKey>::from_str("sh(wsh(or_d(c:pk(020e0338c96a8870479f2396c373cc7696ba124e8635d41b0ea581112b67817261), c:pk(020e0338c96a8870479f2396c373cc7696ba124e8635d41b0ea581112b67817261))))").unwrap();
-
-        // Derive the P2SH address
-        /*assert_eq!(
-            desc.address(bitcoin::Network::Bitcoin).unwrap().to_string(),
-            "32aAVauGwencZwisuvd3anhhhQhNZQPyHv"
-        );*/
-        // TODO wait integration of descriptor with master keys
     }
 
     pub fn psbt_to_base64(psbt: &PSBT) -> String {

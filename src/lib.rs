@@ -9,6 +9,7 @@ use structopt::StructOpt;
 
 mod error;
 
+pub use error::err;
 pub use error::Error;
 
 type Result<R> = std::result::Result<R, Error>;
@@ -83,8 +84,7 @@ pub struct Context {
 fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
-        let mut home_dir =
-            dirs::home_dir().ok_or_else(|| Error("cannot retrieve home dir".into()))?;
+        let mut home_dir = dirs::home_dir().ok_or_else(err("cannot retrieve home dir"))?;
         if p == Path::new("~") {
             Ok(home_dir)
         } else {
