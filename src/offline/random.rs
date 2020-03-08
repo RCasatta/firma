@@ -2,12 +2,11 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use firma::*;
-use rand::Rng;
-use std::error::Error;
-use structopt::StructOpt;
 use log::info;
+use rand::Rng;
+use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 /// Generate a bitcoin master key in bip32 randomly
 #[derive(StructOpt, Debug)]

@@ -2,13 +2,16 @@ use bitcoin::Network;
 use log::info;
 use log::{Level, LevelFilter, Metadata, Record};
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+mod error;
+
+pub use error::Error;
+
+type Result<R> = std::result::Result<R, Error>;
 
 static LOGGER: SimpleLogger = SimpleLogger;
 

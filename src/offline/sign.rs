@@ -11,14 +11,14 @@ use bitcoin::{Address, Network, Script, SigHashType, Transaction};
 use firma::{read_psbt, PrivateMasterKeyJson, PsbtJson};
 use log::{debug, info, Level, Metadata, Record};
 use std::collections::{BTreeMap, HashMap};
-use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
+use firma::Error;
 
 type PSBT = PartiallySignedTransaction;
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 /// Firma is a signer of Partially Signed Bitcoin Transaction (PSBT).
 #[derive(StructOpt, Debug)]
@@ -79,7 +79,7 @@ pub fn start(opt: &SignOptions) -> Result<()> {
         }
 
         if initial_partial_sigs != partial_sigs {
-            fs::write(&opt.file, serde_json::to_string_pretty(&json).unwrap())
+            fs::write(&opt.file, serde_json::to_string_pretty(&json)?)
                 .unwrap_or_else(|_| panic!("Unable to write {:?}", &opt.file));
             info!("\nAdded signatures, wrote {:?}", &opt.file);
         } else {
@@ -274,25 +274,17 @@ fn sign_psbt(psbt: &mut PSBT, xpriv: &ExtendedPrivKey, derivations: Option<u32>)
 }
 
 fn init_hd_keypath_if_absent(
-    psbt: &mut PartiallySignedTransaction,
+    psbt: &mut PSBT,
     xpriv: &ExtendedPrivKey,
     derivations: Option<u32>,
     secp: &Secp256k1<SignOnly>,
 ) {
     // temp code for handling psbt generated from core without hd paths
-    let mut have_hd_keypaths = true;
-    for input in psbt.inputs.iter() {
-        if input.hd_keypaths.is_empty() {
-            have_hd_keypaths = false;
-        }
-    }
-    for output in psbt.outputs.iter() {
-        if output.hd_keypaths.is_empty() {
-            have_hd_keypaths = false;
-        }
-    }
-    if !have_hd_keypaths {
-        info!("Provided PSBT does not contain HD key paths, trying to deduce them...");
+    let outputs_empty = psbt.inputs.iter().any(|i| i.hd_keypaths.is_empty());
+    let inputs_empty = psbt.outputs.iter().any(|o| o.hd_keypaths.is_empty());
+
+    if outputs_empty || inputs_empty {
+        info!("Provided PSBT does not contain all HD key paths, trying to deduce them...");
         let mut keys = HashMap::new();
         for i in 0..=1 {
             let derivation_path = DerivationPath::from_str(&format!("m/{}", i)).unwrap();

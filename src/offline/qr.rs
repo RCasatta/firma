@@ -2,12 +2,12 @@ use bech32;
 use qrcode::types::Color::{Dark, Light};
 use qrcode::QrCode;
 use serde_json::Value;
-use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use firma::Error;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 /// qr
 #[derive(StructOpt, Debug)]

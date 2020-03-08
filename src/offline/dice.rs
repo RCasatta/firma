@@ -4,12 +4,11 @@ use bitcoin::Network;
 use firma::*;
 use log::{debug, info};
 use num_bigint::BigUint;
-use std::error::Error;
 use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::str::FromStr;
 use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 /// Dice generate a bitcoin master key in bip32
 #[derive(StructOpt, Debug)]
@@ -174,10 +173,10 @@ impl FromStr for Bits {
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
-    use num_bigint::BigUint;
     use crate::dice::*;
+    use crate::*;
     use firma::PrivateMasterKeyJson;
+    use num_bigint::BigUint;
 
     #[test]
     fn test_bits() {

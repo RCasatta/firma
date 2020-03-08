@@ -7,18 +7,17 @@ use bitcoincore_rpc::{Auth, Client, RpcApi};
 use firma::*;
 use log::{debug, info};
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 /// firma-online is an helper tool to use with bitcoin core, it allows to:
-/// * Create a watch-only multisig wallet
-/// * Create a funded PSBT tx without signatures
-/// * Combine PSBT to create and broadcast a full tx
+/// create a watch-only multisig wallet,
+/// create a funded PSBT tx without signatures and
+/// combine PSBT to create and broadcast a full tx
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-online")]
 struct FirmaOnlineCommands {
@@ -35,12 +34,27 @@ struct FirmaOnlineCommands {
 
 #[derive(StructOpt, Debug)]
 enum FirmaOnlineSubcommands {
+
+    /// Create a new watch-only wallet
     CreateWallet(CreateWalletOptions),
+
+    /// Rescan the blockchain, useful when importing an existing wallet
     Rescan(RescanOptions),
+
+    /// Get a new address for given wallet
     GetAddress(GetAddressOptions),
+
+    /// Create a new transaction as unsigned PSBT
     CreateTx(CreateTxOptions),
+
+    /// Combine signed PSBT from offline signers and send the resulting tx
     SendTx(SendTxOptions),
+
+    /// View wallet balance
     Balance,
+
+    /// View wallet coins
+    ListCoins,
 }
 
 #[derive(StructOpt, Debug)]
@@ -86,8 +100,9 @@ pub struct SendTxOptions {
     #[structopt(long = "psbt")]
     psbts: Vec<String>,
 
+    /// broadcast transaction through the node
     #[structopt(long)]
-    dry_run: bool,
+    broadcast: bool,
 }
 
 fn main() -> Result<()> {
@@ -101,7 +116,7 @@ fn main() -> Result<()> {
         _ => {
             let (wallet, _) = cmd.context.load_wallet_and_index()?;
             wallet.daemon_opts.clone()
-        },
+        }
     };
 
     let url_with_wallet = format!("{}/wallet/{}", daemon_opts.url, context.wallet_name);
@@ -127,6 +142,7 @@ fn main() -> Result<()> {
         SendTx(opt) => send_tx(&client, &opt)?,
         Balance => balance(&client)?,
         Rescan(opt) => rescan(&client, &opt)?,
+        ListCoins => list_coins(&client)?,
     }
 
     Ok(())
@@ -221,7 +237,6 @@ fn create_wallet(
 
     let import_multi_result = client.import_multi(&[main, change], Some(&multi_options));
     info!("import_multi_result {:?}", import_multi_result);
-    //import_multi_result Ok([ImportMultiResult { success: true, warnings: [], error: None }, ImportMultiResult { success: true, warnings: [], error: None }])
 
     let wallet = WalletJson {
         name: context.wallet_name.to_string(),
@@ -291,6 +306,17 @@ fn balance(client: &Client) -> Result<()> {
     Ok(())
 }
 
+
+fn list_coins(client: &Client) -> Result<()> {
+    let mut list_coins = client.list_unspent(None, None, None, None, None)?;
+    list_coins.sort_by(|a, b| a.amount.cmp(&b.amount));
+    for utxo in list_coins.iter() {
+        info!("{}:{} {}", utxo.txid, utxo.vout, utxo.amount );
+    }
+
+    Ok(())
+}
+
 fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
     let mut psbts = vec![];
     for psbt_file in opt.psbts.iter() {
@@ -304,9 +330,13 @@ fn send_tx(client: &Client, opt: &SendTxOptions) -> Result<()> {
     let finalized = client.finalize_psbt(&combined, Some(true))?;
     debug!("finalized {:?}", finalized);
 
-    if !opt.dry_run {
-        let hash = client.send_raw_transaction(finalized.hex.unwrap())?;
+    let hex = finalized.hex.ok_or_else(|| Error("hex is empty".into()))?;
+
+    if opt.broadcast {
+        let hash = client.send_raw_transaction(hex)?;
         info!("txid {:?}", hash);
+    } else {
+        info!("hex {:?}", hex);
     }
 
     Ok(())
@@ -340,3 +370,5 @@ fn read_xpubs_files(paths: &Vec<PathBuf>) -> Result<Vec<ExtendedPubKey>> {
     }
     Ok(xpubs)
 }
+
+// TODO loadwallet if not in listwallets

@@ -5,10 +5,11 @@ use crate::sign::SignOptions;
 use bitcoin::Network;
 use firma::init_logger;
 use log::debug;
-use std::error::Error;
 use structopt::StructOpt;
+use FirmaOfflineSubcommands::*;
+use firma::Error;
 
-type Result<R> = std::result::Result<R, Box<dyn Error>>;
+type Result<R> = std::result::Result<R, Error>;
 
 mod dice;
 mod qr;
@@ -37,9 +38,17 @@ struct FirmaOfflineCommands {
 
 #[derive(StructOpt, Debug)]
 enum FirmaOfflineSubcommands {
+
+    /// Create a Master Private Key (xprv) with entropy from dice launches
     Dice(DiceOptions),
+
+    /// Create a Master Private Key (xprv) with entropy from this machine RNG
     Random(RandomOptions),
+
+    /// Sign a PSBT with local Master Private Key (xprv)
     Sign(SignOptions),
+
+    /// View a field in a json as qrcode shown in terminal
     Qr(QrOptions),
 }
 
@@ -50,12 +59,10 @@ fn main() -> Result<()> {
     debug!("{:?}", cmd);
 
     match cmd.subcommand {
-        FirmaOfflineSubcommands::Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt)?,
-        FirmaOfflineSubcommands::Sign(opt) => sign::start(&opt)?,
-        FirmaOfflineSubcommands::Qr(opt) => qr::show(&opt)?,
-        FirmaOfflineSubcommands::Random(opt) => {
-            random::start(&cmd.firma_datadir, cmd.network, &opt)?
-        }
+        Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt)?,
+        Sign(opt) => sign::start(&opt)?,
+        Qr(opt) => qr::show(&opt)?,
+        Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt)?,
     }
 
     Ok(())
