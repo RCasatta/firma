@@ -6,8 +6,6 @@ use log::info;
 use rand::Rng;
 use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Error>;
-
 /// Generate a bitcoin master key in bip32 randomly
 #[derive(StructOpt, Debug)]
 #[structopt(name = "random")]
@@ -19,7 +17,6 @@ pub struct RandomOptions {
 
 pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<()> {
     let (private_file, public_file) = generate_key_filenames(datadir, network, &opt.key_name)?;
-
     let secp = Secp256k1::signing_only();
     let sec = rand::thread_rng().gen::<[u8; 32]>();
     let xpriv = ExtendedPrivKey::new_master(network, &sec)?;

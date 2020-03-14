@@ -3,12 +3,10 @@ use crate::qr::QrOptions;
 use crate::random::RandomOptions;
 use crate::sign::SignOptions;
 use bitcoin::Network;
-use firma::{init_logger, Error};
-use log::debug;
+use firma::{init_logger, Result};
+use log::{debug, error};
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
-
-type Result<R> = std::result::Result<R, Error>;
 
 mod dice;
 mod qr;
@@ -56,11 +54,15 @@ fn main() -> Result<()> {
     init_logger(cmd.verbose);
     debug!("{:?}", cmd);
 
-    match cmd.subcommand {
-        Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt)?,
-        Sign(opt) => sign::start(&opt)?,
-        Qr(opt) => qr::show(&opt)?,
-        Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt)?,
+    let result = match cmd.subcommand {
+        Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt),
+        Sign(opt) => sign::start(&opt),
+        Qr(opt) => qr::show(&opt),
+        Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt),
+    };
+
+    if let Err(error) = result {
+        error!("{}", error.0);
     }
 
     Ok(())

@@ -1,13 +1,11 @@
 use bech32;
-use firma::Error;
+use firma::{fn_err, Result};
 use qrcode::types::Color::{Dark, Light};
 use qrcode::QrCode;
 use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
-
-type Result<R> = std::result::Result<R, Error>;
 
 /// qr
 #[derive(StructOpt, Debug)]
@@ -32,7 +30,7 @@ pub fn show(opt: &QrOptions) -> Result<()> {
     let value = match opt.index.clone() {
         Some(val) => initial_json
             .get(val.clone())
-            .unwrap_or_else(|| panic!("Can't find key `{}` in the json", val)),
+            .ok_or_else(fn_err(&format!("Can't find key `{}` in the json", val)))?,
         None => &initial_json,
     };
     let string = if let Value::String(value) = value {

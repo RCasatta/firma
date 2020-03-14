@@ -8,8 +8,6 @@ use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::str::FromStr;
 use structopt::StructOpt;
 
-type Result<R> = std::result::Result<R, Error>;
-
 /// Dice generate a bitcoin master key in bip32
 #[derive(StructOpt, Debug)]
 #[structopt(name = "dice")]
@@ -131,7 +129,10 @@ fn ask_number(question: &str, min: u32, max: u32) -> Result<u32> {
     loop {
         info!("{} [{}-{}]: ", question, min, max);
         io::stdout().flush()?;
-        let line = stdin.next().ok_or_else(err("stdin empty"))??.parse::<u32>();
+        let line = stdin
+            .next()
+            .ok_or_else(fn_err("stdin empty"))??
+            .parse::<u32>();
         if let Ok(val) = line {
             if val >= min && val <= max {
                 return Ok(val);

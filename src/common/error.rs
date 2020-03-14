@@ -1,8 +1,16 @@
 #[derive(Debug)]
 pub struct Error(pub String);
 
-pub fn err(str: &str) -> impl Fn() -> Error + '_ {
+pub fn err<R>(str: &str) -> Result<R, Error> {
+    Err(Error(str.into()))
+}
+
+pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
     move || Error(str.into())
+}
+
+pub fn io_err(str: &str) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::InvalidInput, str.to_string())
 }
 
 impl From<String> for Error {
@@ -34,3 +42,4 @@ impl_error!(qrcode::types::QrError);
 impl_error!(bitcoin::util::key::Error);
 impl_error!(bitcoin::secp256k1::Error);
 impl_error!(bitcoin::util::psbt::Error);
+impl_error!(bitcoin::util::address::Error);
