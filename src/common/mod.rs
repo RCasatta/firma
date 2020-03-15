@@ -2,11 +2,11 @@ use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
 use bitcoin::consensus::deserialize;
-use bitcoin::util::key;
 use bitcoin::{Network, Script};
 use log::{info, Level, LevelFilter, Metadata, Record};
 use std::fs;
 use std::path::{Path, PathBuf};
+use bitcoin::util::key;
 
 pub mod cmd;
 pub mod error;
@@ -82,9 +82,17 @@ pub fn save_private(private_key: &PrivateMasterKeyJson, output: &PathBuf) -> Res
     save(serde_json::to_string_pretty(private_key)?, output)
 }
 
-pub fn read_psbt(path: &Path) -> Result<PsbtJson> {
+pub fn read_psbt_json(path: &Path) -> Result<PsbtJson> {
     let json = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&json)?)
+}
+
+pub fn read_psbt(path: &Path, only_ready: bool) -> Result<PSBT> {
+    let psbt_json = read_psbt_json(&path)?;
+    if !only_ready && (psbt_json.signed_psbt.is_some() || psbt_json.only_sigs.is_some()) {
+        return err("The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data");
+    }
+    psbt_from_base64(&psbt_json.psbt)
 }
 
 pub fn path_for(

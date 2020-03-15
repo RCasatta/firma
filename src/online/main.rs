@@ -75,8 +75,7 @@ impl Wallet {
 }
 
 fn main() {
-    let result = start();
-    if let Err(error) = result {
+    if let Err(error) = start() {
         error!("{}", error.0);
     }
 }

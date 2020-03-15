@@ -10,7 +10,6 @@ pub struct RescanOptions {
 
 impl crate::Wallet {
     pub fn rescan(&self, opt: &RescanOptions) -> firma::Result<()> {
-        self.client.rescan_blockchain(opt.start_from, None)?;
-        Ok(())
+        Ok(self.client.rescan_blockchain(opt.start_from, None)?)
     }
 }

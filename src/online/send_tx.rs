@@ -27,7 +27,7 @@ impl Wallet {
         opt.validate()?;
         let mut psbts = vec![];
         for psbt_file in opt.psbts.iter() {
-            let json = read_psbt(psbt_file)?;
+            let json = read_psbt_json(psbt_file)?;
             psbts.push(json.signed_psbt.expect("signed_psbt not found"));
         }
         let combined = self.client.combine_psbt(&psbts)?;

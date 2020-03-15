@@ -94,7 +94,7 @@ impl Wallet {
         )?;
         info!("wallet_create_funded_psbt {:#?}", b);
 
-        // TODO check if change address is -1 decrease change index?
+        // TODO check if change address is -1 decrease change index? also for any error of wallet_create_funded_psbt
         // TODO check with listreceivedbyaddress if address has been already used
 
         save_psbt(b)?;

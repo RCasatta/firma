@@ -1,36 +1,26 @@
+use crate::print::pretty_print;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::consensus::serialize;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
-use bitcoin::util::key;
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::psbt::Map;
-use bitcoin::{Address, Network, Script, SigHashType};
+use bitcoin::{Network, Script, SigHashType};
 use firma::*;
 use log::{debug, info};
-use std::collections::{BTreeMap, HashMap};
-use std::convert::TryFrom;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
-/// Firma is a signer of Partially Signed Bitcoin Transaction (PSBT).
+/// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
 #[derive(StructOpt, Debug)]
-#[structopt(name = "firma")]
 pub struct SignOptions {
-    /// Verbose mode (-v, -vv, -vvv, etc.)
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: u8,
-
     /// File containing the master key (xpriv...)
     #[structopt(short, long, parse(from_os_str))]
     key: PathBuf,
-
-    /// Network (bitcoin, testnet, regtest)
-    #[structopt(short, long, default_value = "testnet")]
-    network: Network,
 
     /// derivations to consider if psbt doesn't contain HD paths
     #[structopt(short, long, default_value = "1000")]
@@ -48,29 +38,21 @@ struct PSBTSigner {
     derivations: u32,
 }
 
-impl TryFrom<&SignOptions> for PSBTSigner {
-    type Error = firma::Error;
-
-    fn try_from(opt: &SignOptions) -> Result<Self> {
-        let psbt_json = read_psbt(&opt.psbt_file)?;
-        if psbt_json.signed_psbt.is_some() || psbt_json.only_sigs.is_some() {
-            return err("The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data");
-        }
-        let psbt = psbt_from_base64(&psbt_json.psbt)?;
+impl PSBTSigner {
+    fn from_opt(opt: &SignOptions, network: Network) -> Result<Self> {
+        let psbt = read_psbt(&opt.psbt_file, false)?;
 
         // TODO read key from .firma
         let xprv_string = std::fs::read_to_string(&opt.key)?;
         let xprv_json: PrivateMasterKeyJson = serde_json::from_str(&xprv_string)?;
         let xprv = ExtendedPrivKey::from_str(&xprv_json.xpriv)?;
-        if xprv.network != opt.network {
-            return err("Master key network is different from the network passed throug cli");
+        if xprv.network != network {
+            return err("Master key network is different from the network passed through cli");
         }
 
         PSBTSigner::new(psbt, xprv, opt.total_derivations)
     }
-}
 
-impl PSBTSigner {
     pub fn new(psbt: PSBT, xprv: ExtendedPrivKey, derivations: u32) -> Result<Self> {
         let secp = Secp256k1::signing_only();
         Ok(PSBTSigner {
@@ -251,71 +233,8 @@ impl PSBTSigner {
         Ok(())
     }
 
-    pub fn pretty_print(&self) -> Result<()> {
-        let mut input_values: Vec<u64> = vec![];
-        let mut output_values: Vec<u64> = vec![];
-        let tx = &self.psbt.global.unsigned_tx;
-        let network = self.xprv.network;
-        let ins = tx.input.iter();
-        let vouts: Vec<usize> = ins.map(|el| el.previous_output.vout as usize).collect();
-        for (i, input) in self.psbt.inputs.iter().enumerate() {
-            let val = match (&input.non_witness_utxo, &input.witness_utxo) {
-                (Some(val), None) => {
-                    let vout = *vouts.get(i).ok_or_else(fn_err("can't find vout"))?;
-                    val.output
-                        .get(vout)
-                        .ok_or_else(fn_err("can't find value"))?
-                        .value
-                }
-                (None, Some(val)) => val.value,
-                _ => return err("witness_utxo and non_witness_utxo are both None or both Some"),
-            };
-            input_values.push(val);
-        }
-
-        info!("\ninputs [# prevout:vout value]:");
-        for (i, input) in tx.input.iter().enumerate() {
-            info!(
-                "#{} {}:{} ({}) {}",
-                i,
-                input.previous_output.txid,
-                input.previous_output.vout,
-                derivation_paths(&self.psbt.inputs[i].hd_keypaths),
-                input_values[i],
-            );
-        }
-        info!("\noutputs [# script address amount]:");
-        for (i, output) in tx.output.iter().enumerate() {
-            // TODO calculate if it is mine
-            info!(
-                "#{} {} {} ({}) {}",
-                i,
-                hex::encode(&output.script_pubkey.as_bytes()),
-                Address::from_script(&output.script_pubkey, network)
-                    .map(|e| e.to_string())
-                    .unwrap_or_else(|| "unknown address".into()),
-                derivation_paths(&self.psbt.outputs[i].hd_keypaths),
-                output.value
-            );
-            output_values.push(output.value);
-        }
-        // TODO show privacy analysis like blockstream.info
-        let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
-
-        let tx_vbytes = tx.get_weight() / 4;
-        let estimated_tx_vbytes = estimate_weight(&self.psbt)? / 4;
-        let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
-
-        info!("");
-        info!("absolute fee       : {:>6}   satoshi", fee);
-        info!("unsigned tx        : {:>6}   vbyte", tx_vbytes);
-        info!("estimated tx       : {:>6}   vbyte", estimated_tx_vbytes);
-        info!("estimated fee rate : {:>8.1} sat/vbyte", estimated_fee_rate);
-        Ok(())
-    }
-
     fn update_psbt_file(&self, psbt_file: &PathBuf) -> Result<()> {
-        let mut psbt_json = read_psbt(&psbt_file)?;
+        let mut psbt_json = read_psbt_json(&psbt_file)?;
         let partial_sigs = self.get_partial_sigs()?;
         psbt_json.only_sigs = Some(base64::encode(&partial_sigs));
         let signed_psbt = base64::encode(&serialize(&self.psbt));
@@ -323,10 +242,14 @@ impl PSBTSigner {
         std::fs::write(&psbt_file, serde_json::to_string_pretty(&psbt_json)?)?;
         Ok(())
     }
+
+    fn pretty_print(&self) -> Result<()> {
+        pretty_print(&self.psbt, self.xprv.network)
+    }
 }
 
-pub fn start(opt: &SignOptions) -> Result<()> {
-    let mut psbt_signer = PSBTSigner::try_from(opt)?;
+pub fn start(opt: &SignOptions, network: Network) -> Result<()> {
+    let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
     debug!("{:#?}", psbt_signer);
 
     let signed = psbt_signer.sign()?;
@@ -352,21 +275,10 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
         .into_script()
 }
 
-pub fn derivation_paths(
-    hd_keypaths: &BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>,
-) -> String {
-    let mut vec = vec![];
-    for (_, (_, path)) in hd_keypaths.iter() {
-        vec.push(format!("{:?}", path));
-    }
-    vec.sort();
-    vec.dedup();
-    vec.join(", ")
-}
-
 #[cfg(test)]
 mod tests {
     use crate::sign::*;
+    use miniscript::bitcoin::TxOut;
 
     fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xprv: &str) -> Result<()> {
         let xprv = std::str::FromStr::from_str(xprv)?;

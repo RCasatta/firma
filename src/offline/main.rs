@@ -1,4 +1,5 @@
 use crate::dice::DiceOptions;
+use crate::print::PrintOptions;
 use crate::qr::QrOptions;
 use crate::random::RandomOptions;
 use crate::sign::SignOptions;
@@ -9,6 +10,7 @@ use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
 mod dice;
+mod print;
 mod qr;
 mod random;
 mod sign;
@@ -46,6 +48,9 @@ enum FirmaOfflineSubcommands {
 
     /// View a field in a json as qrcode shown in terminal
     Qr(QrOptions),
+
+    /// Decode and print a PSBT
+    Print(PrintOptions),
 }
 
 fn main() -> Result<()> {
@@ -56,9 +61,10 @@ fn main() -> Result<()> {
 
     let result = match cmd.subcommand {
         Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt),
-        Sign(opt) => sign::start(&opt),
+        Sign(opt) => sign::start(&opt, cmd.network),
         Qr(opt) => qr::show(&opt),
         Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt),
+        Print(opt) => print::start(&opt, cmd.network),
     };
 
     if let Err(error) = result {

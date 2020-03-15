@@ -73,7 +73,7 @@ In the first steps we are going to create two master keys.
 This step creates a master key using a dice to provide randomness.
 
 ```
-$ firma-offline dice --key-name dice --faces 6
+firma-offline dice --key-name dice --faces 6
 ```
 ```
 Creating Master Private Key for testnet with a 6-sided dice, saving in "$HOME/.firma/dice.key.json"
@@ -104,7 +104,7 @@ Saving "$HOME/.firma/testnet/dice-public.json"
 This step creates a master key using the machine random number generator.
 
 ```
-$ firma-offline random --key-name random
+firma-offline random --key-name random
 ```
 ```
 Saving "$HOME/.firma/testnet/random-PRIVATE.json"
@@ -126,7 +126,7 @@ online machine.
 `COOKIE_FILE` must point to the bitcoin node cookie file
 
 ```
-$ firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub $HOME/.firma/testnet/dice-public.json --xpub $HOME/.firma/testnet/random-public.json
+firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub $HOME/.firma/testnet/dice-public.json --xpub $HOME/.firma/testnet/random-public.json
 ```
 ```
 Saving wallet data in "$HOME/.firma/testnet/firma-wallet/descriptor.json"
@@ -138,7 +138,7 @@ Saving index data in "$HOME/.firma/testnet/firma-wallet/indexes.json"
 Create a new address from the just generated wallet. Bitcoin node parameters are not needed anymore since have been saved in `$HOME/.firma/testnet/firma-wallet/descriptor.json`
 
 ```
-$ firma-online --wallet-name firma-wallet get-address
+firma-online --wallet-name firma-wallet get-address
 ```
 ```
 Creating external address at index 0
@@ -151,13 +151,13 @@ Send some funds to `tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwk
 ## Check balance and coins
 
 ```
-$ firma-online --wallet-name firma-wallet
+firma-online --wallet-name firma-wallet
 ```
 ```
 0.00023134 BTC
 ```
 ```
-$ firma-online --wallet-name list-coins 
+firma-online --wallet-name list-coins 
 ```
 ```
 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 0.00023134 BTC
@@ -166,10 +166,10 @@ $ firma-online --wallet-name list-coins
 
 ## Create the PSBT
 
-After funds receive a confirmation we can create the PSBT specifiying the recipient and the amount
+After funds receive a confirmation we can create the PSBT specifiying the recipient and the amount, you can specify more than one recipient and you can explicitly spend specific utxo with `--coin`. See `firma-online create-tx --help`
 
 ```
-$ firma-online --wallet-name firma-wallet create-tx --recipient tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x:5234
+firma-online --wallet-name firma-wallet create-tx --recipient tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x:5234
 ```
 ```
 Creating change address at index 1
@@ -189,7 +189,7 @@ Copy on the offline nodes also the wallet descriptor `$HOME/.firma/testnet/firma
 ## Sign from node A
 
 ```
-$ firma-offline sign psbt-0-A.json --key $HOME/.firma/testnet/dice-PRIVATE.json
+firma-offline sign psbt-0-A.json --key $HOME/.firma/testnet/dice-PRIVATE.json
 ```
 ```
 Provided PSBT does not contain HD key paths, trying to deduce them...
@@ -212,7 +212,7 @@ Added signatures, wrote "psbt.0.A.json"
 ## Sign from node B
 
 ```
-$ firma-offline sign psbt-0-B.json --key $HOME/.firma/testnet/random-PRIVATE.json
+firma-offline sign psbt-0-B.json --key $HOME/.firma/testnet/random-PRIVATE.json
 ```
 ```
 Provided PSBT does not contain HD key paths, trying to deduce them...
@@ -235,7 +235,7 @@ Added signatures, wrote "psbt-0-B.json"
 ## Combine, finalize and send TX
 
 ```
-$ firma-online --wallet-name firma-wallet send-tx --psbt psbt-0-A.json --psbt psbt-0-B.json --broadcast
+firma-online --wallet-name firma-wallet send-tx --psbt psbt-0-A.json --psbt psbt-0-B.json --broadcast
 ```
 ```
 7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122
