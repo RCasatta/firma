@@ -139,12 +139,12 @@ fn start() -> Result<Value> {
 fn save_psbt(psbt: &WalletCreateFundedPsbtResult, datadir: &str) -> Result<PathBuf> {
     let mut count = 0;
     loop {
-        let filename = format!("{}/psbt-{}.json", datadir, count);
-        let path = Path::new(&filename);
+        let slash = if datadir.ends_with('/') { "" } else { "/" };
+        let path = expand_tilde( format!("{}{}psbt-{}.json", datadir, slash, count))?;
         if !path.exists() {
             info!("Saving psbt in {:?}", path);
-            fs::write(path, serde_json::to_string_pretty(psbt)?)?;
-            return Ok(path.to_path_buf());
+            fs::write(&path, serde_json::to_string_pretty(psbt)?)?;
+            return Ok(path);
         }
         count += 1;
     }

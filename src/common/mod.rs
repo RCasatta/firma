@@ -178,7 +178,7 @@ pub fn extract_pub_keys(script: &Script) -> Result<Vec<key::PublicKey>> {
 }
 
 // from https://stackoverflow.com/questions/54267608/expand-tilde-in-rust-path-idiomatically
-fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
+pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
         let mut home_dir = dirs::home_dir().ok_or_else(fn_err("cannot retrieve home dir"))?;

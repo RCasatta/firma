@@ -9,6 +9,7 @@ use std::process::Command;
 use std::time::Duration;
 use std::{env, thread};
 use tempdir::TempDir;
+use std::str::from_utf8;
 
 #[test]
 fn integration_test() -> Result<()> {
