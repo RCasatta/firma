@@ -136,10 +136,10 @@ fn start() -> Result<Value> {
     Ok(output)
 }
 
-fn save_psbt(psbt: &WalletCreateFundedPsbtResult) -> Result<PathBuf> {
+fn save_psbt(psbt: &WalletCreateFundedPsbtResult, datadir: &str) -> Result<PathBuf> {
     let mut count = 0;
     loop {
-        let filename = format!("psbt-{}.json", count);
+        let filename = format!("{}/psbt-{}.json", datadir, count);
         let path = Path::new(&filename);
         if !path.exists() {
             info!("Saving psbt in {:?}", path);

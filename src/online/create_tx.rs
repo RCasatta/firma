@@ -83,6 +83,8 @@ impl Wallet {
         let inputs = opt.coins_as_inputs();
         debug!("{:?}", inputs);
 
+        // TODO check with listreceivedbyaddress if address has been already used
+
         let mut options: WalletCreateFundedPsbtOptions = Default::default();
         options.include_watching = Some(true);
         options.change_address = Some(self.get_address(None, true)?.address);
@@ -96,9 +98,8 @@ impl Wallet {
         info!("wallet_create_funded_psbt {:#?}", result);
 
         // TODO check if change address is -1 decrease change index? also for any error of wallet_create_funded_psbt
-        // TODO check with listreceivedbyaddress if address has been already used
 
-        let psbt_file = save_psbt(&result)?;
+        let psbt_file = save_psbt(&result, &self.context.firma_datadir)?;
         let create_tx = CreateTxOutput { result, psbt_file };
 
         Ok(to_value(create_tx)?)
