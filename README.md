@@ -151,13 +151,13 @@ Send some funds to `tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwk
 ## Check balance and coins
 
 ```
-firma-online --wallet-name firma-wallet
+firma-online --wallet-name firma-wallet balance
 ```
 ```
 0.00023134 BTC
 ```
 ```
-firma-online --wallet-name list-coins 
+firma-online --wallet-name firma-wallet list-coins 
 ```
 ```
 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 0.00023134 BTC

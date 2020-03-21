@@ -2,8 +2,8 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use firma::*;
-use log::info;
 use rand::Rng;
+use serde_json::{to_value, Value};
 use structopt::StructOpt;
 
 /// Generate a bitcoin master key in bip32 randomly
@@ -15,23 +15,28 @@ pub struct RandomOptions {
     key_name: String,
 }
 
-pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<()> {
-    let (private_file, public_file) = generate_key_filenames(datadir, network, &opt.key_name)?;
+pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<Value> {
+    let (private_key_file, public_key_file) =
+        generate_key_filenames(datadir, network, &opt.key_name)?;
     let secp = Secp256k1::signing_only();
     let sec = rand::thread_rng().gen::<[u8; 32]>();
-    let xpriv = ExtendedPrivKey::new_master(network, &sec)?;
-    let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
+    let xprv = ExtendedPrivKey::new_master(network, &sec)?;
+    let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
-    let master_key = PrivateMasterKeyJson {
-        xpriv: xpriv.to_string(),
-        xpub: xpub.to_string(),
+    let key = PrivateMasterKey {
+        xprv,
+        xpub,
         faces: None,
         launches: None,
     };
 
-    info!("{}", serde_json::to_string_pretty(&master_key)?);
-    save_private(&master_key, &private_file)?;
-    save_public(&master_key.into(), &public_file)?;
+    save_private(&key, &private_key_file)?;
+    save_public(&key.clone().into(), &public_key_file)?;
 
-    Ok(())
+    let output = MasterKeyOutput {
+        key,
+        public_file: public_key_file,
+        private_file: private_key_file,
+    };
+    Ok(to_value(&output)?) // TODO save also file names so tests could pick from there?
 }

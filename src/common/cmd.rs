@@ -41,18 +41,18 @@ impl Context {
         )
     }
 
-    pub fn save_wallet(&self, wallet: &WalletJson) -> Result<()> {
+    pub fn save_wallet(&self, wallet: &WalletJson) -> Result<PathBuf> {
         let path = self.path_for("descriptor")?;
         if path.exists() {
             return Err("wallet already exist, I am not going to overwrite".into());
         }
-        info!("Saving wallet data in {:?}", path);
+        info!("Saving wallet data in {:?}", &path);
 
-        fs::write(path, serde_json::to_string_pretty(wallet)?)?;
-        Ok(())
+        fs::write(&path, serde_json::to_string_pretty(wallet)?)?;
+        Ok(path)
     }
 
-    pub fn save_index(&self, indexes: &WalletIndexesJson) -> Result<()> {
+    pub fn save_index(&self, indexes: &WalletIndexes) -> Result<()> {
         let path = self.path_for("indexes")?;
         info!("Saving index data in {:?}", path);
         fs::write(path, serde_json::to_string_pretty(indexes)?)?;
@@ -60,7 +60,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexesJson)> {
+    pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexes)> {
         let wallet_path = self.path_for("descriptor")?;
         let wallet = fs::read(wallet_path)?;
         let wallet = serde_json::from_slice(&wallet)?;

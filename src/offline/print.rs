@@ -1,13 +1,12 @@
-use bitcoin::Network;
-use firma::*;
-use std::path::PathBuf;
-use structopt::StructOpt;
-use log::info;
-use bitcoin::Address;
-use std::collections::BTreeMap;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::key;
-
+use bitcoin::Address;
+use bitcoin::Network;
+use firma::*;
+use serde_json::{to_value, Value};
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 /// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
 #[derive(StructOpt, Debug)]
@@ -17,12 +16,13 @@ pub struct PrintOptions {
     psbt_file: PathBuf,
 }
 
-pub fn start(opt: &PrintOptions, network: Network) -> Result<()> {
+pub fn start(opt: &PrintOptions, network: Network) -> Result<Value> {
     let psbt = read_psbt(&opt.psbt_file, true)?;
-    pretty_print(&psbt, network)
+    Ok(to_value(pretty_print(&psbt, network)?)?)
 }
 
-pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
+pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<PsbtPrettyPrint> {
+    let mut result = PsbtPrettyPrint::default();
     let mut input_values: Vec<u64> = vec![];
     let mut output_values: Vec<u64> = vec![];
     let tx = &psbt.global.unsigned_tx;
@@ -43,29 +43,27 @@ pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
         input_values.push(val);
     }
 
-    info!("inputs [# prevout:vout value]:");
     for (i, input) in tx.input.iter().enumerate() {
-        info!(
+        result.inputs.push(format!(
             "#{} {} ({}) {}",
             i,
             input.previous_output,
             derivation_paths(&psbt.inputs[i].hd_keypaths),
             input_values[i],
-        );
+        ));
     }
-    info!("\noutputs [# script address amount]:");
+
     for (i, output) in tx.output.iter().enumerate() {
         // TODO calculate if it is mine
-        info!(
+        result.outputs.push(format!(
             "#{} {} {} ({}) {}",
             i,
             hex::encode(&output.script_pubkey.as_bytes()),
             Address::from_script(&output.script_pubkey, network)
-                .map(|e| e.to_string())
-                .unwrap_or_else(|| "unknown address".into()),
+                .ok_or_else(fn_err("non default script"))?,
             derivation_paths(&psbt.outputs[i].hd_keypaths),
             output.value
-        );
+        ));
         output_values.push(output.value);
     }
     // TODO show privacy analysis like blockstream.info
@@ -75,12 +73,20 @@ pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<()> {
     let estimated_tx_vbytes = estimate_weight(psbt)? / 4;
     let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
 
-    info!("");
-    info!("absolute fee       : {:>6}   satoshi", fee);
-    info!("unsigned tx        : {:>6}   vbyte", tx_vbytes);
-    info!("estimated tx       : {:>6}   vbyte", estimated_tx_vbytes);
-    info!("estimated fee rate : {:>8.1} sat/vbyte", estimated_fee_rate);
-    Ok(())
+    result
+        .sizes
+        .push(format!("unsigned tx        : {:>6}   vbyte", tx_vbytes));
+    result.sizes.push(format!(
+        "estimated tx       : {:>6}   vbyte",
+        estimated_tx_vbytes
+    ));
+
+    result.fee = Fee {
+        absolute: fee,
+        rate: estimated_fee_rate,
+    };
+
+    Ok(result)
 }
 
 pub fn derivation_paths(

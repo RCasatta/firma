@@ -10,6 +10,7 @@ use bitcoin::util::psbt::Map;
 use bitcoin::{Network, Script, SigHashType};
 use firma::*;
 use log::{debug, info};
+use serde_json::{to_value, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -30,6 +31,11 @@ pub struct SignOptions {
     psbt_file: PathBuf,
 }
 
+pub struct SignResult {
+    signed: bool,
+    added_paths: bool,
+}
+
 #[derive(Debug)]
 struct PSBTSigner {
     pub psbt: PSBT,
@@ -44,9 +50,11 @@ impl PSBTSigner {
 
         // TODO read key from .firma
         let xprv_string = std::fs::read_to_string(&opt.key)?;
-        let xprv_json: PrivateMasterKeyJson = serde_json::from_str(&xprv_string)?;
-        let xprv = ExtendedPrivKey::from_str(&xprv_json.xpriv)?;
-        if xprv.network != network {
+        let xprv_json: PrivateMasterKey = serde_json::from_str(&xprv_string)?;
+        let xprv = xprv_json.xprv.clone();
+        if !(network == xprv.network
+            || (network == Network::Regtest && xprv.network == Network::Testnet))
+        {
             return err("Master key network is different from the network passed through cli");
         }
 
@@ -77,29 +85,26 @@ impl PSBTSigner {
         Ok(only_partial_sigs)
     }
 
-    pub fn sign(&mut self) -> Result<bool> {
-        self.init_hd_keypath_if_absent()?;
+    pub fn sign(&mut self) -> Result<SignResult> {
+        let initial_inputs = self.psbt.inputs.clone();
+        let added_paths = self.init_hd_keypath_if_absent()?;
 
         for (i, input) in self.psbt.inputs.clone().iter().enumerate() {
             debug!("{} {:?}", i, input);
             match input.non_witness_utxo.clone() {
                 Some(non_witness_utxo) => {
                     let prevout = self.psbt.global.unsigned_tx.input[i].previous_output;
-                    assert_eq!(
-                        non_witness_utxo.txid(),
-                        prevout.txid,
-                        "prevout doesn't match non_witness_utxo"
-                    );
+                    if non_witness_utxo.txid() != prevout.txid {
+                        return err("prevout doesn't match non_witness_utxo");
+                    }
                     let script_pubkey = non_witness_utxo.output[prevout.vout as usize]
                         .clone()
                         .script_pubkey;
                     match input.redeem_script.clone() {
                         Some(redeem_script) => {
-                            assert_eq!(
-                                script_pubkey,
-                                redeem_script.to_p2sh(),
-                                "script_pubkey does not match the redeem script converted to p2sh"
-                            );
+                            if script_pubkey != redeem_script.to_p2sh() {
+                                return err("script_pubkey does not match the redeem script converted to p2sh");
+                            }
                             self.sign_input(&redeem_script, i)?;
                         }
                         None => {
@@ -114,38 +119,45 @@ impl PSBTSigner {
                         .expect("both witness_utxo and non_witness_utxo are none");
                     let script = match input.clone().redeem_script {
                         Some(script) => {
-                            assert_eq!(witness_utxo.script_pubkey, script.to_p2sh(), "witness_utxo script_pubkey doesn't match the redeem script converted to p2sh");
+                            if witness_utxo.script_pubkey != script.to_p2sh() {
+                                return err("witness_utxo script_pubkey doesn't match the redeem script converted to p2sh");
+                            }
                             script
                         }
                         None => witness_utxo.script_pubkey,
                     };
                     if script.is_v0_p2wpkh() {
                         let script = to_p2pkh(&script.as_bytes()[2..]);
-                        assert!(script.is_p2pkh(), "it is not a p2pkh script");
+                        if !script.is_p2pkh() {
+                            return err("it is not a p2pkh script");
+                        }
                         self.sign_input(&script, i)?;
                     } else {
                         let wit_script = input
                             .clone()
                             .witness_script
                             .expect("witness_script is none");
-                        assert_eq!(
-                            script,
-                            wit_script.to_v0_p2wsh(),
-                            "script and witness script to v0 p2wsh doesn't match"
-                        );
+                        if script != wit_script.to_v0_p2wsh() {
+                            return err("script and witness script to v0 p2wsh doesn't match");
+                        }
                         self.sign_input(&wit_script, i)?;
                     }
                 }
             }
         }
-        Ok(true)
+        let signed = self.psbt.inputs != initial_inputs;
+        Ok(SignResult {
+            added_paths,
+            signed,
+        })
     }
 
-    fn init_hd_keypath_if_absent(&mut self) -> Result<()> {
+    fn init_hd_keypath_if_absent(&mut self) -> Result<bool> {
         // temp code for handling psbt generated from core without hd paths
         let outputs_empty = self.psbt.inputs.iter().any(|i| i.hd_keypaths.is_empty());
         let inputs_empty = self.psbt.outputs.iter().any(|o| o.hd_keypaths.is_empty());
 
+        let mut added = false;
         if outputs_empty || inputs_empty {
             info!("Provided PSBT does not contain all HD key paths, trying to deduce them...");
             let mut keys = HashMap::new();
@@ -174,6 +186,7 @@ impl PSBTSigner {
                                 key.clone(),
                                 keys.get(&key).ok_or_else(fn_err("key not found"))?.clone(),
                             );
+                            added = true;
                         }
                     }
                 }
@@ -188,12 +201,16 @@ impl PSBTSigner {
                                 key.clone(),
                                 keys.get(&key).ok_or_else(fn_err("key not found"))?.clone(),
                             );
+                            added = true;
                         }
                     }
                 }
             }
         }
-        Ok(())
+        if added {
+            info!("Added HD key paths\n");
+        }
+        Ok(added)
     }
 
     fn sign_input(&mut self, script: &Script, input_index: usize) -> Result<()> {
@@ -243,26 +260,30 @@ impl PSBTSigner {
         Ok(())
     }
 
-    fn pretty_print(&self) -> Result<()> {
+    fn pretty_print(&self) -> Result<PsbtPrettyPrint> {
         pretty_print(&self.psbt, self.xprv.network)
     }
 }
 
-pub fn start(opt: &SignOptions, network: Network) -> Result<()> {
+pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
     let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
     debug!("{:#?}", psbt_signer);
 
-    let signed = psbt_signer.sign()?;
-    psbt_signer.pretty_print()?;
+    let sign_result = psbt_signer.sign()?;
+    let mut psbt_print = psbt_signer.pretty_print()?;
 
-    if signed {
+    if sign_result.added_paths {
+        psbt_print.info.push("Added paths".to_string());
+    }
+    if sign_result.signed {
         psbt_signer.update_psbt_file(&opt.psbt_file)?;
-        info!("\nAdded signatures, wrote {:?}", &opt.psbt_file);
+        psbt_print.info.push("Added signatures".to_string());
+        psbt_print.psbt_file = opt.psbt_file.clone();
     } else {
-        info!("\nNo signature added");
+        psbt_print.info.push("No signature added".to_string());
     }
 
-    Ok(())
+    Ok(to_value(psbt_print)?)
 }
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
@@ -278,11 +299,14 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::sign::*;
-    use miniscript::bitcoin::TxOut;
+    use bitcoin::util::bip32::ExtendedPubKey;
 
-    fn test_sign(psbt_to_sign: &mut PSBT, psbt_signed: &PSBT, xprv: &str) -> Result<()> {
-        let xprv = std::str::FromStr::from_str(xprv)?;
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign.clone(), xprv, 10)?;
+    fn test_sign(
+        psbt_to_sign: &mut PSBT,
+        psbt_signed: &PSBT,
+        xprv: &ExtendedPrivKey,
+    ) -> Result<()> {
+        let mut psbt_signer = PSBTSigner::new(psbt_to_sign.clone(), xprv.clone(), 10)?;
         psbt_signer.sign()?;
         assert_eq!(&psbt_signer.psbt, psbt_signed);
         Ok(())
@@ -307,25 +331,38 @@ mod tests {
 
     #[test]
     fn test_psbt() -> Result<()> {
+        let secp = Secp256k1::signing_only();
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
         let (mut psbt_to_sign, psbt_signed, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
-        let key: firma::PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
-        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xpriv)?;
+        let key: firma::PrivateMasterKey = serde_json::from_slice(bytes)?;
+        assert_eq!(
+            key.xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+        );
+        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv)?;
         assert!(perc_diff_with_core(&psbt_to_sign, 462)?); // 462 is estimated_vsize from analyzepsbt
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
         let (mut psbt_to_sign, mut psbt1, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
-        let key: firma::PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
-        test_sign(&mut psbt_to_sign, &psbt1, &key.xpriv)?;
+        let key: firma::PrivateMasterKey = serde_json::from_slice(bytes)?;
+        assert_eq!(
+            key.xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+        );
+        test_sign(&mut psbt_to_sign, &psbt1, &key.xprv)?;
         assert!(perc_diff_with_core(&psbt_to_sign, 192)?);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
         let (mut psbt_to_sign, psbt2, _) = extract_psbt(bytes)?;
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
-        let key: firma::PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
-        test_sign(&mut psbt_to_sign, &psbt2, &key.xpriv)?;
+        let key: firma::PrivateMasterKey = serde_json::from_slice(bytes)?;
+        assert_eq!(
+            key.xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+        );
+        test_sign(&mut psbt_to_sign, &psbt2, &key.xprv)?;
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.signed.json");
         let (_, psbt_complete, psbt_signed_complete) = extract_psbt(bytes)?;

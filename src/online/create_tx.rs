@@ -2,6 +2,7 @@ use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
+use serde_json::{to_value, Value};
 use std::collections::HashMap;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -75,7 +76,7 @@ impl FromStr for AddressAmount {
 }
 
 impl Wallet {
-    pub fn create_tx(&self, opt: &CreateTxOptions) -> Result<()> {
+    pub fn create_tx(&self, opt: &CreateTxOptions) -> Result<Value> {
         opt.validate()?;
         let outputs = opt.recipients_as_outputs();
         debug!("{:?}", outputs);
@@ -84,21 +85,22 @@ impl Wallet {
 
         let mut options: WalletCreateFundedPsbtOptions = Default::default();
         options.include_watching = Some(true);
-        options.change_address = Some(self.get_address(None, true)?);
-        let b = self.client.wallet_create_funded_psbt(
+        options.change_address = Some(self.get_address(None, true)?.address);
+        let result = self.client.wallet_create_funded_psbt(
             &inputs,
             &outputs,
             None,
             Some(options),
             Some(true),
         )?;
-        info!("wallet_create_funded_psbt {:#?}", b);
+        info!("wallet_create_funded_psbt {:#?}", result);
 
         // TODO check if change address is -1 decrease change index? also for any error of wallet_create_funded_psbt
         // TODO check with listreceivedbyaddress if address has been already used
 
-        save_psbt(b)?;
+        let psbt_file = save_psbt(&result)?;
+        let create_tx = CreateTxOutput { result, psbt_file };
 
-        Ok(())
+        Ok(to_value(create_tx)?)
     }
 }

@@ -1,7 +1,7 @@
 use crate::*;
-use bitcoin::Address;
 use bitcoincore_rpc::RpcApi;
 use log::info;
+use serde_json::{to_value, Value};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -12,37 +12,42 @@ pub struct GetAddressOptions {
 }
 
 impl Wallet {
-    pub fn get_address(&self, cmd_index: Option<u32>, is_change: bool) -> Result<Address> {
-        let (wallet, mut index_json) = self.context.load_wallet_and_index()?;
+    pub fn get_address(&self, cmd_index: Option<u32>, is_change: bool) -> Result<GetAddressOutput> {
+        let (wallet, mut indexes) = self.context.load_wallet_and_index()?;
 
         let (index, descriptor) = if is_change {
-            (index_json.change, wallet.change_descriptor)
+            (indexes.change, wallet.descriptor_change)
         } else {
             match cmd_index {
-                Some(index) => (index, wallet.main_descriptor),
-                None => (index_json.main, wallet.main_descriptor),
+                Some(index) => (index, wallet.descriptor_main),
+                None => (indexes.main, wallet.descriptor_main),
             }
         };
         let address_type = if is_change { "change" } else { "external" };
 
         info!("Creating {} address at index {}", address_type, index);
+
         let addresses = self
             .client
             .derive_addresses(&descriptor, Some([index, index]))?;
-        let address = &addresses[0];
+        //TODO derive it twice? You know bitflips
+        let address = addresses.first().ok_or_else(fn_err("no address"))?.clone();
         if address.network != self.context.network {
             return Err("address returned is not on the same network as given".into());
         }
         info!("{}", address);
 
         if is_change {
-            index_json.change += 1;
-            self.context.save_index(&index_json)?;
+            indexes.change += 1;
+            self.context.save_index(&indexes)?;
         } else if cmd_index.is_none() {
-            index_json.main += 1;
-            self.context.save_index(&index_json)?;
+            indexes.main += 1;
+            self.context.save_index(&indexes)?;
         }
+        Ok(GetAddressOutput { address, indexes })
+    }
 
-        Ok(address.clone())
+    pub fn get_address_value(&self, cmd_index: Option<u32>, is_change: bool) -> Result<Value> {
+        Ok(to_value(self.get_address(cmd_index, is_change)?)?)
     }
 }

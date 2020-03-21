@@ -2,6 +2,7 @@ use crate::*;
 use bitcoin::Network;
 use bitcoincore_rpc::RpcApi;
 use log::info;
+use serde_json::{to_value, Value};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -35,8 +36,13 @@ impl CreateWalletOptions {
 
         let xpubs = read_xpubs_files(&self.xpubs)?;
         for xpub in xpubs.iter() {
-            if network != xpub.network {
-                return err("detected xpub of another network");
+            if !(network == xpub.network
+                || (network == Network::Regtest && xpub.network == Network::Testnet))
+            {
+                return err(&format!(
+                    "detected xpub of another network (cmd:{}) (xpub:{})",
+                    network, xpub.network
+                ));
             }
 
             if xpubs.iter().filter(|xpub2| *xpub2 == xpub).count() > 1 {
@@ -49,7 +55,7 @@ impl CreateWalletOptions {
 }
 
 impl Wallet {
-    pub fn create(&self, daemon_opts: &DaemonOpts, opt: &CreateWalletOptions) -> Result<()> {
+    pub fn create(&self, daemon_opts: &DaemonOpts, opt: &CreateWalletOptions) -> Result<Value> {
         opt.validate(self.context.network)?;
 
         let xpubs = read_xpubs_files(&opt.xpubs)?;
@@ -64,12 +70,12 @@ impl Wallet {
             let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
             descriptors.push(descriptor);
         }
-        dbg!(&descriptors);
+        //dbg!(&descriptors);
 
-        let main_descriptor = self.client.get_descriptor_info(&descriptors[0])?.descriptor;
-        let change_descriptor = self.client.get_descriptor_info(&descriptors[1])?.descriptor;
-        dbg!(&main_descriptor);
-        dbg!(&change_descriptor);
+        let descriptor_main = self.client.get_descriptor_info(&descriptors[0])?.descriptor;
+        let descriptor_change = self.client.get_descriptor_info(&descriptors[1])?.descriptor;
+        //dbg!(&main_descriptor);
+        //dbg!(&change_descriptor);
 
         self.client
             .create_wallet(&self.context.wallet_name, Some(true))?;
@@ -80,10 +86,10 @@ impl Wallet {
         multi_request.keypool = Some(true);
         multi_request.watchonly = Some(true);
         let mut main = multi_request.clone();
-        main.descriptor = Some(&main_descriptor);
+        main.descriptor = Some(&descriptor_main);
         main.internal = Some(false);
         let mut change = multi_request.clone();
-        change.descriptor = Some(&change_descriptor);
+        change.descriptor = Some(&descriptor_change);
         change.internal = Some(true);
 
         let multi_options = ImportMultiOptions {
@@ -97,18 +103,23 @@ impl Wallet {
 
         let wallet = WalletJson {
             name: self.context.wallet_name.to_string(),
-            main_descriptor,
-            change_descriptor,
+            descriptor_main,
+            descriptor_change,
             daemon_opts: daemon_opts.clone(),
         };
-        let indexes = WalletIndexesJson {
+        let indexes = WalletIndexes {
             main: 0u32,
             change: 0u32,
         };
 
-        self.context.save_wallet(&wallet)?;
+        let wallet_file = self.context.save_wallet(&wallet)?;
         self.context.save_index(&indexes)?;
 
-        Ok(())
+        let create_wallet = CreateWalletOutput {
+            wallet_file,
+            wallet,
+        };
+
+        Ok(to_value(&create_wallet)?)
     }
 }

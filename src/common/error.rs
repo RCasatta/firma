@@ -1,5 +1,15 @@
+use crate::ErrorJson;
+use serde_json::Value;
+
 #[derive(Debug)]
 pub struct Error(pub String);
+
+impl Error {
+    pub fn to_json(self) -> Result<Value, Error> {
+        let value = ErrorJson { error: self.0 };
+        Ok(serde_json::to_value(&value)?)
+    }
+}
 
 pub fn err<R>(str: &str) -> Result<R, Error> {
     Err(Error(str.into()))
@@ -43,3 +53,5 @@ impl_error!(bitcoin::util::key::Error);
 impl_error!(bitcoin::secp256k1::Error);
 impl_error!(bitcoin::util::psbt::Error);
 impl_error!(bitcoin::util::address::Error);
+impl_error!(hex::FromHexError);
+impl_error!(std::env::VarError);

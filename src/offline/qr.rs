@@ -23,7 +23,7 @@ pub struct QrOptions {
     file: PathBuf,
 }
 
-pub fn show(opt: &QrOptions) -> Result<()> {
+pub fn show(opt: &QrOptions) -> Result<Value> {
     let json = fs::read_to_string(&opt.file)?;
     let initial_json: Value = serde_json::from_str(&json)?;
 
@@ -41,7 +41,7 @@ pub fn show(opt: &QrOptions) -> Result<()> {
 
     print_qr(&string, opt.reverse)?;
 
-    Ok(())
+    Ok("".into())
 }
 
 fn print_qr(value: &str, inverted: bool) -> Result<()> {

@@ -4,10 +4,10 @@ use bitcoin::Network;
 use bitcoincore_rpc::json::*;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use firma::*;
-use log::{debug, error, info};
+use log::{debug, info};
+use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use structopt::StructOpt;
 
 mod balance;
@@ -74,13 +74,17 @@ impl Wallet {
     }
 }
 
-fn main() {
-    if let Err(error) = start() {
-        error!("{}", error.0);
-    }
+fn main() -> Result<()> {
+    let output = match start() {
+        Ok(output) => output,
+        Err(e) => e.to_json()?,
+    };
+
+    println!("{}", serde_json::to_string_pretty(&output)?);
+    Ok(())
 }
 
-fn start() -> Result<()> {
+fn start() -> Result<Value> {
     let cmd = FirmaOnlineCommands::from_args();
     init_logger(cmd.verbose);
     debug!("{:?}", cmd);
@@ -99,24 +103,29 @@ fn start() -> Result<()> {
         Auth::CookieFile(daemon_opts.cookie_file.clone()),
         cmd.context.clone(),
     )?;
-    if let CreateWallet(_) = &cmd.subcommand {
-    } else {
+    if !matches!(cmd.subcommand, CreateWallet(_)) {
         wallet.load_if_unloaded(&cmd.context.wallet_name)?;
     }
 
     let result = wallet.client.get_blockchain_info()?;
     debug!("{:?}", result);
 
-    match result.chain.as_ref() {
-        "main" => assert_eq!(Network::Bitcoin, cmd.context.network),
-        "test" => assert_eq!(Network::Testnet, cmd.context.network),
-        "regtest" => assert_eq!(Network::Regtest, cmd.context.network),
-        _ => return Err("Unrecognized network".into()),
+    let node_network = match result.chain.as_ref() {
+        "main" => Network::Bitcoin,
+        "test" => Network::Testnet,
+        "regtest" => Network::Regtest,
+        _ => return err("Unrecognized network"),
     };
+    if node_network != cmd.context.network {
+        return err(&format!(
+            "network of the bitcoin node {} does not match used one {}",
+            node_network, cmd.context.network
+        ));
+    }
 
-    match cmd.subcommand {
+    let output = match cmd.subcommand {
         CreateWallet(ref opt) => wallet.create(&daemon_opts, opt)?,
-        GetAddress(ref opt) => wallet.get_address(opt.index, false).map(|_| ())?,
+        GetAddress(ref opt) => wallet.get_address_value(opt.index, false)?,
         CreateTx(ref opt) => wallet.create_tx(opt)?,
         SendTx(ref opt) => wallet.send_tx(opt)?,
         Balance => wallet.balance()?,
@@ -124,18 +133,18 @@ fn start() -> Result<()> {
         ListCoins => wallet.list_coins()?,
     };
 
-    Ok(())
+    Ok(output)
 }
 
-fn save_psbt(psbt: WalletCreateFundedPsbtResult) -> Result<()> {
+fn save_psbt(psbt: &WalletCreateFundedPsbtResult) -> Result<PathBuf> {
     let mut count = 0;
     loop {
         let filename = format!("psbt-{}.json", count);
         let path = Path::new(&filename);
         if !path.exists() {
             info!("Saving psbt in {:?}", path);
-            fs::write(path, serde_json::to_string_pretty(&psbt)?)?;
-            return Ok(());
+            fs::write(path, serde_json::to_string_pretty(psbt)?)?;
+            return Ok(path.to_path_buf());
         }
         count += 1;
     }
@@ -145,8 +154,8 @@ fn read_xpubs_files(paths: &[PathBuf]) -> Result<Vec<ExtendedPubKey>> {
     let mut xpubs = vec![];
     for xpub_path in paths.iter() {
         let content = fs::read(xpub_path)?;
-        let json: PublicMasterKeyJson = serde_json::from_slice(&content)?;
-        xpubs.push(ExtendedPubKey::from_str(&json.xpub)?);
+        let json: PublicMasterKey = serde_json::from_slice(&content)?;
+        xpubs.push(json.xpub.clone());
     }
     Ok(xpubs)
 }

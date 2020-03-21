@@ -4,6 +4,7 @@ use bitcoin::Network;
 use firma::*;
 use log::{debug, info};
 use num_bigint::BigUint;
+use serde_json::{to_value, Value};
 use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -32,7 +33,7 @@ enum Bits {
     _256,
 }
 
-pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<()> {
+pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value> {
     debug!("{:?}", opt);
     let (private_file, public_file) = generate_key_filenames(datadir, network, &opt.key_name)?;
 
@@ -55,9 +56,9 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<()> {
     info!("{}", serde_json::to_string_pretty(&master_key)?);
 
     save_private(&master_key, &private_file)?;
-    save_public(&master_key.into(), &public_file)?;
+    save_public(&master_key.clone().into(), &public_file)?;
 
-    Ok(())
+    Ok(to_value(&master_key)?)
 }
 
 fn ask_launches(count: u32, faces: u32) -> Result<Vec<u32>> {
@@ -92,18 +93,18 @@ fn required_dice_launches(faces: u32, max: &BigUint) -> u32 {
     }
 }
 
-fn calculate_key(launches: &[u32], faces: u32, network: Network) -> Result<PrivateMasterKeyJson> {
+fn calculate_key(launches: &[u32], faces: u32, network: Network) -> Result<PrivateMasterKey> {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let secp = Secp256k1::signing_only();
 
-    let xpriv = ExtendedPrivKey::new_master(network, &sec)?;
-    let xpub = ExtendedPubKey::from_private(&secp, &xpriv);
+    let xprv = ExtendedPrivKey::new_master(network, &sec)?;
+    let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
-    Ok(PrivateMasterKeyJson {
-        xpriv: xpriv.to_string(),
-        xpub: xpub.to_string(),
+    Ok(PrivateMasterKey {
+        xprv,
+        xpub,
         faces: Some(faces),
         launches: Some(format!("{:?}", launches)), // ugly, using a string to avoid going newline for every element
     })
@@ -177,7 +178,7 @@ mod tests {
     use crate::dice::*;
 
     use bitcoin::Network;
-    use firma::PrivateMasterKeyJson;
+    use firma::PrivateMasterKey;
     use num_bigint::BigUint;
 
     #[test]
@@ -230,11 +231,11 @@ mod tests {
         // priv1.key and priv2.key taken from https://github.com/tyler-smith/go-bip32/blob/master/bip32_test.go
 
         let bytes = include_bytes!("../../test_data/dice/priv1.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        let expected: PrivateMasterKey = serde_json::from_slice(bytes)?;
         assert_eq!(calculate_key(&vec![2], 2, Network::Bitcoin)?, expected);
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes)?;
+        let expected: PrivateMasterKey = serde_json::from_slice(bytes)?;
         assert_eq!(
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9, 10, 1], 256, Network::Bitcoin)?,
             expected

@@ -1,6 +1,9 @@
 use crate::*;
+use bitcoin::consensus::deserialize;
+use bitcoin::Transaction;
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
+use serde_json::{to_value, Value};
 
 #[derive(structopt::StructOpt, Debug)]
 pub struct SendTxOptions {
@@ -23,7 +26,7 @@ impl SendTxOptions {
 }
 
 impl Wallet {
-    pub fn send_tx(&self, opt: &SendTxOptions) -> Result<()> {
+    pub fn send_tx(&self, opt: &SendTxOptions) -> Result<Value> {
         opt.validate()?;
         let mut psbts = vec![];
         for psbt_file in opt.psbts.iter() {
@@ -38,13 +41,22 @@ impl Wallet {
 
         let hex = finalized.hex.ok_or_else(fn_err("hex is empty"))?;
 
+        let mut broadcasted = false;
         if opt.broadcast {
-            let hash = self.client.send_raw_transaction(hex)?;
+            let hash = self.client.send_raw_transaction(hex.clone())?;
+            broadcasted = true;
             info!("{:?}", hash);
         } else {
-            info!("{}", hex);
+            info!("{}", hex.clone());
         }
 
-        Ok(())
+        let txid = deserialize::<Transaction>(&hex::decode(&hex)?)?.txid();
+        let send_tx = SendTxOutput {
+            hex,
+            txid,
+            broadcasted,
+        };
+
+        Ok(to_value(send_tx)?)
     }
 }

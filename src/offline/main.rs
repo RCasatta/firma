@@ -5,7 +5,7 @@ use crate::random::RandomOptions;
 use crate::sign::SignOptions;
 use bitcoin::Network;
 use firma::{init_logger, Result};
-use log::{debug, error};
+use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
@@ -31,6 +31,7 @@ struct FirmaOfflineCommands {
     #[structopt(short, long, default_value = "~/.firma/")]
     firma_datadir: String,
 
+    //TODO ContextOffline with network, json, firma_datadir
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
     subcommand: FirmaOfflineSubcommands,
 }
@@ -67,9 +68,12 @@ fn main() -> Result<()> {
         Print(opt) => print::start(&opt, cmd.network),
     };
 
-    if let Err(error) = result {
-        error!("{}", error.0);
-    }
+    let value = match result {
+        Ok(value) => value,
+        Err(e) => e.to_json()?,
+    };
+
+    println!("{}", serde_json::to_string_pretty(&value)?);
 
     Ok(())
 }

@@ -2,11 +2,11 @@ use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
 use bitcoin::consensus::deserialize;
+use bitcoin::util::key;
 use bitcoin::{Network, Script};
 use log::{info, Level, LevelFilter, Metadata, Record};
 use std::fs;
 use std::path::{Path, PathBuf};
-use bitcoin::util::key;
 
 pub mod cmd;
 pub mod error;
@@ -35,8 +35,10 @@ impl log::Log for SimpleLogger {
 }
 
 pub fn init_logger(verbose: u8) {
+    //TODO write log message to file
     let level = match verbose {
-        0 => LevelFilter::Info,
+        0 => LevelFilter::Off,
+        1 => LevelFilter::Info,
         _ => LevelFilter::Debug,
     };
     log::set_logger(&LOGGER)
@@ -44,9 +46,9 @@ pub fn init_logger(verbose: u8) {
         .expect("cannot initialize logging");
 }
 
-impl From<PrivateMasterKeyJson> for PublicMasterKeyJson {
-    fn from(private: PrivateMasterKeyJson) -> Self {
-        PublicMasterKeyJson { xpub: private.xpub }
+impl From<PrivateMasterKey> for PublicMasterKey {
+    fn from(private: PrivateMasterKey) -> Self {
+        PublicMasterKey { xpub: private.xpub }
     }
 }
 
@@ -74,11 +76,11 @@ fn save(value: String, output: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn save_public(public_key: &PublicMasterKeyJson, output: &PathBuf) -> Result<()> {
+pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()> {
     save(serde_json::to_string_pretty(public_key)?, output)
 }
 
-pub fn save_private(private_key: &PrivateMasterKeyJson, output: &PathBuf) -> Result<()> {
+pub fn save_private(private_key: &PrivateMasterKey, output: &PathBuf) -> Result<()> {
     save(serde_json::to_string_pretty(private_key)?, output)
 }
 
