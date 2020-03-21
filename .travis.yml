@@ -5,18 +5,12 @@ rust:
 
 cache:
   cargo: true
-  directories:
-    - $TRAVIS_BUILD_DIR/bitcoin/
 
 env:
-  - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin/bitcoin-0.19.1/bin
+  - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
 
-before_install: |
-  if ! [ -f ./bitcoin/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz ]; then
-    curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz -o ./bitcoin/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz;
-    cd bitcoin
-    cat bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | gzip -d | tar -xv
-  fi
+before_install:
+  - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
 
 script:
   - cargo build --verbose --all
