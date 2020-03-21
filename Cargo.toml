@@ -9,7 +9,8 @@ hex = "0.4.0"
 bech32 = "0.7.1"
 bitcoin = "0.23.0"
 #bitcoincore-rpc = "0.9.1"
-bitcoincore-rpc = { path = "../rust-bitcoincore-rpc/client" }
+#bitcoincore-rpc = { path = "../rust-bitcoincore-rpc/client" }
+bitcoincore-rpc = { git = "https://github.com/RCasatta/rust-bitcoincore-rpc", rev="8706aa8602d08a0aabdea532d4fc7c2bd174cd88"}
 base64 = "0.11.0"
 num-bigint = "0.2.3"
 qrcode = "0.11.0"
