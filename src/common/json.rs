@@ -3,6 +3,7 @@ use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::{Address, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -42,6 +43,13 @@ pub struct WalletJson {
     pub descriptor_main: String,
     pub descriptor_change: String,
     pub daemon_opts: DaemonOpts,
+    pub stat: KindStat,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct KindStat {
+    pub kind: String,
+    pub diffusion: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -73,6 +81,7 @@ pub struct SendTxOutput {
 pub struct CreateTxOutput {
     pub psbt_file: PathBuf,
     pub result: WalletCreateFundedPsbtResult,
+    pub address_reused: HashSet<Address>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

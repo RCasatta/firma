@@ -38,5 +38,5 @@ pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<Val
         public_file: public_key_file,
         private_file: private_key_file,
     };
-    Ok(to_value(&output)?) // TODO save also file names so tests could pick from there?
+    Ok(to_value(&output)?)
 }

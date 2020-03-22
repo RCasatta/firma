@@ -52,7 +52,6 @@ fn integration_test() -> Result<()> {
 
     // fund the bitcoind default wallet
     let address = client_default.get_new_address(None, None).unwrap();
-    println!("core address {}", address);
     client_default.generate_to_address(101, &address).unwrap();
     let balance = client_default.get_balance(None, None).unwrap();
     assert!(balance.as_btc() > 49.9);
@@ -120,7 +119,6 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of2
         .offline_sign(&psbt_files[0], &r1.private_file.to_str().unwrap())
         .unwrap(); //TODO test passing public key
-    println!("{:#?}", sign_a);
     assert!(sign_a.info.iter().any(|msg| msg.contains("#Address_reuse")));
     let sign_b = firma_2of2
         .offline_sign(&psbt_files[1], &r2.private_file.to_str().unwrap())
@@ -139,11 +137,11 @@ fn integration_test() -> Result<()> {
     let value_sent = 1_000_000;
     let recipients = vec![(address_2of2.clone(), value_sent)];
     let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
+    assert!(create_tx.address_reused.contains(&address_2of2));
     let psbt_files = cp(&create_tx.psbt_file, 2).unwrap();
     let sign_a = firma_2of2
         .offline_sign(&psbt_files[0], &r1.private_file.to_str().unwrap())
         .unwrap();
-    println!("{:#?}", sign_a);
     assert!(sign_a.info.iter().any(|msg| msg.contains("#Round_numbers")));
     assert!(!sign_a
         .info
@@ -158,7 +156,6 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[0])
         .unwrap(); //TODO passing xpub file gives misleading error
-    println!("{:#?}", sign_a);
     assert!(sign_a
         .info
         .iter()
@@ -184,7 +181,6 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[1])
         .unwrap();
-    println!("{:#?}", sign_a);
     let sign_b = firma_2of3
         .offline_sign(&psbt_files[1], &xprvs_2of3[2])
         .unwrap();
@@ -206,7 +202,6 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[0])
         .unwrap();
-    println!("{:#?}", sign_a);
     let sign_b = firma_2of3
         .offline_sign(&psbt_files[1], &xprvs_2of3[2])
         .unwrap();
@@ -285,7 +280,9 @@ impl FirmaCommand {
             args.push(xpub);
         }
         let value = self.online("create-wallet", args).unwrap();
-        Ok(from_value(value).unwrap())
+        let output = from_value(value).unwrap();
+        println!("{:#?}", output);
+        Ok(output)
     }
 
     fn online_get_address(&self) -> Result<GetAddressOutput> {
@@ -303,8 +300,10 @@ impl FirmaCommand {
             args.push(format!("{}:{}", recipient.0, recipient.1));
         }
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+        let output = from_value(self.online("create-tx", args).unwrap()).unwrap();
+        println!("{:#?}", output);
 
-        Ok(from_value(self.online("create-tx", args).unwrap()).unwrap())
+        Ok(output)
     }
 
     fn online_send_tx(&self, psbts: Vec<&str>) -> Result<SendTxOutput> {
@@ -344,14 +343,13 @@ impl FirmaCommand {
     }
 
     pub fn offline_sign(&self, psbt_file: &str, key_file: &str) -> Result<PsbtPrettyPrint> {
-        Ok(from_value(
-            self.offline(
-                "sign",
-                vec![psbt_file, "--key", key_file, "--total-derivations", "20"],
-            )
-            .unwrap(),
-        )
-        .unwrap())
+        let result = self.offline(
+            "sign",
+            vec![psbt_file, "--key", key_file, "--total-derivations", "20"],
+        );
+        let output = from_value(result.unwrap()).unwrap();
+        println!("{:#?}", output);
+        Ok(output)
     }
 }
 

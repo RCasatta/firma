@@ -3,7 +3,7 @@ use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
 use serde_json::{to_value, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -31,6 +31,7 @@ impl CreateTxOptions {
         if self.recipients.is_empty() {
             return err("At least one recipient is mandatory (--recipient)");
         }
+
         Ok(())
     }
 
@@ -83,8 +84,6 @@ impl Wallet {
         let inputs = opt.coins_as_inputs();
         debug!("{:?}", inputs);
 
-        // TODO check with listreceivedbyaddress if address has been already used
-
         let mut options: WalletCreateFundedPsbtOptions = Default::default();
         options.include_watching = Some(true);
         options.change_address = Some(self.get_address(None, true)?.address);
@@ -100,7 +99,27 @@ impl Wallet {
         // TODO check if change address is -1 decrease change index? also for any error of wallet_create_funded_psbt
 
         let psbt_file = save_psbt(&result, &self.context.firma_datadir)?;
-        let create_tx = CreateTxOutput { result, psbt_file };
+
+        let transactions = self
+            .client
+            .list_transactions(None, Some(1000), None, Some(true))
+            .unwrap();
+        let mut address_reused = HashSet::new();
+        for recipient in opt.recipients.iter() {
+            for tx in transactions.iter() {
+                if tx.detail.address == recipient.address
+                    && tx.detail.category == GetTransactionResultDetailCategory::Send
+                {
+                    address_reused.insert(recipient.address.clone());
+                }
+            }
+        }
+
+        let create_tx = CreateTxOutput {
+            result,
+            psbt_file,
+            address_reused,
+        };
 
         Ok(to_value(create_tx)?)
     }

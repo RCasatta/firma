@@ -41,6 +41,7 @@ struct PSBTSigner {
     pub psbt: PSBT,
     xprv: ExtendedPrivKey,
     secp: Secp256k1<SignOnly>,
+    network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
     derivations: u32,
 }
 
@@ -58,16 +59,22 @@ impl PSBTSigner {
             return err("Master key network is different from the network passed through cli");
         }
 
-        PSBTSigner::new(psbt, xprv, opt.total_derivations)
+        PSBTSigner::new(psbt, xprv, opt.total_derivations, network)
     }
 
-    pub fn new(psbt: PSBT, xprv: ExtendedPrivKey, derivations: u32) -> Result<Self> {
+    pub fn new(
+        psbt: PSBT,
+        xprv: ExtendedPrivKey,
+        derivations: u32,
+        network: Network,
+    ) -> Result<Self> {
         let secp = Secp256k1::signing_only();
         Ok(PSBTSigner {
             psbt,
             xprv,
             secp,
             derivations,
+            network,
         })
     }
 
@@ -261,7 +268,7 @@ impl PSBTSigner {
     }
 
     fn pretty_print(&self) -> Result<PsbtPrettyPrint> {
-        pretty_print(&self.psbt, self.xprv.network)
+        pretty_print(&self.psbt, self.network)
     }
 }
 
@@ -306,7 +313,8 @@ mod tests {
         psbt_signed: &PSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign.clone(), xprv.clone(), 10)?;
+        let mut psbt_signer =
+            PSBTSigner::new(psbt_to_sign.clone(), xprv.clone(), 10, xprv.network)?;
         psbt_signer.sign()?;
         assert_eq!(&psbt_signer.psbt, psbt_signed);
         Ok(())

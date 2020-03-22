@@ -100,12 +100,23 @@ impl Wallet {
             .client
             .import_multi(&[main, change], Some(&multi_options));
         info!("import_multi_result {:?}", import_multi_result);
+        let kind = format!("{:02}of{:02}", opt.r, opt.xpubs.len());
+        let position = LABELS.iter().position(|el| el == &&kind).unwrap_or(10); // 10 is the other class
+        let total: f64 = VALUES.iter().sum::<u64>() as f64;
+        let percentage: Vec<f64> = VALUES.iter().map(|v| (*v as f64) / total).collect();
+
+        let diffusion = match position {
+            10 => format!("less than {:.6}", percentage[position]),
+            _ => format!("{:.6}", percentage[position]),
+        };
+        let stat = KindStat { kind, diffusion };
 
         let wallet = WalletJson {
             name: self.context.wallet_name.to_string(),
             descriptor_main,
             descriptor_change,
             daemon_opts: daemon_opts.clone(),
+            stat,
         };
         let indexes = WalletIndexes {
             main: 0u32,
@@ -123,3 +134,12 @@ impl Wallet {
         Ok(to_value(&create_wallet)?)
     }
 }
+
+// From https://opreturn.org/segwit-multisig/ # 1 march 2020
+const LABELS: [&str; 11] = [
+    "01of01", "01of02", "01of04", "02of02", "02of03", "02of04", "02of05", "03of04", "03of05",
+    "04of05", "other",
+];
+const VALUES: [u64; 11] = [
+    2770896, 128768, 22264, 16476433, 23682698, 286534, 1783, 67716, 2760, 38641, 1912,
+];

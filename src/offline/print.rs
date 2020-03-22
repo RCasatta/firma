@@ -146,15 +146,15 @@ fn biggest_dividing_pow(num: u64) -> u8 {
     }
 }
 
+const SCRIPT_TYPE_FN: [fn(&Script) -> bool; 5] = [
+    Script::is_p2pk,
+    Script::is_p2pkh,
+    Script::is_p2sh,
+    Script::is_v0_p2wpkh,
+    Script::is_v0_p2wsh,
+];
 fn script_type(script: &Script) -> Option<usize> {
-    let script_type_fn = [
-        Script::is_p2pk,
-        Script::is_p2pkh,
-        Script::is_p2sh,
-        Script::is_v0_p2wpkh,
-        Script::is_v0_p2wsh,
-    ];
-    for (i, f) in script_type_fn.iter().enumerate() {
+    for (i, f) in SCRIPT_TYPE_FN.iter().enumerate() {
         if f(script) {
             return Some(i);
         }
