@@ -60,6 +60,13 @@ impl Context {
         Ok(())
     }
 
+    pub fn decrease_change_index(&self) -> Result<()> {
+        let (_, mut indexes) = self.load_wallet_and_index()?;
+        indexes.change -= 1;
+        self.save_index(&indexes)?;
+        Ok(())
+    }
+
     pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexes)> {
         let wallet_path = self.path_for("descriptor")?;
         let wallet = fs::read(wallet_path)?;

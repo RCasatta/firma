@@ -4,6 +4,7 @@ use bitcoincore_rpc::{Auth, Client, RpcApi};
 use firma::*;
 use rand::{self, Rng};
 use serde_json::{from_value, Value};
+use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
@@ -19,11 +20,13 @@ fn integration_test() -> Result<()> {
     let cookie_file = bitcoin_work_dir.path().join("regtest").join(".cookie");
     let cookie_file_str = format!("{}", cookie_file.display());
     let rpc_port = 18242u16;
-    let node_url = format!("http://127.0.0.1:{}", rpc_port);
-    let node_url_default = format!("http://127.0.0.1:{}/wallet/default", rpc_port);
+    let socket = format!("127.0.0.1:{}", rpc_port);
+    let node_url = format!("http://{}", socket);
+    let node_url_default = format!("http://{}/wallet/default", socket);
 
-    // TODO should check bitcoind is not already running
-    // launch bitcoin
+    let test = TcpStream::connect(&socket);
+    assert!(test.is_err()); // check the port is not open with a previous instance of bitcoind
+
     let mut bitcoind = Command::new(&format!("{}/bitcoind", bitcoin_exe_dir))
         .arg(format!("-datadir={}", &bitcoin_work_dir.path().display()))
         .arg(format!("-rpcport={}", rpc_port))

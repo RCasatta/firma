@@ -80,7 +80,7 @@ pub struct SendTxOutput {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct CreateTxOutput {
     pub psbt_file: PathBuf,
-    pub result: WalletCreateFundedPsbtResult,
+    pub funded_psbt: WalletCreateFundedPsbtResult,
     pub address_reused: HashSet<Address>,
 }
 

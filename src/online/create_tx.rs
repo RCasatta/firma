@@ -93,12 +93,24 @@ impl Wallet {
             None,
             Some(options),
             Some(true),
-        )?;
+        );
         info!("wallet_create_funded_psbt {:#?}", result);
 
-        // TODO check if change address is -1 decrease change index? also for any error of wallet_create_funded_psbt
+        // decreasing auto-incremented change index if error or change not used
+        let funded_psbt = match result {
+            Ok(value) => {
+                if value.change_position == -1 {
+                    self.context.decrease_change_index()?;
+                }
+                value
+            },
+            Err(e) =>  {
+                self.context.decrease_change_index()?;
+                return err(&format!("error creating psbt ({:?})", e) );
+            }
+        };
 
-        let psbt_file = save_psbt(&result, &self.context.firma_datadir)?;
+        let psbt_file = save_psbt(&funded_psbt, &self.context.firma_datadir)?;
 
         let transactions = self
             .client
@@ -116,7 +128,7 @@ impl Wallet {
         }
 
         let create_tx = CreateTxOutput {
-            result,
+            funded_psbt,
             psbt_file,
             address_reused,
         };
