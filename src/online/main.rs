@@ -7,7 +7,7 @@ use firma::*;
 use log::{debug, info};
 use serde_json::Value;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 mod balance;
@@ -140,7 +140,7 @@ fn save_psbt(psbt: &WalletCreateFundedPsbtResult, datadir: &str) -> Result<PathB
     let mut count = 0;
     loop {
         let slash = if datadir.ends_with('/') { "" } else { "/" };
-        let path = expand_tilde( format!("{}{}psbt-{}.json", datadir, slash, count))?;
+        let path = expand_tilde(format!("{}{}psbt-{}.json", datadir, slash, count))?;
         if !path.exists() {
             info!("Saving psbt in {:?}", path);
             fs::write(&path, serde_json::to_string_pretty(psbt)?)?;

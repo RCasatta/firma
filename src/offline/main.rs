@@ -5,7 +5,7 @@ use crate::random::RandomOptions;
 use crate::sign::SignOptions;
 use bitcoin::Network;
 use firma::{init_logger, Result};
-use log::{debug, Level};
+use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
     let cmd = FirmaOfflineCommands::from_args();
 
     if matches!(cmd.subcommand, Dice(_)) {
-        init_logger(1);  // TODO fix logging...
+        init_logger(1); // TODO fix logging...
     } else {
         init_logger(cmd.verbose);
     }

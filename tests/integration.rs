@@ -9,7 +9,6 @@ use std::process::Command;
 use std::time::Duration;
 use std::{env, thread};
 use tempdir::TempDir;
-use std::str::from_utf8;
 
 #[test]
 fn integration_test() -> Result<()> {
@@ -53,6 +52,7 @@ fn integration_test() -> Result<()> {
 
     // fund the bitcoind default wallet
     let address = client_default.get_new_address(None, None).unwrap();
+    println!("core address {}", address);
     client_default.generate_to_address(101, &address).unwrap();
     let balance = client_default.get_balance(None, None).unwrap();
     assert!(balance.as_btc() > 49.9);
@@ -112,14 +112,16 @@ fn integration_test() -> Result<()> {
     let balance_2of3 = firma_2of3.online_balance().unwrap();
     assert_eq!(fund_2of3, balance_2of3.satoshi);
 
-    // create a tx from firma 2of2 wallet back to bitcoind
+    // create a tx from firma 2of2 wallet and send back to myself (detecting script reuse)
     let value_sent = rng.gen_range(1_000, 1_000_000);
-    let recipients = vec![(address.clone(), value_sent)];
+    let recipients = vec![(address_2of2.clone(), value_sent)];
     let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
     let psbt_files = cp(&create_tx.psbt_file, 2).unwrap();
     let sign_a = firma_2of2
         .offline_sign(&psbt_files[0], &r1.private_file.to_str().unwrap())
         .unwrap(); //TODO test passing public key
+    println!("{:#?}", sign_a);
+    assert!(sign_a.info.iter().any(|msg| msg.contains("#Address_reuse")));
     let sign_b = firma_2of2
         .offline_sign(&psbt_files[1], &r2.private_file.to_str().unwrap())
         .unwrap();
@@ -130,10 +132,25 @@ fn integration_test() -> Result<()> {
     assert!(sent_tx.broadcasted);
     client_default.generate_to_address(1, &address).unwrap();
     let balance_2of2 = firma_2of2.online_balance().unwrap();
-    let expected = fund_2of2 - value_sent - sign_a.fee.absolute;
+    let expected = fund_2of2 - sign_a.fee.absolute; // since sending to myself deduct just the fee
     assert_eq!(expected, balance_2of2.satoshi);
 
-    // create a tx from firma 2of3 wallet back to bitcoind with keys 0 and 1
+    // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysys
+    let value_sent = 1_000_000;
+    let recipients = vec![(address_2of2.clone(), value_sent)];
+    let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
+    let psbt_files = cp(&create_tx.psbt_file, 2).unwrap();
+    let sign_a = firma_2of2
+        .offline_sign(&psbt_files[0], &r1.private_file.to_str().unwrap())
+        .unwrap();
+    println!("{:#?}", sign_a);
+    assert!(sign_a.info.iter().any(|msg| msg.contains("#Round_numbers")));
+    assert!(!sign_a
+        .info
+        .iter()
+        .any(|msg| msg.contains("#Sending_to_a_different_script_type")));
+
+    // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 1
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
     let create_tx = firma_2of3.online_create_tx(recipients).unwrap();
@@ -141,6 +158,11 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[0])
         .unwrap(); //TODO passing xpub file gives misleading error
+    println!("{:#?}", sign_a);
+    assert!(sign_a
+        .info
+        .iter()
+        .any(|msg| msg.contains("#Sending_to_a_different_script_type"))); // core generates a different address type
     let sign_b = firma_2of3
         .offline_sign(&psbt_files[1], &xprvs_2of3[1])
         .unwrap();
@@ -154,7 +176,7 @@ fn integration_test() -> Result<()> {
     let expected = fund_2of3 - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3.satoshi);
 
-    // create a tx from firma 2of3 wallet back to bitcoind with keys 1 and 2
+    // create a tx from firma 2of3 wallet and send back to bitcoind with keys 1 and 2
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
     let create_tx = firma_2of3.online_create_tx(recipients).unwrap();
@@ -162,6 +184,7 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[1])
         .unwrap();
+    println!("{:#?}", sign_a);
     let sign_b = firma_2of3
         .offline_sign(&psbt_files[1], &xprvs_2of3[2])
         .unwrap();
@@ -175,7 +198,7 @@ fn integration_test() -> Result<()> {
     let expected = balance_2of3.satoshi - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3_2.satoshi);
 
-    // create a tx from firma 2of3 wallet back to bitcoind with keys 0 and 2
+    // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 2
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
     let create_tx = firma_2of3.online_create_tx(recipients).unwrap();
@@ -183,6 +206,7 @@ fn integration_test() -> Result<()> {
     let sign_a = firma_2of3
         .offline_sign(&psbt_files[0], &xprvs_2of3[0])
         .unwrap();
+    println!("{:#?}", sign_a);
     let sign_b = firma_2of3
         .offline_sign(&psbt_files[1], &xprvs_2of3[2])
         .unwrap();
@@ -321,8 +345,11 @@ impl FirmaCommand {
 
     pub fn offline_sign(&self, psbt_file: &str, key_file: &str) -> Result<PsbtPrettyPrint> {
         Ok(from_value(
-            self.offline("sign", vec![psbt_file, "--key", key_file])
-                .unwrap(),
+            self.offline(
+                "sign",
+                vec![psbt_file, "--key", key_file, "--total-derivations", "20"],
+            )
+            .unwrap(),
         )
         .unwrap())
     }
