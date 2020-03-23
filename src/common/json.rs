@@ -1,5 +1,5 @@
 use crate::DaemonOpts;
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::{Address, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
@@ -42,6 +42,7 @@ pub struct WalletJson {
     pub name: String,
     pub descriptor_main: String,
     pub descriptor_change: String,
+    pub fingerprints: HashSet<Fingerprint>,
     pub daemon_opts: DaemonOpts,
     pub stat: KindStat,
 }

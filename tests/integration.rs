@@ -68,10 +68,10 @@ fn integration_test() -> Result<()> {
         r1.public_file.to_str().unwrap(),
         r2.public_file.to_str().unwrap(),
     ];
-    let created_wallet = firma_2of2
+    let created_2of2_wallet = firma_2of2
         .online_create_wallet(&node_url, &cookie_file_str, 2, &xpubs)
         .unwrap();
-    assert_eq!(&created_wallet.wallet.name, &name_2of2);
+    assert_eq!(&created_2of2_wallet.wallet.name, &name_2of2);
 
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
@@ -88,10 +88,10 @@ fn integration_test() -> Result<()> {
         .iter()
         .map(|e| e.private_file.to_str().unwrap())
         .collect();
-    let created_wallet = firma_2of3
+    let created_2of3_wallet = firma_2of3
         .online_create_wallet(&node_url, &cookie_file_str, 2, &xpubs_2of3)
         .unwrap();
-    assert_eq!(&created_wallet.wallet.name, &name_2of3);
+    assert_eq!(&created_2of3_wallet.wallet.name, &name_2of3);
 
     // create address for firma 2of2
     let address_2of2 = firma_2of2.online_get_address().unwrap().address;
@@ -136,7 +136,7 @@ fn integration_test() -> Result<()> {
     let expected = fund_2of2 - sign_a.fee.absolute; // since sending to myself deduct just the fee
     assert_eq!(expected, balance_2of2.satoshi);
 
-    // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysys
+    // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysis
     let value_sent = 1_000_000;
     let recipients = vec![(address_2of2.clone(), value_sent)];
     let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
@@ -240,6 +240,14 @@ impl FirmaCommand {
             wallet_name: wallet_name.to_string(),
             work_dir,
         })
+    }
+
+    fn wallet_file(&self) -> String {
+        format!(
+            "{}/regtest/{}/descriptor.json",
+            self.work_dir.path().display(),
+            self.wallet_name
+        )
     }
 
     pub fn online(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
@@ -348,7 +356,15 @@ impl FirmaCommand {
     pub fn offline_sign(&self, psbt_file: &str, key_file: &str) -> Result<PsbtPrettyPrint> {
         let result = self.offline(
             "sign",
-            vec![psbt_file, "--key", key_file, "--total-derivations", "20"],
+            vec![
+                psbt_file,
+                "--key",
+                key_file,
+                "--total-derivations",
+                "20",
+                "--wallet-descriptor-file",
+                &self.wallet_file(),
+            ],
         );
         let output = from_value(result.unwrap()).unwrap();
         println!("{:#?}", output);

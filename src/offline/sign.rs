@@ -5,13 +5,13 @@ use bitcoin::consensus::serialize;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::Map;
 use bitcoin::{Network, Script, SigHashType};
 use firma::*;
 use log::{debug, info};
 use serde_json::{to_value, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -26,6 +26,10 @@ pub struct SignOptions {
     /// derivations to consider if psbt doesn't contain HD paths
     #[structopt(short, long, default_value = "1000")]
     total_derivations: u32,
+
+    /// File containing the wallet descriptor, show if outputs are mine.
+    #[structopt(short, long, parse(from_os_str))]
+    wallet_descriptor_file: PathBuf,
 
     /// PSBT json file
     psbt_file: PathBuf,
@@ -267,17 +271,18 @@ impl PSBTSigner {
         Ok(())
     }
 
-    fn pretty_print(&self) -> Result<PsbtPrettyPrint> {
-        pretty_print(&self.psbt, self.network)
+    fn pretty_print(&self, fingerprints: &HashSet<Fingerprint>) -> Result<PsbtPrettyPrint> {
+        pretty_print(&self.psbt, self.network, fingerprints)
     }
 }
 
 pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
+    let wallet = read_wallet(&opt.wallet_descriptor_file)?;
     let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
     debug!("{:#?}", psbt_signer);
 
     let sign_result = psbt_signer.sign()?;
-    let mut psbt_print = psbt_signer.pretty_print()?;
+    let mut psbt_print = psbt_signer.pretty_print(&wallet.fingerprints)?;
 
     if sign_result.added_paths {
         psbt_print.info.push("Added paths".to_string());

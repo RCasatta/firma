@@ -69,13 +69,21 @@ impl Context {
 
     pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexes)> {
         let wallet_path = self.path_for("descriptor")?;
-        let wallet = fs::read(wallet_path)?;
-        let wallet = serde_json::from_slice(&wallet)?;
+        let wallet = read_wallet(&wallet_path)?;
 
         let indexes_path = self.path_for("indexes")?;
-        let indexes = fs::read(indexes_path)?;
-        let indexes = serde_json::from_slice(&indexes)?;
+        let indexes = read_indexes(&indexes_path)?;
 
         Ok((wallet, indexes))
     }
+}
+
+pub fn read_wallet(path: &PathBuf) -> Result<WalletJson> {
+    let wallet = fs::read(path)?;
+    Ok(serde_json::from_slice(&wallet)?)
+}
+
+fn read_indexes(path: &PathBuf) -> Result<WalletIndexes> {
+    let indexes = fs::read(path)?;
+    Ok(serde_json::from_slice(&indexes)?)
 }

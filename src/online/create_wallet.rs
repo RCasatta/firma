@@ -110,6 +110,7 @@ impl Wallet {
             _ => format!("{:.6}", percentage[position]),
         };
         let stat = KindStat { kind, diffusion };
+        let fingerprints = xpubs.iter().map(|x| x.fingerprint()).collect();
 
         let wallet = WalletJson {
             name: self.context.wallet_name.to_string(),
@@ -117,6 +118,7 @@ impl Wallet {
             descriptor_change,
             daemon_opts: daemon_opts.clone(),
             stat,
+            fingerprints,
         };
         let indexes = WalletIndexes {
             main: 0u32,

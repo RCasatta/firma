@@ -39,15 +39,16 @@ impl Wallet {
         let finalized = self.client.finalize_psbt(&combined, Some(true))?;
         debug!("finalized {:?}", finalized);
 
-        let hex = finalized.hex.ok_or_else(fn_err("hex is empty"))?;
+        let bytes = finalized.hex.ok_or_else(fn_err("hex is empty"))?;
+        let hex = hex::encode(&bytes);
 
         let mut broadcasted = false;
         if opt.broadcast {
-            let hash = self.client.send_raw_transaction(hex.clone())?;
+            let hash = self.client.send_raw_transaction(&bytes)?;
             broadcasted = true;
             info!("{:?}", hash);
         } else {
-            info!("{}", hex.clone());
+            info!("{}", hex);
         }
 
         let txid = deserialize::<Transaction>(&hex::decode(&hex)?)?.txid();

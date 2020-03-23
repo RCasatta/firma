@@ -7,20 +7,35 @@ use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+type HDKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
+
 /// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma")]
 pub struct PrintOptions {
     /// PSBT json file
     psbt_file: PathBuf,
+
+    /// File containing the wallet descriptor, show if outputs are mine.
+    #[structopt(short, long, parse(from_os_str))]
+    wallet_descriptor_file: PathBuf,
 }
 
 pub fn start(opt: &PrintOptions, network: Network) -> Result<Value> {
     let psbt = read_psbt(&opt.psbt_file, true)?;
-    Ok(to_value(pretty_print(&psbt, network)?)?)
+    let wallet = read_wallet(&opt.wallet_descriptor_file)?;
+    Ok(to_value(pretty_print(
+        &psbt,
+        network,
+        &wallet.fingerprints,
+    )?)?)
 }
 
-pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<PsbtPrettyPrint> {
+pub fn pretty_print(
+    psbt: &PSBT,
+    network: Network,
+    fingerprints: &HashSet<Fingerprint>,
+) -> Result<PsbtPrettyPrint> {
     let mut result = PsbtPrettyPrint::default();
     let mut previous_outputs: Vec<TxOut> = vec![];
     let mut output_values: Vec<u64> = vec![];
@@ -54,14 +69,14 @@ pub fn pretty_print(psbt: &PSBT, network: Network) -> Result<PsbtPrettyPrint> {
     }
 
     for (i, output) in tx.output.iter().enumerate() {
-        // TODO calculate if it is mine
         result.outputs.push(format!(
-            "#{} {} {} ({}) {}",
+            "#{} {} {} ({}{}) {}",
             i,
             hex::encode(&output.script_pubkey.as_bytes()),
             Address::from_script(&output.script_pubkey, network)
                 .ok_or_else(fn_err("non default script"))?,
             derivation_paths(&psbt.outputs[i].hd_keypaths),
+            is_mine(&psbt.outputs[i].hd_keypaths, &fingerprints),
             output.value
         ));
         output_values.push(output.value);
@@ -162,9 +177,7 @@ fn script_type(script: &Script) -> Option<usize> {
     return None;
 }
 
-pub fn derivation_paths(
-    hd_keypaths: &BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>,
-) -> String {
+pub fn derivation_paths(hd_keypaths: &HDKeypaths) -> String {
     let mut vec = vec![];
     for (_, (_, path)) in hd_keypaths.iter() {
         vec.push(format!("{:?}", path));
@@ -172,6 +185,15 @@ pub fn derivation_paths(
     vec.sort();
     vec.dedup();
     vec.join(", ")
+}
+
+fn is_mine(hd_keypaths: &HDKeypaths, wallet: &HashSet<Fingerprint>) -> String {
+    if !hd_keypaths.is_empty() && hd_keypaths.iter().all(|(_, (f, _))| wallet.contains(f)) {
+        " MINE"
+    } else {
+        ""
+    }
+    .to_string()
 }
 
 #[cfg(test)]

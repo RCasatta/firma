@@ -103,10 +103,10 @@ impl Wallet {
                     self.context.decrease_change_index()?;
                 }
                 value
-            },
-            Err(e) =>  {
+            }
+            Err(e) => {
                 self.context.decrease_change_index()?;
-                return err(&format!("error creating psbt ({:?})", e) );
+                return err(&format!("error creating psbt ({:?})", e));
             }
         };
 
