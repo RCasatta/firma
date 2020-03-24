@@ -178,10 +178,10 @@ fn script_type(script: &Script) -> Option<usize> {
 }
 
 pub fn derivation_paths(hd_keypaths: &HDKeypaths) -> String {
-    let mut vec = vec![];
-    for (_, (_, path)) in hd_keypaths.iter() {
-        vec.push(format!("{:?}", path));
-    }
+    let mut vec: Vec<String> = hd_keypaths
+        .iter()
+        .map(|(_, (_, p))| format!("{:?}", p))
+        .collect();
     vec.sort();
     vec.dedup();
     vec.join(", ")
