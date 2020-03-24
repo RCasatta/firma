@@ -73,6 +73,9 @@ fn integration_test() -> Result<()> {
         .unwrap();
     assert_eq!(&created_2of2_wallet.wallet.name, &name_2of2);
 
+    // call qr view
+    firma_2of2.offline_qr(xpubs[0], "xpub").unwrap();
+
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
     let firma_2of3 = FirmaCommand::new(&firma_exe_dir, &name_2of3).unwrap();
@@ -218,6 +221,9 @@ fn integration_test() -> Result<()> {
     let expected = balance_2of3_2.satoshi - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3_3.satoshi);
 
+    let coins_output = firma_2of3.online_list_coins()?;
+    assert!(!coins_output.coins.is_empty());
+
     // stop bitcoind
     client_default.stop().unwrap();
     let ecode = bitcoind.wait().unwrap();
@@ -304,6 +310,10 @@ impl FirmaCommand {
         Ok(from_value(self.online("balance", vec![]).unwrap()).unwrap())
     }
 
+    fn online_list_coins(&self) -> Result<ListCoinsOutput> {
+        Ok(from_value(self.online("list-coins", vec![]).unwrap()).unwrap())
+    }
+
     fn online_create_tx(&self, recipients: Vec<(Address, u64)>) -> Result<CreateTxOutput> {
         let mut args = vec![];
         for recipient in recipients {
@@ -338,11 +348,17 @@ impl FirmaCommand {
             .output()
             .unwrap();
         if output.status.success() {
-            let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+            let value: Value = serde_json::from_slice(&output.stdout)?;
             Ok(value)
         } else {
             err(&String::from_utf8_lossy(&output.stderr))
         }
+    }
+
+    pub fn offline_qr(&self, json_file: &str, index: &str) -> Result<()> {
+        let result = self.offline("qr", vec![json_file, "--index", index]);
+        assert!(result.is_err());
+        Ok(())
     }
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
