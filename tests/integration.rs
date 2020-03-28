@@ -130,6 +130,12 @@ fn integration_test() -> Result<()> {
         .offline_sign(&psbt_files[1], &r2.private_file.to_str().unwrap())
         .unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
+    let sign_err = firma_2of2
+        .offline_sign(&psbt_files[0], &r1.public_file.to_str().unwrap());
+    assert!(sign_err.is_err());
+    if let Err(err) = sign_err{
+        assert_eq!(err.0,ALREADY_SIGNED);
+    }
     let sent_tx = firma_2of2
         .online_send_tx(vec![&psbt_files[0], &psbt_files[1]])
         .unwrap();
@@ -297,21 +303,21 @@ impl FirmaCommand {
             args.push(xpub);
         }
         let value = self.online("create-wallet", args).unwrap();
-        let output = from_value(value).unwrap();
+        let output = from_value(value)?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
 
     fn online_get_address(&self) -> Result<GetAddressOutput> {
-        Ok(from_value(self.online("get-address", vec![]).unwrap()).unwrap())
+        Ok(from_value(self.online("get-address", vec![]).unwrap())?)
     }
 
     fn online_balance(&self) -> Result<BalanceOutput> {
-        Ok(from_value(self.online("balance", vec![]).unwrap()).unwrap())
+        Ok(from_value(self.online("balance", vec![]).unwrap())?)
     }
 
     fn online_list_coins(&self) -> Result<ListCoinsOutput> {
-        Ok(from_value(self.online("list-coins", vec![]).unwrap()).unwrap())
+        Ok(from_value(self.online("list-coins", vec![]).unwrap())?)
     }
 
     fn online_create_tx(&self, recipients: Vec<(Address, u64)>) -> Result<CreateTxOutput> {
@@ -321,7 +327,7 @@ impl FirmaCommand {
             args.push(format!("{}:{}", recipient.0, recipient.1));
         }
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
-        let output = from_value(self.online("create-tx", args).unwrap()).unwrap();
+        let output = from_value(self.online("create-tx", args).unwrap())?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -333,7 +339,7 @@ impl FirmaCommand {
             args.push(psbt);
         }
         let value = self.online("send-tx", args).unwrap();
-        Ok(from_value(value).unwrap())
+        Ok(from_value(value)?)
     }
 
     pub fn offline(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
@@ -356,13 +362,13 @@ impl FirmaCommand {
 
     pub fn offline_qr(&self, json_file: &str, index: &str) -> Result<()> {
         let result = self.offline("qr", vec![json_file, "--index", index]);
-        assert!(result.is_err());
+        assert!(result.is_err());  // TODO non json output
         Ok(())
     }
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
         let result = self.offline("random", vec!["--key-name", key_name]);
-        let output = from_value(result.unwrap()).unwrap();
+        let output = from_value(result.unwrap())?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -380,10 +386,20 @@ impl FirmaCommand {
                 &self.wallet_file(),
             ],
         );
-        let output = from_value(result.unwrap()).unwrap();
+        throw_if_err(&result)?;
+        let output = from_value(result.unwrap())?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
+}
+
+fn throw_if_err(result: &Result<Value>) -> Result<()> {
+    if let Ok(value) = result {
+        if let Some(Value::String(error)) = value.get("error") {
+            return err(error);
+        }
+    }
+    Ok(())
 }
 
 fn client_send_to_address(client: &Client, address: &Address, satoshi: u64) -> Result<Txid> {

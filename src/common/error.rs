@@ -1,6 +1,9 @@
 use crate::ErrorJson;
 use serde_json::Value;
 
+pub const ALREADY_SIGNED: &str = "The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data";
+// TODO put all error string here, or better, enum
+
 #[derive(Debug)]
 pub struct Error(pub String);
 

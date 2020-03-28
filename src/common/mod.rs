@@ -110,7 +110,7 @@ pub fn read_psbt_json(path: &Path) -> Result<PsbtJson> {
 pub fn read_psbt(path: &Path, only_ready: bool) -> Result<PSBT> {
     let psbt_json = read_psbt_json(&path)?;
     if !only_ready && (psbt_json.signed_psbt.is_some() || psbt_json.only_sigs.is_some()) {
-        return err("The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data");
+        return err(crate::ALREADY_SIGNED);
     }
     psbt_from_base64(&psbt_json.psbt)
 }
