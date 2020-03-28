@@ -1,5 +1,7 @@
 language: rust
 
+group: stable
+
 matrix:
   include:
     - rust: stable
