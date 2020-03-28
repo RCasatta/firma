@@ -1,8 +1,6 @@
-use bitcoin::secp256k1::Secp256k1;
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use firma::*;
-use log::{debug, info};
+use log::debug;
 use num_bigint::BigUint;
 use serde_json::{to_value, Value};
 use std::io::{self, BufRead, Lines, StdinLock, Write};
@@ -35,9 +33,8 @@ enum Bits {
 
 pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value> {
     debug!("{:?}", opt);
-    let (private_file, public_file) = generate_key_filenames(datadir, network, &opt.key_name)?;
 
-    info!(
+    println!(
         "Creating Master Private Key for {} with a {}-sided dice",
         network, opt.faces,
     );
@@ -45,7 +42,7 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value>
     let max: BigUint = opt.bits.clone().into();
 
     let count: u32 = required_dice_launches(opt.faces, &max);
-    info!(
+    println!(
         "Need {} dice launches to achieve {} bits of entropy",
         count, bits
     );
@@ -53,12 +50,10 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value>
     let launches: Vec<u32> = ask_launches(count, opt.faces)?;
 
     let master_key = calculate_key(&launches, opt.faces, network)?;
-    info!("{}", serde_json::to_string_pretty(&master_key)?);
 
-    save_private(&master_key, &private_file)?;
-    save_public(&master_key.clone().into(), &public_file)?;
+    let output = save_keys(datadir, network, &opt.key_name, master_key)?;
 
-    Ok(to_value(&master_key)?)
+    Ok(to_value(&output)?)
 }
 
 fn ask_launches(count: u32, faces: u32) -> Result<Vec<u32>> {
@@ -97,17 +92,14 @@ fn calculate_key(launches: &[u32], faces: u32, network: Network) -> Result<Priva
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
-    let secp = Secp256k1::signing_only();
+    let mut key = PrivateMasterKey::new(network, &sec)?;
+    let dice = Dice {
+        faces,
+        launches: format!("{:?}", launches),
+    };
+    key.dice = Some(dice);
 
-    let xprv = ExtendedPrivKey::new_master(network, &sec)?;
-    let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-
-    Ok(PrivateMasterKey {
-        xprv,
-        xpub,
-        faces: Some(faces),
-        launches: Some(format!("{:?}", launches)), // ugly, using a string to avoid going newline for every element
-    })
+    Ok(key)
 }
 
 fn endish(i: u32) -> String {
@@ -128,7 +120,7 @@ fn ask_number(question: &str, min: u32, max: u32) -> Result<u32> {
     let stdin = io::stdin();
     let mut stdin: Lines<StdinLock> = stdin.lock().lines();
     loop {
-        info!("{} [{}-{}]: ", question, min, max);
+        println!("{} [{}-{}]: ", question, min, max);
         io::stdout().flush()?;
         let line = stdin
             .next()
@@ -138,10 +130,10 @@ fn ask_number(question: &str, min: u32, max: u32) -> Result<u32> {
             if val >= min && val <= max {
                 return Ok(val);
             } else {
-                info!("Out of range");
+                println!("Out of range");
             }
         } else {
-            info!("Not a number");
+            println!("Not a number");
         }
     }
 }

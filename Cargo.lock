@@ -256,7 +256,6 @@ name = "firma"
 version = "0.1.0"
 dependencies = [
  "base64 0.12.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "bech32 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcoin 0.23.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitcoincore-rpc 0.9.1 (git+https://github.com/stevenroose/rust-bitcoincore-rpc?rev=c1d57dc49c0d5130f6b9a1b83012866839b2172f)",
  "dirs 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

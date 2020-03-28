@@ -55,3 +55,4 @@ impl_error!(bitcoin::util::psbt::Error);
 impl_error!(bitcoin::util::address::Error);
 impl_error!(hex::FromHexError);
 impl_error!(std::env::VarError);
+impl_error!(bitcoin::bech32::Error);

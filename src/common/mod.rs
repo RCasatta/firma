@@ -4,8 +4,11 @@ use bitcoin::blockdata::script::Instruction::PushBytes;
 use bitcoin::consensus::deserialize;
 use bitcoin::util::key;
 use bitcoin::{Network, Script};
-use log::{info, Level, LevelFilter, Metadata, Record};
+use log::{info, LevelFilter, Metadata, Record};
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::BufWriter;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 pub mod cmd;
@@ -23,26 +26,24 @@ impl log::Log for SimpleLogger {
 
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
-            if record.level() <= Level::Warn {
-                println!("{} - {}", record.level(), record.args());
-            } else {
-                println!("{}", record.args());
-            }
+            let file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("log")
+                .expect("can't open log");
+            let mut stream = BufWriter::new(file);
+            stream
+                .write(format!("{} - {}\n", record.level(), record.args()).as_bytes())
+                .expect("can't write log");
         }
     }
 
     fn flush(&self) {}
 }
 
-pub fn init_logger(verbose: u8) {
-    //TODO write log message to file
-    let level = match verbose {
-        0 => LevelFilter::Off,
-        1 => LevelFilter::Info,
-        _ => LevelFilter::Debug,
-    };
+pub fn init_logger() {
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(level))
+        .map(|()| log::set_max_level(LevelFilter::Debug))
         .expect("cannot initialize logging");
 }
 
@@ -82,6 +83,20 @@ pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()>
 
 pub fn save_private(private_key: &PrivateMasterKey, output: &PathBuf) -> Result<()> {
     save(serde_json::to_string_pretty(private_key)?, output)
+}
+
+
+pub fn save_keys(datadir: &str, network: Network, key_name: &str, key: PrivateMasterKey) -> Result<MasterKeyOutput> {
+    let (private_key_file, public_key_file) =
+        generate_key_filenames(datadir, network, key_name)?;
+    save_private(&key, &private_key_file)?;
+    save_public(&key.clone().into(), &public_key_file)?;
+
+    Ok(MasterKeyOutput {
+        key,
+        public_file: public_key_file,
+        private_file: private_key_file,
+    })
 }
 
 pub fn read_psbt_json(path: &Path) -> Result<PsbtJson> {

@@ -3,7 +3,7 @@ use bitcoin::{Address, Amount};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use firma::*;
 use rand::{self, Rng};
-use serde_json::{from_value, Value};
+use serde_json::{from_value, to_string_pretty, Value};
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
@@ -298,7 +298,7 @@ impl FirmaCommand {
         }
         let value = self.online("create-wallet", args).unwrap();
         let output = from_value(value).unwrap();
-        println!("{:#?}", output);
+        println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
 
@@ -322,8 +322,7 @@ impl FirmaCommand {
         }
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
         let output = from_value(self.online("create-tx", args).unwrap()).unwrap();
-        println!("{:#?}", output);
-
+        println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
 
@@ -362,11 +361,10 @@ impl FirmaCommand {
     }
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
-        Ok(from_value(
-            self.offline("random", vec!["--key-name", key_name])
-                .unwrap(),
-        )
-        .unwrap())
+        let result = self.offline("random", vec!["--key-name", key_name]);
+        let output = from_value(result.unwrap()).unwrap();
+        println!("{}", to_string_pretty(&output).unwrap());
+        Ok(output)
     }
 
     pub fn offline_sign(&self, psbt_file: &str, key_file: &str) -> Result<PsbtPrettyPrint> {
@@ -383,7 +381,7 @@ impl FirmaCommand {
             ],
         );
         let output = from_value(result.unwrap()).unwrap();
-        println!("{:#?}", output);
+        println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
 }

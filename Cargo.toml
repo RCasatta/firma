@@ -7,7 +7,6 @@ edition = "2018"
 
 [dependencies]
 hex = "0.4.2"
-bech32 = "0.7.2"
 bitcoin = "0.23.0"
 #bitcoincore-rpc = "0.9.1"
 #bitcoincore-rpc = { path = "../rust-bitcoincore-rpc/client" }

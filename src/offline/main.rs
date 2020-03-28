@@ -1,8 +1,3 @@
-use crate::dice::DiceOptions;
-use crate::print::PrintOptions;
-use crate::qr::QrOptions;
-use crate::random::RandomOptions;
-use crate::sign::SignOptions;
 use bitcoin::Network;
 use firma::{init_logger, Result};
 use log::debug;
@@ -13,16 +8,14 @@ mod dice;
 mod print;
 mod qr;
 mod random;
+mod restore;
 mod sign;
+mod derive_key;
 
 /// firma-offline is a signer of Partially Signed Bitcoin Transaction (PSBT).
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-offline")]
 struct FirmaOfflineCommands {
-    /// Verbose mode (-v)
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: u8,
-
     /// Network (bitcoin, testnet, regtest)
     #[structopt(short, long, default_value = "testnet")]
     network: Network,
@@ -39,30 +32,30 @@ struct FirmaOfflineCommands {
 #[derive(StructOpt, Debug)]
 enum FirmaOfflineSubcommands {
     /// Create a Master Private Key (xprv) with entropy from dice launches
-    Dice(DiceOptions),
+    Dice(crate::dice::DiceOptions),
 
     /// Create a Master Private Key (xprv) with entropy from this machine RNG
-    Random(RandomOptions),
+    Random(crate::random::RandomOptions),
 
     /// Sign a PSBT with local Master Private Key (xprv)
-    Sign(SignOptions),
+    Sign(crate::sign::SignOptions),
 
     /// View a field in a json as qrcode shown in terminal
-    Qr(QrOptions),
+    Qr(crate::qr::QrOptions),
 
     /// Decode and print a PSBT
-    Print(PrintOptions),
+    Print(crate::print::PrintOptions),
+
+    /// Restore a json key from xprv, hex seed or bech32 seed
+    Restore(crate::restore::RestoreOptions),
+
+    /// Hard derive a master key from a master^2 key
+    DeriveKey(crate::derive_key::DeriveKeyOptions),
 }
 
 fn main() -> Result<()> {
+    init_logger();
     let cmd = FirmaOfflineCommands::from_args();
-
-    if matches!(cmd.subcommand, Dice(_)) {
-        init_logger(1); // TODO fix logging...
-    } else {
-        init_logger(cmd.verbose);
-    }
-
     debug!("{:?}", cmd);
 
     let result = match cmd.subcommand {
@@ -71,6 +64,8 @@ fn main() -> Result<()> {
         Qr(opt) => qr::show(&opt),
         Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt),
         Print(opt) => print::start(&opt, cmd.network),
+        Restore(opt) => restore::start(&cmd.firma_datadir, cmd.network, &opt),
+        DeriveKey(opt) => derive_key::start(&cmd.firma_datadir, cmd.network, &opt),
     };
 
     let value = match result {

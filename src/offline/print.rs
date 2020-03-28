@@ -133,14 +133,10 @@ pub fn pretty_print(
     let estimated_tx_vbytes = estimate_weight(psbt)? / 4;
     let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
 
-    result
-        .sizes
-        .push(format!("unsigned tx        : {:>6}   vbyte", tx_vbytes));
-    result.sizes.push(format!(
-        "estimated tx       : {:>6}   vbyte",
-        estimated_tx_vbytes
-    ));
-
+    result.sizes = Size {
+        estimated: estimated_tx_vbytes,
+        unsigned: tx_vbytes,
+    };
     result.fee = Fee {
         absolute: fee,
         rate: estimated_fee_rate,

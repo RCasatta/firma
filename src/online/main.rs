@@ -25,10 +25,6 @@ mod send_tx;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-online")]
 struct FirmaOnlineCommands {
-    /// Verbose mode (-v)
-    #[structopt(short, long, parse(from_occurrences))]
-    verbose: u8,
-
     #[structopt(flatten)]
     context: Context,
 
@@ -85,8 +81,8 @@ fn main() -> Result<()> {
 }
 
 fn start() -> Result<Value> {
+    init_logger();
     let cmd = FirmaOnlineCommands::from_args();
-    init_logger(cmd.verbose);
     debug!("{:?}", cmd);
 
     let daemon_opts = match &cmd.subcommand {

@@ -54,8 +54,7 @@ impl PSBTSigner {
         let psbt = read_psbt(&opt.psbt_file, false)?;
 
         // TODO read key from .firma
-        let xprv_string = std::fs::read_to_string(&opt.key)?;
-        let xprv_json: PrivateMasterKey = serde_json::from_str(&xprv_string)?;
+        let xprv_json = read_key(&opt.key)?;
         let xprv = xprv_json.xprv.clone();
         if !(network == xprv.network
             || (network == Network::Regtest && xprv.network == Network::Testnet))
@@ -279,7 +278,7 @@ impl PSBTSigner {
 pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
     let wallet = read_wallet(&opt.wallet_descriptor_file)?;
     let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
-    debug!("{:#?}", psbt_signer);
+    debug!("{:?}", psbt_signer);
 
     let sign_result = psbt_signer.sign()?;
     let mut psbt_print = psbt_signer.pretty_print(&wallet.fingerprints)?;
@@ -296,6 +295,11 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
     }
 
     Ok(to_value(psbt_print)?)
+}
+
+pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
+    let xprv_string = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&xprv_string)?)
 }
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {

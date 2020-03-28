@@ -1,6 +1,6 @@
 use crate::DaemonOpts;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
-use bitcoin::{Address, OutPoint, Txid};
+use bitcoin::{bech32, Address, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -11,9 +11,21 @@ pub struct PrivateMasterKey {
     pub xpub: ExtendedPubKey,
     pub xprv: ExtendedPrivKey,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub launches: Option<String>,
+    pub seed: Option<Seed>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub faces: Option<u32>,
+    pub dice: Option<Dice>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Dice {
+    pub launches: String,
+    pub faces: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Seed {
+    pub hex: String,
+    pub bech32: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -111,7 +123,7 @@ pub struct ErrorJson {
 pub struct PsbtPrettyPrint {
     pub inputs: Vec<String>,
     pub outputs: Vec<String>,
-    pub sizes: Vec<String>,
+    pub sizes: Size,
     pub fee: Fee,
     pub info: Vec<String>,
     pub psbt_file: PathBuf,
@@ -121,4 +133,49 @@ pub struct PsbtPrettyPrint {
 pub struct Fee {
     pub absolute: u64,
     pub rate: f64,
+}
+
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct Size {
+    pub unsigned: usize,
+    pub estimated: usize,
+}
+
+impl Seed {
+    pub fn new(sec: &[u8]) -> crate::Result<Seed> {
+        let hex = hex::encode(&sec);
+        let bech32 = bech32::encode("s", bech32::ToBase32::to_base32(&sec))?;
+        Ok(Seed { hex, bech32 })
+    }
+}
+
+impl PrivateMasterKey {
+    pub fn new(network: Network, sec: &[u8]) -> crate::Result<PrivateMasterKey> {
+        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+
+        let xprv = ExtendedPrivKey::new_master(network, &sec)?;
+        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
+        let seed = Some(Seed::new(&sec)?);
+
+        Ok(PrivateMasterKey {
+            xprv,
+            xpub,
+            seed,
+            dice: None,
+        })
+    }
+}
+
+impl From<ExtendedPrivKey> for PrivateMasterKey {
+    fn from(xprv: ExtendedPrivKey) -> Self {
+        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
+        PrivateMasterKey {
+            xprv,
+            xpub,
+            seed: None,
+            dice: None,
+        }
+    }
 }

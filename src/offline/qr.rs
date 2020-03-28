@@ -1,4 +1,4 @@
-use bech32;
+use bitcoin::bech32;
 use firma::{fn_err, Result};
 use qrcode::types::Color::{Dark, Light};
 use qrcode::QrCode;
