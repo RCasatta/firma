@@ -15,7 +15,6 @@ env:
 
 before_install:
   - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
-  - curl -L https://github.com/mozilla/grcov/releases/download/v0.5.9/grcov-linux-x86_64.tar.bz2 | tar jxf -
 
 script:
   - cargo build --verbose --all
@@ -23,7 +22,8 @@ script:
 
 after_success: |
   if [ "$DO_COV" = true ]; then
-    ./grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
+    cargo install grcov
+    grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
     bash <(curl -s https://codecov.io/bash) -f lcov.info;
     echo "Uploaded code coverage";
   fi
