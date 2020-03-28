@@ -6,9 +6,6 @@ matrix:
     - rust: nightly
       env: DO_COV=true CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
 
-cache:
-  cargo: true
-
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
