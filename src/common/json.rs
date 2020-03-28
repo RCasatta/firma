@@ -135,7 +135,6 @@ pub struct Fee {
     pub rate: f64,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct Size {
     pub unsigned: usize,

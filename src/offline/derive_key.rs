@@ -1,11 +1,11 @@
-use structopt::StructOpt;
-use bitcoin::Network;
-use serde_json::{Value, to_value};
-use std::path::PathBuf;
 use crate::sign::read_key;
-use bitcoin::util::bip32::ChildNumber;
-use firma::{err, PrivateMasterKey, save_keys};
 use bitcoin::secp256k1::Secp256k1;
+use bitcoin::util::bip32::ChildNumber;
+use bitcoin::Network;
+use firma::{err, save_keys, PrivateMasterKey};
+use serde_json::{to_value, Value};
+use std::path::PathBuf;
+use structopt::StructOpt;
 
 /// Restore a master key from the secret component
 #[derive(StructOpt, Debug)]
@@ -25,11 +25,11 @@ pub fn start(datadir: &str, network: Network, opt: &DeriveKeyOptions) -> crate::
         return err("--to-key-name must have 1 or more characters");
     }
     let secp = Secp256k1::signing_only();
-    let from_key_json= read_key(&opt.from_key_file)?;
+    let from_key_json = read_key(&opt.from_key_file)?;
     let mut child_key = from_key_json.xprv.clone();
     let bytes = opt.to_key_name.as_bytes();
     for byte in bytes {
-        let path = [ChildNumber::from_hardened_idx(*byte as u32 )?];
+        let path = [ChildNumber::from_hardened_idx(*byte as u32)?];
         child_key = child_key.derive_priv(&secp, &path)?;
     }
 

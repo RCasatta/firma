@@ -85,10 +85,13 @@ pub fn save_private(private_key: &PrivateMasterKey, output: &PathBuf) -> Result<
     save(serde_json::to_string_pretty(private_key)?, output)
 }
 
-
-pub fn save_keys(datadir: &str, network: Network, key_name: &str, key: PrivateMasterKey) -> Result<MasterKeyOutput> {
-    let (private_key_file, public_key_file) =
-        generate_key_filenames(datadir, network, key_name)?;
+pub fn save_keys(
+    datadir: &str,
+    network: Network,
+    key_name: &str,
+    key: PrivateMasterKey,
+) -> Result<MasterKeyOutput> {
+    let (private_key_file, public_key_file) = generate_key_filenames(datadir, network, key_name)?;
     save_private(&key, &private_key_file)?;
     save_public(&key.clone().into(), &public_key_file)?;
 

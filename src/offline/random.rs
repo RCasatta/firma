@@ -14,7 +14,6 @@ pub struct RandomOptions {
 }
 
 pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<Value> {
-
     let sec = rand::thread_rng().gen::<[u8; 16]>();
     let master_key = PrivateMasterKey::new(network, &sec)?;
     let output = save_keys(datadir, network, &opt.key_name, master_key)?;

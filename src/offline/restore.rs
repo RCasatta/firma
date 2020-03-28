@@ -2,8 +2,8 @@ use crate::Result;
 use bitcoin::bech32::{self, FromBase32};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
-use firma::{err, PrivateMasterKey, save_keys};
-use serde_json::{Value, to_value};
+use firma::{err, save_keys, PrivateMasterKey};
+use serde_json::{to_value, Value};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -60,11 +60,11 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Va
             }
             let sec = Vec::<u8>::from_base32(&vec_u5)?;
             PrivateMasterKey::new(network, &sec)?
-        },
+        }
         Nature::HexSeed => {
             let sec = hex::decode(&opt.value)?;
             PrivateMasterKey::new(network, &sec)?
-        },
+        }
     };
 
     let output = save_keys(datadir, network, &opt.key_name, master_key)?;

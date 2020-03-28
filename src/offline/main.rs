@@ -4,13 +4,13 @@ use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
+mod derive_key;
 mod dice;
 mod print;
 mod qr;
 mod random;
 mod restore;
 mod sign;
-mod derive_key;
 
 /// firma-offline is a signer of Partially Signed Bitcoin Transaction (PSBT).
 #[derive(StructOpt, Debug)]
