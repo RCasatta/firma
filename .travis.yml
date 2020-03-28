@@ -1,7 +1,5 @@
 language: rust
 
-group: stable
-
 matrix:
   include:
     - rust: stable
@@ -17,7 +15,7 @@ env:
 
 before_install:
   - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
-  - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+  - curl -L https://github.com/mozilla/grcov/releases/download/v0.5.9/grcov-linux-x86_64.tar.bz2 | tar jxf -
 
 script:
   - cargo build --verbose --all
