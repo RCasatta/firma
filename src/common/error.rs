@@ -1,25 +1,95 @@
 use crate::ErrorJson;
 use serde_json::Value;
 
-pub const ALREADY_SIGNED: &str = "The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data";
-// TODO put all error string here, or better, enum
-
 #[derive(Debug)]
-pub struct Error(pub String);
+pub enum Error {
+    Generic(String),
 
-impl Error {
-    pub fn to_json(self) -> Result<Value, Error> {
-        let value = ErrorJson { error: self.0 };
-        Ok(serde_json::to_value(&value)?)
+    // Internal
+    AlreadySigned,
+
+    // External
+    BitcoinRpc(bitcoincore_rpc::Error),
+    BitcoinEncode(bitcoin::consensus::encode::Error),
+    BitcoinKey(bitcoin::util::key::Error),
+    BitcoinSecp256k1(bitcoin::secp256k1::Error),
+    BitcoinPSBT(bitcoin::util::psbt::Error),
+    BitcoinAddress(bitcoin::util::address::Error),
+    BitcoinBech32(bitcoin::bech32::Error),
+    Serde(serde_json::error::Error),
+    IO(std::io::Error),
+    Base58(bitcoin::util::base58::Error),
+    Bip32(bitcoin::util::bip32::Error),
+    Base64(base64::DecodeError),
+    PathStrip(std::path::StripPrefixError),
+    Qr(qrcode::types::QrError),
+    Hex(hex::FromHexError),
+    Env(std::env::VarError),
+
+
+}
+
+macro_rules! impl_error {
+    ( $from:ty, $to:ident ) => {
+        impl std::convert::From<$from> for Error {
+            fn from(err: $from) -> Self {
+                Error::$to(err)
+            }
+        }
+    };
+}
+
+impl_error!(bitcoincore_rpc::Error, BitcoinRpc);
+impl_error!(bitcoin::util::base58::Error, Base58);
+impl_error!(bitcoin::util::bip32::Error, Bip32);
+impl_error!(bitcoin::consensus::encode::Error, BitcoinEncode);
+impl_error!(bitcoin::util::key::Error, BitcoinKey);
+impl_error!(bitcoin::secp256k1::Error, BitcoinSecp256k1);
+impl_error!(bitcoin::util::psbt::Error, BitcoinPSBT);
+impl_error!(bitcoin::util::address::Error, BitcoinAddress);
+impl_error!(bitcoin::bech32::Error, BitcoinBech32);
+impl_error!(serde_json::error::Error, Serde);
+impl_error!(std::io::Error, IO);
+impl_error!(base64::DecodeError, Base64);
+impl_error!(std::path::StripPrefixError, PathStrip);
+impl_error!(qrcode::types::QrError, Qr);
+impl_error!(hex::FromHexError, Hex);
+impl_error!(std::env::VarError, Env);
+
+impl ToString for Error {
+    fn to_string(&self) -> String {
+        match self {
+            Error::Generic(e) => e.to_string(),
+
+            Error::AlreadySigned => "The json psbt already contain signed_psbt or only_sigs, exiting to avoid risk of overwriting data".to_string(),
+
+            Error::BitcoinRpc(e) => e.to_string(),
+            Error::Serde(e) => e.to_string(),
+            Error::IO(e) => e.to_string(),
+            Error::Base58(e) => e.to_string(),
+            Error::Bip32(e) => e.to_string(),
+            Error::Base64(e) => e.to_string(),
+            Error::BitcoinEncode(e) => e.to_string(),
+            Error::BitcoinKey(e) => e.to_string(),
+            Error::BitcoinSecp256k1(e) => e.to_string(),
+            Error::BitcoinPSBT(e) => e.to_string(),
+            Error::BitcoinAddress(e) => e.to_string(),
+            Error::BitcoinBech32(e) => e.to_string(),
+            Error::PathStrip(e) => e.to_string(),
+            Error::Qr(e) => e.to_string(),
+            Error::Hex(e) => e.to_string(),
+            Error::Env(e) => e.to_string(),
+
+        }
     }
 }
 
 pub fn err<R>(str: &str) -> Result<R, Error> {
-    Err(Error(str.into()))
+    Err(Error::Generic(str.into()))
 }
 
 pub fn fn_err(str: &str) -> impl Fn() -> Error + '_ {
-    move || Error(str.into())
+    move || Error::Generic(str.into())
 }
 
 pub fn io_err(str: &str) -> std::io::Error {
@@ -28,34 +98,19 @@ pub fn io_err(str: &str) -> std::io::Error {
 
 impl From<String> for Error {
     fn from(e: String) -> Error {
-        Error(e)
+        Error::Generic(e)
     }
 }
 
-macro_rules! impl_error {
-    ( $from:ty ) => {
-        impl std::convert::From<$from> for Error {
-            fn from(err: $from) -> Self {
-                Error(err.to_string())
-            }
-        }
-    };
+impl From<&str> for Error {
+    fn from(e: &str) -> Error {
+        Error::Generic(e.to_string())
+    }
 }
 
-impl_error!(bitcoincore_rpc::Error);
-impl_error!(&str);
-impl_error!(serde_json::error::Error);
-impl_error!(std::io::Error);
-impl_error!(bitcoin::util::base58::Error);
-impl_error!(bitcoin::util::bip32::Error);
-impl_error!(base64::DecodeError);
-impl_error!(bitcoin::consensus::encode::Error);
-impl_error!(std::path::StripPrefixError);
-impl_error!(qrcode::types::QrError);
-impl_error!(bitcoin::util::key::Error);
-impl_error!(bitcoin::secp256k1::Error);
-impl_error!(bitcoin::util::psbt::Error);
-impl_error!(bitcoin::util::address::Error);
-impl_error!(hex::FromHexError);
-impl_error!(std::env::VarError);
-impl_error!(bitcoin::bech32::Error);
+impl Error {
+    pub fn to_json(self) -> Result<Value, Error> {
+        let value = ErrorJson { error: self.to_string() };
+        Ok(serde_json::to_value(&value)?)
+    }
+}

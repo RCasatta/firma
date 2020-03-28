@@ -122,6 +122,12 @@ fn integration_test() -> Result<()> {
     let recipients = vec![(address_2of2.clone(), value_sent)];
     let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
     let psbt_files = cp(&create_tx.psbt_file, 2).unwrap();
+    let sign_a_wrong = firma_2of2
+        .offline_sign(&psbt_files[0], &r1.public_file.to_str().unwrap());
+    match sign_a_wrong {
+        Ok(_) => assert!(false),
+        Err(e) => assert!(e.to_string().contains("missing field `xprv`")),
+    }
     let sign_a = firma_2of2
         .offline_sign(&psbt_files[0], &r1.private_file.to_str().unwrap())
         .unwrap(); //TODO test passing public key
@@ -130,11 +136,11 @@ fn integration_test() -> Result<()> {
         .offline_sign(&psbt_files[1], &r2.private_file.to_str().unwrap())
         .unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
-    let sign_err = firma_2of2
-        .offline_sign(&psbt_files[0], &r1.public_file.to_str().unwrap());
-    assert!(sign_err.is_err());
-    if let Err(err) = sign_err{
-        assert_eq!(err.0,ALREADY_SIGNED);
+    let sign_b_again = firma_2of2
+        .offline_sign(&psbt_files[0], &r2.private_file.to_str().unwrap());
+    match sign_b_again {
+        Ok(_) => assert!(false),
+        Err(e) => assert_eq!(e.to_string(), Error::AlreadySigned.to_string()),
     }
     let sent_tx = firma_2of2
         .online_send_tx(vec![&psbt_files[0], &psbt_files[1]])
@@ -227,7 +233,7 @@ fn integration_test() -> Result<()> {
     let expected = balance_2of3_2.satoshi - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3_3.satoshi);
 
-    let coins_output = firma_2of3.online_list_coins()?;
+    let coins_output = firma_2of3.online_list_coins().unwrap();
     assert!(!coins_output.coins.is_empty());
 
     // stop bitcoind
@@ -302,8 +308,9 @@ impl FirmaCommand {
             args.push("--xpub");
             args.push(xpub);
         }
-        let value = self.online("create-wallet", args).unwrap();
-        let output = from_value(value)?;
+        let result = self.online("create-wallet", args);
+        throw_if_err(&result)?;
+        let output = from_value(result.unwrap())?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -368,7 +375,8 @@ impl FirmaCommand {
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
         let result = self.offline("random", vec!["--key-name", key_name]);
-        let output = from_value(result.unwrap())?;
+        throw_if_err(&result)?;
+        let output = from_value(result.unwrap()).unwrap();
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -387,7 +395,7 @@ impl FirmaCommand {
             ],
         );
         throw_if_err(&result)?;
-        let output = from_value(result.unwrap())?;
+        let output = from_value(result.unwrap()).unwrap();
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
