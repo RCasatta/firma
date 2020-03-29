@@ -278,12 +278,9 @@ impl FirmaCommand {
             .args(args)
             .output()
             .unwrap();
-        if output.status.success() {
-            let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-            Ok(value)
-        } else {
-            err(&String::from_utf8_lossy(&output.stderr))
-        }
+        assert!(output.status.success());
+        let value: Value = serde_json::from_slice(&output.stdout).unwrap();
+        Ok(value)
     }
 
     pub fn online_create_wallet(
@@ -357,12 +354,9 @@ impl FirmaCommand {
             .args(args)
             .output()
             .unwrap();
-        if output.status.success() {
-            let value: Value = serde_json::from_slice(&output.stdout)?;
-            Ok(value)
-        } else {
-            err(&String::from_utf8_lossy(&output.stderr))
-        }
+        assert!(output.status.success());
+        let value: Value = serde_json::from_slice(&output.stdout)?;
+        Ok(value)
     }
 
     pub fn offline_qr(&self, json_file: &str, index: &str) -> Result<()> {
