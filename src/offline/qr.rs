@@ -41,7 +41,7 @@ pub fn show(opt: &QrOptions) -> Result<Value> {
 
     print_qr(&string, opt.reverse)?;
 
-    Ok("".into())
+    Ok(Value::default())
 }
 
 fn print_qr(value: &str, inverted: bool) -> Result<()> {

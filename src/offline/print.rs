@@ -23,11 +23,7 @@ pub struct PrintOptions {
 pub fn start(opt: &PrintOptions, network: Network) -> Result<PsbtPrettyPrint> {
     let psbt = read_psbt(&opt.psbt_file, true)?;
     let wallet = read_wallet(&opt.wallet_descriptor_file)?;
-    let output = pretty_print(
-        &psbt,
-        network,
-        &wallet.fingerprints,
-    )?;
+    let output = pretty_print(&psbt, network, &wallet.fingerprints)?;
     Ok(output)
 }
 

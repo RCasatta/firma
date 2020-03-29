@@ -219,18 +219,15 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 
 // #[cfg(test)]
 pub fn unwrap_as_json(result: Result<serde_json::Value>) -> serde_json::Value {
-    result.unwrap_or_else(|e| e.to_json().unwrap() )
+    result.unwrap_or_else(|e| e.to_json().unwrap())
 }
 
 pub fn map_json_error(result: Result<serde_json::Value>) -> Result<serde_json::Value> {
     match result {
-        Ok(value) => {
-            match value.get("error") {
-                Some(serde_json::Value::String(e)) => Err(Error::Generic(e.to_string())),
-                _ => Ok(value)
-            }
-        }
+        Ok(value) => match value.get("error") {
+            Some(serde_json::Value::String(e)) => Err(Error::Generic(e.to_string())),
+            _ => Ok(value),
+        },
         Err(e) => Err(Error::Generic(e.to_string())),
     }
 }
-

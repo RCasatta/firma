@@ -2,7 +2,6 @@ use crate::*;
 use bitcoin::Network;
 use bitcoincore_rpc::RpcApi;
 use log::info;
-use serde_json::{to_value, Value};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -55,7 +54,11 @@ impl CreateWalletOptions {
 }
 
 impl Wallet {
-    pub fn create(&self, daemon_opts: &DaemonOpts, opt: &CreateWalletOptions) -> Result<Value> {
+    pub fn create(
+        &self,
+        daemon_opts: &DaemonOpts,
+        opt: &CreateWalletOptions,
+    ) -> Result<CreateWalletOutput> {
         opt.validate(self.context.network)?;
 
         let xpubs = read_xpubs_files(&opt.xpubs)?;
@@ -133,7 +136,7 @@ impl Wallet {
             wallet,
         };
 
-        Ok(to_value(&create_wallet)?)
+        Ok(create_wallet)
     }
 }
 

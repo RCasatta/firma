@@ -1,7 +1,6 @@
 use crate::*;
 use bitcoincore_rpc::RpcApi;
 use log::info;
-use serde_json::{to_value, Value};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -44,10 +43,7 @@ impl Wallet {
             indexes.main += 1;
             self.context.save_index(&indexes)?;
         }
-        Ok(GetAddressOutput { address, indexes })
-    }
 
-    pub fn get_address_value(&self, cmd_index: Option<u32>, is_change: bool) -> Result<Value> {
-        Ok(to_value(self.get_address(cmd_index, is_change)?)?)
+        Ok(GetAddressOutput { address, indexes })
     }
 }

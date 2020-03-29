@@ -3,7 +3,6 @@ use bitcoin::consensus::deserialize;
 use bitcoin::Transaction;
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
-use serde_json::{to_value, Value};
 
 #[derive(structopt::StructOpt, Debug)]
 pub struct SendTxOptions {
@@ -26,7 +25,7 @@ impl SendTxOptions {
 }
 
 impl Wallet {
-    pub fn send_tx(&self, opt: &SendTxOptions) -> Result<Value> {
+    pub fn send_tx(&self, opt: &SendTxOptions) -> Result<SendTxOutput> {
         opt.validate()?;
         let mut psbts = vec![];
         for psbt_file in opt.psbts.iter() {
@@ -58,6 +57,6 @@ impl Wallet {
             broadcasted,
         };
 
-        Ok(to_value(send_tx)?)
+        Ok(send_tx)
     }
 }

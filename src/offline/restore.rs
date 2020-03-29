@@ -2,7 +2,7 @@ use crate::Result;
 use bitcoin::bech32::{self, FromBase32};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
-use firma::{err, save_keys, PrivateMasterKey, MasterKeyOutput};
+use firma::{err, save_keys, MasterKeyOutput, PrivateMasterKey};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -93,7 +93,8 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.key.xprv.to_string(),
         };
-        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
+        let key_restored =
+            crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
         assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
 
@@ -104,7 +105,8 @@ mod tests {
             nature: Nature::Bech32Seed,
             value: key_orig.key.seed.as_ref().unwrap().bech32.clone(),
         };
-        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
+        let key_restored =
+            crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key, key_restored.key);
 
         let key_name_restored = "test_restore_seed_hex".to_string();
@@ -113,7 +115,8 @@ mod tests {
             nature: Nature::HexSeed,
             value: key_orig.key.seed.as_ref().unwrap().hex.clone(),
         };
-        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
+        let key_restored =
+            crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key, key_restored.key);
 
         let key_name_restored = "test_restore_fail".to_string();

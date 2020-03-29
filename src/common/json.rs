@@ -3,10 +3,10 @@ use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::{bech32, Address, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::path::PathBuf;
 use serde_json::Value;
+use std::collections::HashSet;
 use std::convert::TryInto;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKey {
@@ -181,20 +181,22 @@ impl From<ExtendedPrivKey> for PrivateMasterKey {
     }
 }
 
-// TODO macro for try into impl
+macro_rules! impl_try_into {
+    ( $for:ty ) => {
+        impl TryInto<Value> for $for {
+            type Error = crate::Error;
 
-impl TryInto<Value> for MasterKeyOutput {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Value, Self::Error> {
-        Ok(serde_json::to_value(self)?)
-    }
+            fn try_into(self) -> Result<Value, Self::Error> {
+                Ok(serde_json::to_value(self)?)
+            }
+        }
+    };
 }
-
-impl TryInto<Value> for PsbtPrettyPrint {
-    type Error = crate::Error;
-
-    fn try_into(self) -> Result<Value, Self::Error> {
-        Ok(serde_json::to_value(self)?)
-    }
-}
+impl_try_into!(MasterKeyOutput);
+impl_try_into!(PsbtPrettyPrint);
+impl_try_into!(CreateWalletOutput);
+impl_try_into!(CreateTxOutput);
+impl_try_into!(SendTxOutput);
+impl_try_into!(BalanceOutput);
+impl_try_into!(ListCoinsOutput);
+impl_try_into!(GetAddressOutput);

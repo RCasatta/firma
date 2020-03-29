@@ -1,10 +1,10 @@
 use bitcoin::Network;
 use firma::{init_logger, Result};
 use log::debug;
-use structopt::StructOpt;
-use FirmaOfflineSubcommands::*;
 use serde_json::Value;
 use std::convert::TryInto;
+use structopt::StructOpt;
+use FirmaOfflineSubcommands::*;
 
 mod derive_key;
 mod dice;

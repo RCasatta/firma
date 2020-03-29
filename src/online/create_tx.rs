@@ -2,7 +2,6 @@ use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
-use serde_json::{to_value, Value};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -77,7 +76,7 @@ impl FromStr for AddressAmount {
 }
 
 impl Wallet {
-    pub fn create_tx(&self, opt: &CreateTxOptions) -> Result<Value> {
+    pub fn create_tx(&self, opt: &CreateTxOptions) -> Result<CreateTxOutput> {
         opt.validate()?;
         let outputs = opt.recipients_as_outputs();
         debug!("{:?}", outputs);
@@ -133,6 +132,6 @@ impl Wallet {
             address_reused,
         };
 
-        Ok(to_value(create_tx)?)
+        Ok(create_tx)
     }
 }

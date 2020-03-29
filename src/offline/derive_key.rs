@@ -2,7 +2,7 @@ use crate::sign::read_key;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
-use firma::{err, save_keys, PrivateMasterKey, MasterKeyOutput};
+use firma::{err, save_keys, MasterKeyOutput, PrivateMasterKey};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -19,7 +19,11 @@ pub struct DeriveKeyOptions {
     to_key_name: String,
 }
 
-pub fn start(datadir: &str, network: Network, opt: &DeriveKeyOptions) -> crate::Result<MasterKeyOutput> {
+pub fn start(
+    datadir: &str,
+    network: Network,
+    opt: &DeriveKeyOptions,
+) -> crate::Result<MasterKeyOutput> {
     if opt.to_key_name.is_empty() {
         return err("--to-key-name must have 1 or more characters");
     }

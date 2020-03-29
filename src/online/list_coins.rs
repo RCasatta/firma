@@ -1,10 +1,9 @@
 use bitcoin::OutPoint;
 use bitcoincore_rpc::RpcApi;
 use firma::*;
-use serde_json::{to_value, Value};
 
 impl crate::Wallet {
-    pub fn list_coins(&self) -> Result<Value> {
+    pub fn list_coins(&self) -> Result<ListCoinsOutput> {
         let mut list_coins = self.client.list_unspent(None, None, None, None, None)?;
         list_coins.sort_by(|a, b| a.amount.cmp(&b.amount));
         let mut coins = vec![];
@@ -16,6 +15,6 @@ impl crate::Wallet {
         }
         let list_coins = ListCoinsOutput { coins };
 
-        Ok(to_value(list_coins)?)
+        Ok(list_coins)
     }
 }

@@ -6,6 +6,7 @@ use bitcoincore_rpc::{Auth, Client, RpcApi};
 use firma::*;
 use log::{debug, info};
 use serde_json::Value;
+use std::convert::TryInto;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -119,17 +120,15 @@ fn start() -> Result<Value> {
         ));
     }
 
-    let output = match cmd.subcommand {
-        CreateWallet(ref opt) => wallet.create(&daemon_opts, opt)?,
-        GetAddress(ref opt) => wallet.get_address_value(opt.index, false)?,
-        CreateTx(ref opt) => wallet.create_tx(opt)?,
-        SendTx(ref opt) => wallet.send_tx(opt)?,
-        Balance => wallet.balance()?,
-        Rescan(ref opt) => wallet.rescan(opt)?,
-        ListCoins => wallet.list_coins()?,
-    };
-
-    Ok(output)
+    match cmd.subcommand {
+        CreateWallet(ref opt) => wallet.create(&daemon_opts, opt)?.try_into(),
+        GetAddress(ref opt) => wallet.get_address(opt.index, false)?.try_into(),
+        CreateTx(ref opt) => wallet.create_tx(opt)?.try_into(),
+        SendTx(ref opt) => wallet.send_tx(opt)?.try_into(),
+        Balance => wallet.balance()?.try_into(),
+        Rescan(ref opt) => Ok(wallet.rescan(opt)?),
+        ListCoins => wallet.list_coins()?.try_into(),
+    }
 }
 
 fn save_psbt(psbt: &WalletCreateFundedPsbtResult, datadir: &str) -> Result<PathBuf> {
