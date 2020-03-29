@@ -78,7 +78,7 @@ mod tests {
     use tempdir::TempDir;
 
     #[test]
-    fn test_restore() -> firma::Result<()> {
+    fn test_restore() {
         let temp_dir = TempDir::new("test_restore").unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
         let key_name_random = "test_restore_random".to_string();
@@ -136,7 +136,5 @@ mod tests {
         };
         let result = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
         assert!(result.is_err());
-
-        Ok(())
     }
 }

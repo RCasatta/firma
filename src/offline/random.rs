@@ -27,7 +27,7 @@ mod tests {
     use tempdir::TempDir;
 
     #[test]
-    fn test_random() -> firma::Result<()> {
+    fn test_random() {
         let temp_dir = TempDir::new("test_random").unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
 
@@ -45,7 +45,5 @@ mod tests {
         assert_ne!(key_1.key, key_2.key);
         assert_ne!(key_1.public_file, key_2.public_file);
         assert_ne!(key_1.private_file, key_2.private_file);
-
-        Ok(())
     }
 }
