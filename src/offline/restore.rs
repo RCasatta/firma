@@ -71,3 +71,86 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Va
 
     Ok(to_value(&output)?)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::random::RandomOptions;
+    use crate::restore::{Nature, RestoreOptions};
+    use bitcoin::Network;
+    use firma::common::throw_if_err;
+    use firma::MasterKeyOutput;
+    use serde_json::from_value;
+    use tempdir::TempDir;
+
+    #[test]
+    fn test_restore() -> firma::Result<()> {
+        let dir = TempDir::new("test_restore").unwrap();
+        let temp_dir_path = dir.path();
+        let temp_dir = format!("{}/", temp_dir_path.display());
+        let key_name_random = "test_restore_random".to_string();
+        let rand_opts = RandomOptions {
+            key_name: key_name_random,
+        };
+
+        let result = crate::random::start(&temp_dir, Network::Testnet, &rand_opts);
+        throw_if_err(&result)?;
+        let key_orig: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+
+        let key_name_restored = "test_restore_restored".to_string();
+        let restore_opts = RestoreOptions {
+            key_name: key_name_restored,
+            nature: Nature::Xprv,
+            value: key_orig.key.xprv.to_string(),
+        };
+        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
+        throw_if_err(&result)?;
+        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
+        assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
+
+        let key_name_restored = "test_restore_seed".to_string();
+        assert!(key_orig.key.seed.is_some());
+        let restore_opts = RestoreOptions {
+            key_name: key_name_restored,
+            nature: Nature::Bech32Seed,
+            value: key_orig.key.seed.as_ref().unwrap().bech32.clone(),
+        };
+        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
+        throw_if_err(&result)?;
+        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        assert_eq!(key_orig.key, key_restored.key);
+
+        let key_name_restored = "test_restore_seed_hex".to_string();
+        let restore_opts = RestoreOptions {
+            key_name: key_name_restored,
+            nature: Nature::HexSeed,
+            value: key_orig.key.seed.as_ref().unwrap().hex.clone(),
+        };
+        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
+        throw_if_err(&result)?;
+        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        assert_eq!(key_orig.key, key_restored.key);
+
+        let key_name_restored = "test_restore_fail".to_string();
+        let restore_opts = RestoreOptions {
+            key_name: key_name_restored,
+            nature: Nature::HexSeed,
+            value: "X".to_string(),
+        };
+        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
+        let err = throw_if_err(&result);
+        assert!(err.is_err());
+
+        let key_name_restored = "test_restore_fail".to_string();
+        let restore_opts = RestoreOptions {
+            key_name: key_name_restored,
+            nature: Nature::Xprv,
+            value: key_orig.key.xpub.to_string(),
+        };
+        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
+        let err = throw_if_err(&result);
+        assert!(err.is_err());
+
+        Ok(())
+    }
+}

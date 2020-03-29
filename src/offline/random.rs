@@ -10,7 +10,7 @@ use structopt::StructOpt;
 pub struct RandomOptions {
     /// Name of the key
     #[structopt(short, long)]
-    key_name: String,
+    pub key_name: String,
 }
 
 pub fn start(datadir: &str, network: Network, opt: &RandomOptions) -> Result<Value> {

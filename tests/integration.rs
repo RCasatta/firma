@@ -122,8 +122,7 @@ fn integration_test() -> Result<()> {
     let recipients = vec![(address_2of2.clone(), value_sent)];
     let create_tx = firma_2of2.online_create_tx(recipients).unwrap();
     let psbt_files = cp(&create_tx.psbt_file, 2).unwrap();
-    let sign_a_wrong = firma_2of2
-        .offline_sign(&psbt_files[0], &r1.public_file.to_str().unwrap());
+    let sign_a_wrong = firma_2of2.offline_sign(&psbt_files[0], &r1.public_file.to_str().unwrap());
     match sign_a_wrong {
         Ok(_) => assert!(false),
         Err(e) => assert!(e.to_string().contains("missing field `xprv`")),
@@ -136,8 +135,7 @@ fn integration_test() -> Result<()> {
         .offline_sign(&psbt_files[1], &r2.private_file.to_str().unwrap())
         .unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
-    let sign_b_again = firma_2of2
-        .offline_sign(&psbt_files[0], &r2.private_file.to_str().unwrap());
+    let sign_b_again = firma_2of2.offline_sign(&psbt_files[0], &r2.private_file.to_str().unwrap());
     match sign_b_again {
         Ok(_) => assert!(false),
         Err(e) => assert_eq!(e.to_string(), Error::AlreadySigned.to_string()),
@@ -369,7 +367,7 @@ impl FirmaCommand {
 
     pub fn offline_qr(&self, json_file: &str, index: &str) -> Result<()> {
         let result = self.offline("qr", vec![json_file, "--index", index]);
-        assert!(result.is_err());  // TODO non json output
+        assert!(result.is_err()); // TODO non json output
         Ok(())
     }
 
@@ -399,15 +397,6 @@ impl FirmaCommand {
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
-}
-
-fn throw_if_err(result: &Result<Value>) -> Result<()> {
-    if let Ok(value) = result {
-        if let Some(Value::String(error)) = value.get("error") {
-            return err(error);
-        }
-    }
-    Ok(())
 }
 
 fn client_send_to_address(client: &Client, address: &Address, satoshi: u64) -> Result<Txid> {

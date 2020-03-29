@@ -216,3 +216,16 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
         Ok(p.to_path_buf())
     }
 }
+
+// #[cfg(test)]
+pub fn throw_if_err(result: &Result<serde_json::Value>) -> Result<()> {
+    match result {
+        Ok(value) => {
+            if let Some(serde_json::Value::String(error)) = value.get("error") {
+                return err(error);
+            }
+        }
+        Err(e) => return err(&e.to_string()),
+    }
+    Ok(())
+}
