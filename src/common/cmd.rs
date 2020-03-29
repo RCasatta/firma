@@ -1,4 +1,4 @@
-use crate::*;
+use crate::common::*;
 use log::info;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -44,7 +44,9 @@ impl Context {
     pub fn save_wallet(&self, wallet: &WalletJson) -> Result<PathBuf> {
         let path = self.path_for("descriptor")?;
         if path.exists() {
-            return Err(Error::Generic("wallet already exist, I am not going to overwrite".into()));
+            return Err(Error::Generic(
+                "wallet already exist, I am not going to overwrite".into(),
+            ));
         }
         info!("Saving wallet data in {:?}", &path);
 

@@ -25,8 +25,6 @@ pub enum Error {
     Qr(qrcode::types::QrError),
     Hex(hex::FromHexError),
     Env(std::env::VarError),
-
-
 }
 
 macro_rules! impl_error {
@@ -110,7 +108,9 @@ impl From<&str> for Error {
 
 impl Error {
     pub fn to_json(self) -> Result<Value, Error> {
-        let value = ErrorJson { error: self.to_string() };
+        let value = ErrorJson {
+            error: self.to_string(),
+        };
         Ok(serde_json::to_value(&value)?)
     }
 }

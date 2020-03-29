@@ -1,6 +1,7 @@
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::key;
 use bitcoin::{Address, Network, OutPoint, Script, TxOut};
+use firma::common::{estimate_weight, read_psbt};
 use firma::*;
 use serde_json::{to_value, Value};
 use std::collections::{BTreeMap, HashSet};

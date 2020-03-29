@@ -8,6 +8,7 @@ use bitcoin::util::bip143::SighashComponents;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::Map;
 use bitcoin::{Network, Script, SigHashType};
+use firma::common::{extract_pub_keys, read_psbt, read_psbt_json};
 use firma::*;
 use log::{debug, info};
 use serde_json::{to_value, Value};
@@ -315,6 +316,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::sign::*;
+    use firma::common::{psbt_from_base64, estimate_weight};
     use bitcoin::util::bip32::ExtendedPubKey;
 
     fn test_sign(

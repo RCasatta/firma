@@ -1,5 +1,6 @@
 use bitcoin::Network;
-use firma::{init_logger, Result};
+use firma::common::init_logger;
+use firma::Result;
 use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;

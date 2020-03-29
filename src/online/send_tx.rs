@@ -2,6 +2,7 @@ use crate::*;
 use bitcoin::consensus::deserialize;
 use bitcoin::Transaction;
 use bitcoincore_rpc::RpcApi;
+use firma::common::read_psbt_json;
 use log::{debug, info};
 use serde_json::{to_value, Value};
 

@@ -3,6 +3,7 @@ use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
 use bitcoincore_rpc::json::*;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
+use firma::common::{expand_tilde, init_logger};
 use firma::*;
 use log::{debug, info};
 use serde_json::Value;

@@ -1,4 +1,5 @@
 use bitcoin::Network;
+use firma::common::save_keys;
 use firma::*;
 use rand::Rng;
 use serde_json::{to_value, Value};
