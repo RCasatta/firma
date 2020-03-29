@@ -3,6 +3,8 @@ use firma::{init_logger, Result};
 use log::debug;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
+use serde_json::Value;
+use std::convert::TryInto;
 
 mod derive_key;
 mod dice;
@@ -58,17 +60,7 @@ fn main() -> Result<()> {
     let cmd = FirmaOfflineCommands::from_args();
     debug!("{:?}", cmd);
 
-    let result = match cmd.subcommand {
-        Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt),
-        Sign(opt) => sign::start(&opt, cmd.network),
-        Qr(opt) => qr::show(&opt),
-        Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt),
-        Print(opt) => print::start(&opt, cmd.network),
-        Restore(opt) => restore::start(&cmd.firma_datadir, cmd.network, &opt),
-        DeriveKey(opt) => derive_key::start(&cmd.firma_datadir, cmd.network, &opt),
-    };
-
-    let value = match result {
+    let value = match launch_subcommand(&cmd) {
         Ok(value) => value,
         Err(e) => e.to_json()?,
     };
@@ -76,4 +68,16 @@ fn main() -> Result<()> {
     println!("{}", serde_json::to_string_pretty(&value)?);
 
     Ok(())
+}
+
+fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
+    match &cmd.subcommand {
+        Dice(opt) => dice::roll(&cmd.firma_datadir, cmd.network, &opt)?.try_into(),
+        Sign(opt) => sign::start(&opt, cmd.network)?.try_into(),
+        Qr(opt) => Ok(qr::show(&opt)?),
+        Random(opt) => random::start(&cmd.firma_datadir, cmd.network, &opt)?.try_into(),
+        Print(opt) => print::start(&opt, cmd.network)?.try_into(),
+        Restore(opt) => restore::start(&cmd.firma_datadir, cmd.network, &opt)?.try_into(),
+        DeriveKey(opt) => derive_key::start(&cmd.firma_datadir, cmd.network, &opt)?.try_into(),
+    }
 }

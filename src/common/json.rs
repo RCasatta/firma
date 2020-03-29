@@ -5,6 +5,8 @@ use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::PathBuf;
+use serde_json::Value;
+use std::convert::TryInto;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKey {
@@ -176,5 +178,23 @@ impl From<ExtendedPrivKey> for PrivateMasterKey {
             seed: None,
             dice: None,
         }
+    }
+}
+
+// TODO macro for try into impl
+
+impl TryInto<Value> for MasterKeyOutput {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<Value, Self::Error> {
+        Ok(serde_json::to_value(self)?)
+    }
+}
+
+impl TryInto<Value> for PsbtPrettyPrint {
+    type Error = crate::Error;
+
+    fn try_into(self) -> Result<Value, Self::Error> {
+        Ok(serde_json::to_value(self)?)
     }
 }

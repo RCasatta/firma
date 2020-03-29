@@ -77,7 +77,6 @@ impl ToString for Error {
             Error::Qr(e) => e.to_string(),
             Error::Hex(e) => e.to_string(),
             Error::Env(e) => e.to_string(),
-
         }
     }
 }

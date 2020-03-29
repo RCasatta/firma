@@ -2,7 +2,6 @@ use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::key;
 use bitcoin::{Address, Network, OutPoint, Script, TxOut};
 use firma::*;
-use serde_json::{to_value, Value};
 use std::collections::{BTreeMap, HashSet};
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -21,14 +20,15 @@ pub struct PrintOptions {
     wallet_descriptor_file: PathBuf,
 }
 
-pub fn start(opt: &PrintOptions, network: Network) -> Result<Value> {
+pub fn start(opt: &PrintOptions, network: Network) -> Result<PsbtPrettyPrint> {
     let psbt = read_psbt(&opt.psbt_file, true)?;
     let wallet = read_wallet(&opt.wallet_descriptor_file)?;
-    Ok(to_value(pretty_print(
+    let output = pretty_print(
         &psbt,
         network,
         &wallet.fingerprints,
-    )?)?)
+    )?;
+    Ok(output)
 }
 
 pub fn pretty_print(

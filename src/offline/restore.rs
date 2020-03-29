@@ -2,8 +2,7 @@ use crate::Result;
 use bitcoin::bech32::{self, FromBase32};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
-use firma::{err, save_keys, PrivateMasterKey};
-use serde_json::{to_value, Value};
+use firma::{err, save_keys, PrivateMasterKey, MasterKeyOutput};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -47,7 +46,7 @@ impl FromStr for Nature {
     }
 }
 
-pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Value> {
+pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<MasterKeyOutput> {
     let master_key = match opt.nature {
         Nature::Xprv => ExtendedPrivKey::from_str(&opt.value)?.into(),
         Nature::Bech32Seed => {
@@ -68,8 +67,7 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Va
     };
 
     let output = save_keys(datadir, network, &opt.key_name, master_key)?;
-
-    Ok(to_value(&output)?)
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -77,24 +75,17 @@ mod tests {
     use crate::random::RandomOptions;
     use crate::restore::{Nature, RestoreOptions};
     use bitcoin::Network;
-    use firma::common::throw_if_err;
-    use firma::MasterKeyOutput;
-    use serde_json::from_value;
     use tempdir::TempDir;
 
     #[test]
     fn test_restore() -> firma::Result<()> {
-        let dir = TempDir::new("test_restore").unwrap();
-        let temp_dir_path = dir.path();
-        let temp_dir = format!("{}/", temp_dir_path.display());
+        let temp_dir = TempDir::new("test_restore").unwrap();
+        let temp_dir_str = format!("{}/", temp_dir.path().display());
         let key_name_random = "test_restore_random".to_string();
         let rand_opts = RandomOptions {
             key_name: key_name_random,
         };
-
-        let result = crate::random::start(&temp_dir, Network::Testnet, &rand_opts);
-        throw_if_err(&result)?;
-        let key_orig: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        let key_orig = crate::random::start(&temp_dir_str, Network::Testnet, &rand_opts).unwrap();
 
         let key_name_restored = "test_restore_restored".to_string();
         let restore_opts = RestoreOptions {
@@ -102,9 +93,7 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.key.xprv.to_string(),
         };
-        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
-        throw_if_err(&result)?;
-        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
         assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
 
@@ -115,9 +104,7 @@ mod tests {
             nature: Nature::Bech32Seed,
             value: key_orig.key.seed.as_ref().unwrap().bech32.clone(),
         };
-        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
-        throw_if_err(&result)?;
-        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key, key_restored.key);
 
         let key_name_restored = "test_restore_seed_hex".to_string();
@@ -126,9 +113,7 @@ mod tests {
             nature: Nature::HexSeed,
             value: key_orig.key.seed.as_ref().unwrap().hex.clone(),
         };
-        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
-        throw_if_err(&result)?;
-        let key_restored: MasterKeyOutput = from_value(result.unwrap()).unwrap();
+        let key_restored = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key, key_restored.key);
 
         let key_name_restored = "test_restore_fail".to_string();
@@ -137,9 +122,8 @@ mod tests {
             nature: Nature::HexSeed,
             value: "X".to_string(),
         };
-        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
-        let err = throw_if_err(&result);
-        assert!(err.is_err());
+        let result = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
+        assert!(result.is_err());
 
         let key_name_restored = "test_restore_fail".to_string();
         let restore_opts = RestoreOptions {
@@ -147,9 +131,8 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.key.xpub.to_string(),
         };
-        let result = crate::restore::start(&temp_dir, Network::Testnet, &restore_opts);
-        let err = throw_if_err(&result);
-        assert!(err.is_err());
+        let result = crate::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
+        assert!(result.is_err());
 
         Ok(())
     }

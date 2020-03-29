@@ -2,8 +2,7 @@ use crate::sign::read_key;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
-use firma::{err, save_keys, PrivateMasterKey};
-use serde_json::{to_value, Value};
+use firma::{err, save_keys, PrivateMasterKey, MasterKeyOutput};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -20,7 +19,7 @@ pub struct DeriveKeyOptions {
     to_key_name: String,
 }
 
-pub fn start(datadir: &str, network: Network, opt: &DeriveKeyOptions) -> crate::Result<Value> {
+pub fn start(datadir: &str, network: Network, opt: &DeriveKeyOptions) -> crate::Result<MasterKeyOutput> {
     if opt.to_key_name.is_empty() {
         return err("--to-key-name must have 1 or more characters");
     }
@@ -36,5 +35,5 @@ pub fn start(datadir: &str, network: Network, opt: &DeriveKeyOptions) -> crate::
     let child_key_json = PrivateMasterKey::from(child_key);
     let output = save_keys(datadir, network, &opt.to_key_name, child_key_json)?;
 
-    Ok(to_value(&output)?)
+    Ok(output)
 }

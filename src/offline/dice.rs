@@ -2,7 +2,6 @@ use bitcoin::Network;
 use firma::*;
 use log::debug;
 use num_bigint::BigUint;
-use serde_json::{to_value, Value};
 use std::io::{self, BufRead, Lines, StdinLock, Write};
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -31,7 +30,7 @@ enum Bits {
     _256,
 }
 
-pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value> {
+pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<MasterKeyOutput> {
     debug!("{:?}", opt);
 
     println!(
@@ -53,7 +52,7 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Value>
 
     let output = save_keys(datadir, network, &opt.key_name, master_key)?;
 
-    Ok(to_value(&output)?)
+    Ok(output)
 }
 
 fn ask_launches(count: u32, faces: u32) -> Result<Vec<u32>> {

@@ -307,8 +307,8 @@ impl FirmaCommand {
             args.push(xpub);
         }
         let result = self.online("create-wallet", args);
-        throw_if_err(&result)?;
-        let output = from_value(result.unwrap())?;
+        let value = unwrap_as_json(result);
+        let output = from_value(value).unwrap();
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -373,8 +373,8 @@ impl FirmaCommand {
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
         let result = self.offline("random", vec!["--key-name", key_name]);
-        throw_if_err(&result)?;
-        let output = from_value(result.unwrap()).unwrap();
+        let value = unwrap_as_json(result);
+        let output = from_value(value).unwrap();
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }
@@ -392,8 +392,8 @@ impl FirmaCommand {
                 &self.wallet_file(),
             ],
         );
-        throw_if_err(&result)?;
-        let output = from_value(result.unwrap()).unwrap();
+        let value = map_json_error(result)?;
+        let output = from_value(value)?;
         println!("{}", to_string_pretty(&output).unwrap());
         Ok(output)
     }

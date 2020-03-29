@@ -10,7 +10,6 @@ use bitcoin::util::psbt::Map;
 use bitcoin::{Network, Script, SigHashType};
 use firma::*;
 use log::{debug, info};
-use serde_json::{to_value, Value};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -275,7 +274,7 @@ impl PSBTSigner {
     }
 }
 
-pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
+pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     let wallet = read_wallet(&opt.wallet_descriptor_file)?;
     let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
     debug!("{:?}", psbt_signer);
@@ -294,7 +293,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<Value> {
         psbt_print.info.push("No signature added".to_string());
     }
 
-    Ok(to_value(psbt_print)?)
+    Ok(psbt_print)
 }
 
 pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
