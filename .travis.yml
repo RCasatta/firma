@@ -6,6 +6,11 @@ matrix:
     - rust: nightly
       env: DO_COV=true CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
 
+addons:
+  apt:
+    packages:
+      - libgoogle-perftools-dev  # required for grcov
+
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
@@ -19,8 +24,8 @@ script:
 
 after_success: |
   if [ "$DO_COV" = true ]; then
-    cargo install grcov
-    grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
+    curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+    ./grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
     bash <(curl -s https://codecov.io/bash) -f lcov.info;
     echo "Uploaded code coverage";
   fi
