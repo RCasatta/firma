@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.67" />
+
+    <TextView
+        android:id="@+id/network_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="network_text"
+        android:textSize="20sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/network_switch"
+        app:layout_constraintBottom_toTopOf="@id/key_text"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="@id/guideline"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Switch
+        android:id="@+id/network_switch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintVertical_bias="0.4"
+        app:layout_constraintBottom_toTopOf="@id/key_button"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/key_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="key_text"
+        android:textSize="20sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/key_button"
+        app:layout_constraintBottom_toTopOf="@id/wallet_text"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="@id/guideline"
+        app:layout_constraintTop_toBottomOf="@id/network_text" />
+
+    <Button
+        android:id="@+id/key_button"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:text="✏️"
+        app:layout_constraintBottom_toTopOf="@id/wallet_button"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/network_switch" />
+
+    <TextView
+        android:id="@+id/wallet_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="wallet_text"
+        android:textSize="20sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/wallet_button"
+        app:layout_constraintBottom_toTopOf="@id/psbt_text"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="@id/guideline"
+        app:layout_constraintTop_toBottomOf="@id/key_text" />
+
+    <Button
+        android:id="@+id/wallet_button"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:text="✏️"
+        app:layout_constraintBottom_toTopOf="@id/psbt_button"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/key_button" />
+
+    <TextView
+        android:id="@+id/psbt_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="psbt_text"
+        android:textSize="20sp"
+        app:layout_constraintBaseline_toBaselineOf="@id/psbt_button"
+        app:layout_constraintBottom_toTopOf="@id/sign_button"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="@id/guideline"
+        app:layout_constraintTop_toBottomOf="@id/wallet_text" />
+
+    <Button
+        android:id="@+id/psbt_button"
+        android:layout_width="50dp"
+        android:layout_height="wrap_content"
+        android:text="✏️"
+        app:layout_constraintBottom_toTopOf="@id/sign_button"
+        app:layout_constraintLeft_toLeftOf="@id/guideline"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/wallet_button" />
+
+    <Button
+        android:id="@+id/sign_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:text="Sign"
+        app:layout_constraintVertical_bias="0.7"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/psbt_text" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

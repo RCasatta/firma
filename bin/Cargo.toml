@@ -1,0 +1,28 @@
+[package]
+name = "firma-bin"
+version = "0.1.0"
+authors = ["Riccardo Casatta <riccardo@casatta.it>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+firma = { path = "../lib"}
+bitcoincore-rpc = "0.10.0"
+bitcoin = "0.23.0"
+serde = { version = "1.0.105", features = [ "derive" ] }
+serde_json = "1.0.48"
+structopt = "0.3.12"
+log = "0.4.8"
+
+[[bin]]
+name = "firma-online"
+path = "src/online/main.rs"
+
+[[bin]]
+name = "firma-offline"
+path = "src/offline/main.rs"
+
+[dev-dependencies]
+tempdir = "0.3"
+rand = "0.7.3"

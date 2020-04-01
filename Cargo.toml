@@ -1,34 +1,6 @@
-[package]
-name = "firma"
-version = "0.1.0"
-authors = ["Riccardo Casatta <riccardo@casatta.it>"]
-edition = "2018"
-#rust = "1.42"
+[workspace]
 
-[dependencies]
-hex = "0.4.2"
-bitcoin = "0.23.0"
-#bitcoincore-rpc = "0.9.1"
-#bitcoincore-rpc = { path = "../rust-bitcoincore-rpc/client" }
-#bitcoincore-rpc = { git = "https://github.com/RCasatta/rust-bitcoincore-rpc", rev="c044c8431e49231fb7755560f519f1bf9716b04f"}
-bitcoincore-rpc = { git = "https://github.com/stevenroose/rust-bitcoincore-rpc", rev="c1d57dc49c0d5130f6b9a1b83012866839b2172f"}
-base64 = "0.12.0"
-num-bigint = "0.2.6"
-qrcode = "0.12.0"
-structopt = "0.3.12"
-log = "0.4.8"
-serde = { version = "1.0.105", features = [ "derive" ] }
-serde_json = "1.0.48"
-dirs = "2.0.2"
-rand = "0.7.3"
-
-[dev-dependencies]
-tempdir = "0.3"
-
-[[bin]]
-name = "firma-online"
-path = "src/online/main.rs"
-
-[[bin]]
-name = "firma-offline"
-path = "src/offline/main.rs"
+members = [
+    "lib",
+    "bin",
+]
