@@ -5,14 +5,17 @@
 
 **WARNING - Early stage software, do not use with real bitcoins.**
 
-Firma is a tool to create bitcoin multisig wallet with private keys stored on offline machines.
-The offline machine could be [CLI](bin) terminal or a spare [android](android) phone.
-Informations are transferred between devices through QR codes, since PSBT could become large some kB, more than 1 qr code could be needed, those QRs are chained with qr [structured append](https://segno.readthedocs.io/en/stable/structured-append.html) 
+Firma is a tool to create bitcoin multisig wallets with private keys stored on offline devices.
+
+The offline device could be a [CLI](bin) terminal or a spare [android](android) phone.
+
+Informations are transferred between devices through QR codes. Since PSBT could become large some kB, more than 1 QR code could be needed, those QRs are chained with qr [structured append](https://segno.readthedocs.io/en/stable/structured-append.html) 
 
 It is based on:
   * [bitcoin core](https://bitcoincore.org/)
   * [psbt](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) (Partially Signed Bitcoin Transaction)
   * [rust-bitcoin](https://github.com/rust-bitcoin/rust-bitcoin)
+  * and other [libs](lib/Cargo.toml)
   
 ## High level process:
 
