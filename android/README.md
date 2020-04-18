@@ -7,6 +7,10 @@
 ![Screenshot_20200418-150041](https://user-images.githubusercontent.com/6470319/79639847-78c90300-818e-11ea-8041-5a08618caa23.png)
 ![Screenshot_20200418-160141](https://user-images.githubusercontent.com/6470319/79639843-76ff3f80-818e-11ea-955a-24a03c75c989.png)
 
+## Beta test
+
+https://github.com/RCasatta/firma/releases/tag/beta_release_0.2.0
+
 ## Building
 
 To build the android app you need the rust lib built with the android [ndk](https://developer.android.com/ndk).
