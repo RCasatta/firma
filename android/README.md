@@ -1,6 +1,6 @@
 # Android
 
-![Screenshot_20200418-145715](https://user-images.githubusercontent.com/6470319/79639853-7a92c680-818e-11ea-91b5-f715c2eb170f.png)
+![Screenshot_20200418-211935](https://user-images.githubusercontent.com/6470319/79669281-bfcced80-81ba-11ea-83af-564f57875bcb.png)
 ![Screenshot_20200418-145729](https://user-images.githubusercontent.com/6470319/79639852-79fa3000-818e-11ea-97eb-14d493b059b3.png)
 ![Screenshot_20200418-145740](https://user-images.githubusercontent.com/6470319/79639850-79fa3000-818e-11ea-82ad-4823264634cb.png)
 ![Screenshot_20200418-150030](https://user-images.githubusercontent.com/6470319/79639849-79619980-818e-11ea-82b7-985636a0eb3b.png)
