@@ -787,6 +787,7 @@ dependencies = [
 [[package]]
 name = "qrcode"
 version = "0.12.0"
+source = "git+https://github.com/RCasatta/qrcode-rust/?branch=append#9dddab008b587de333ea33c9c8be3712207d4ca0"
 dependencies = [
  "checked_int_cast",
  "image",

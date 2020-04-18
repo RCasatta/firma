@@ -20,7 +20,6 @@ class MainActivity : AppCompatActivity() {
         const val TESTNET_NETWORK = "testnet"
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -59,7 +58,6 @@ class MainActivity : AppCompatActivity() {
                 AlertDialog.Builder(this).setMessage(result.toString()).create().show()
             }
         }
-
     }
 
     private fun reset_select() {

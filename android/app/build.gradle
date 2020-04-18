@@ -9,7 +9,7 @@ android {
     buildToolsVersion "29.0.2"
     defaultConfig {
         applicationId "it.casatta"
-        minSdkVersion 24
+        minSdkVersion 23
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
@@ -45,6 +45,7 @@ dependencies {
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.9.+"
     implementation 'com.google.android.material:material:1.0.0'
 
-    implementation 'com.journeyapps:zxing-android-embedded:4.1.0'
-
+    implementation('com.journeyapps:zxing-android-embedded:4.1.0') { transitive = false }
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'com.google.zxing:core:3.3.0'
 }

@@ -1,36 +1,38 @@
+use crate::list::ListOptions;
 use crate::*;
+use bitcoin::consensus::serialize;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::key;
-use bitcoin::{Address, Network, OutPoint, Script, TxOut};
-use std::collections::{BTreeMap, HashSet};
+use bitcoin::{Address, Amount, Network, OutPoint, Script, SignedAmount, TxOut};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
 type HDKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
 
 /// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, Serialize, Deserialize)]
 #[structopt(name = "firma")]
 pub struct PrintOptions {
     /// PSBT json file
     psbt_file: PathBuf,
-
-    /// File containing the wallet descriptor, show if outputs are mine.
-    #[structopt(short, long, parse(from_os_str))]
-    wallet_descriptor_file: PathBuf,
 }
 
-pub fn start(opt: &PrintOptions, network: Network) -> Result<PsbtPrettyPrint> {
+pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
     let psbt = read_psbt(&opt.psbt_file)?;
-    let wallet = read_wallet(&opt.wallet_descriptor_file)?;
-    let output = pretty_print(&psbt, network, &wallet.fingerprints)?;
+    let kind = Kind::Wallet;
+    let opt = ListOptions { kind };
+    let result = common::list::list(datadir, network, &opt)?;
+    let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();
+    let output = pretty_print(&psbt, network, &wallets)?;
     Ok(output)
 }
 
 pub fn pretty_print(
     psbt: &PSBT,
     network: Network,
-    fingerprints: &HashSet<Fingerprint>,
+    wallets: &[WalletJson],
 ) -> Result<PsbtPrettyPrint> {
     let mut result = PsbtPrettyPrint::default();
     let mut previous_outputs: Vec<TxOut> = vec![];
@@ -53,30 +55,47 @@ pub fn pretty_print(
         previous_outputs.push(previous_output.clone());
     }
     let input_values: Vec<u64> = previous_outputs.iter().map(|o| o.value).collect();
+    let mut balances = HashMap::new();
 
     for (i, input) in tx.input.iter().enumerate() {
-        result.inputs.push(format!(
-            "#{} {} ({}) {}",
-            i,
-            input.previous_output,
-            derivation_paths(&psbt.inputs[i].hd_keypaths),
-            previous_outputs[i].value,
-        ));
+        let keypaths = &psbt.inputs[i].hd_keypaths;
+        let wallets = which_wallet(keypaths, &wallets);
+        let txin = TxInOut {
+            outpoint: Some(input.previous_output.to_string()),
+            address: None,
+            value: Amount::from_sat(previous_outputs[i].value).to_string(),
+            path: derivation_paths(keypaths),
+            wallet: wallets.join(", "),
+        };
+        for wallet in wallets {
+            *balances.entry(wallet).or_insert(0i64) -= previous_outputs[i].value as i64
+        }
+        result.inputs.push(txin);
     }
 
     for (i, output) in tx.output.iter().enumerate() {
-        result.outputs.push(format!(
-            "#{} {} {} ({}{}) {}",
-            i,
-            hex::encode(&output.script_pubkey.as_bytes()),
-            Address::from_script(&output.script_pubkey, network)
-                .ok_or_else(fn_err("non default script"))?,
-            derivation_paths(&psbt.outputs[i].hd_keypaths),
-            is_mine(&psbt.outputs[i].hd_keypaths, fingerprints),
-            output.value
-        ));
+        let addr = Address::from_script(&output.script_pubkey, network)
+            .ok_or_else(fn_err("non default script"))?;
+        let keypaths = &psbt.outputs[i].hd_keypaths;
+        let wallets = which_wallet(keypaths, &wallets);
+        let txout = TxInOut {
+            outpoint: None,
+            address: Some(addr.to_string()),
+            value: Amount::from_sat(output.value).to_string(),
+            path: derivation_paths(keypaths),
+            wallet: wallets.join(" ,"),
+        };
+        for wallet in wallets {
+            *balances.entry(wallet).or_insert(0i64) += output.value as i64
+        }
+        result.outputs.push(txout);
         output_values.push(output.value);
     }
+    let balances_vec: Vec<String> = balances
+        .iter()
+        .map(|(k, v)| format!("{}: {}", k, SignedAmount::from_sat(*v).to_string()))
+        .collect();
+    result.balances = balances_vec.join("\n");
 
     // Privacy analysis
     // Detect different script types in the outputs
@@ -129,12 +148,14 @@ pub fn pretty_print(
     let estimated_tx_vbytes = estimate_weight(psbt)? / 4;
     let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
 
-    result.sizes = Size {
+    result.size = Size {
         estimated: estimated_tx_vbytes,
         unsigned: tx_vbytes,
+        psbt: serialize(psbt).len(),
     };
     result.fee = Fee {
         absolute: fee,
+        absolute_fmt: Amount::from_sat(fee).to_string(),
         rate: estimated_fee_rate,
     };
 
@@ -174,13 +195,19 @@ pub fn derivation_paths(hd_keypaths: &HDKeypaths) -> String {
     vec.join(", ")
 }
 
-fn is_mine(hd_keypaths: &HDKeypaths, wallet: &HashSet<Fingerprint>) -> String {
-    if !hd_keypaths.is_empty() && hd_keypaths.iter().all(|(_, (f, _))| wallet.contains(f)) {
-        " MINE"
-    } else {
-        ""
+fn which_wallet(hd_keypaths: &HDKeypaths, wallets: &[WalletJson]) -> Vec<String> {
+    // TODO this should be done with miniscript
+    let mut result = vec![];
+    for wallet in wallets {
+        if !hd_keypaths.is_empty()
+            && hd_keypaths
+                .iter()
+                .all(|(_, (f, _))| wallet.fingerprints.contains(f))
+        {
+            result.push(wallet.name.to_string())
+        }
     }
-    .to_string()
+    result
 }
 
 #[cfg(test)]

@@ -68,6 +68,34 @@ class Rust {
         val qr_files: List<String>
     )
 
+    data class TxInOut (
+        val outpoint: String?,
+        val address: String?,
+        val value: String,
+        val path: String,
+        val wallet: String?
+    )
+
+    data class Size (
+        val unsigned: Int,
+        val estimated: Int
+    )
+
+    data class Fee (
+        val absolute: Long,
+        val rate : Double
+    )
+
+    data class PsbtPrettyPrint (
+        val inputs: List<TxInOut>,
+        val outputs: List<TxInOut>,
+        val size: Size,
+        val fee: Fee,
+        val info: List<String>,
+        val psbt_file: String,
+        val balances: String
+    )
+
     external fun call(json: String): String
 
     fun callJson(json: String): JsonNode {
@@ -140,6 +168,16 @@ class Rust {
         val reqString = mapper.writeValueAsString(req)
         val json = callJson(reqString)
         return json
+    }
+
+    fun print(datadir: String, network: String, psbt_file: String): PsbtPrettyPrint {
+        val node = JsonNodeFactory.instance.objectNode()
+        node.put("psbt_file", psbt_file)
+        val req = JsonRpc("print", datadir, network, node)
+        val reqString = mapper.writeValueAsString(req)
+        val json = callJson(reqString)
+        val output = mapper.convertValue(json, PsbtPrettyPrint::class.java)
+        return output
     }
 }
 

@@ -3,7 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="it.casatta">
 
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-sdk tools:overrideLibrary="com.google.zxing.client.android" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <application
         android:name=".FirmaApplication"
@@ -13,10 +16,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".QrActivity"></activity>
+        <activity android:name=".WalletActivity"></activity>
+        <activity android:name=".KeyActivity" />
+        <activity android:name=".PSBTActivity" />
+        <activity android:name=".QrActivity" />
         <activity
             android:name=".ListActivity"
-            android:screenOrientation="portrait"></activity>
+            android:screenOrientation="portrait" />
         <activity
             android:name=".MainActivity"
             android:screenOrientation="portrait">

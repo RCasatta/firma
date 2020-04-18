@@ -404,7 +404,7 @@ mod tests {
         bits.push_byte_data(data_half).unwrap();
         bits.push_terminator(LEVEL).unwrap();
         assert_eq!(
-            hex::encode(bits.clone().into_bytes()),
+            hex::encode(bits.into_bytes()),
             "3013940e49207265616420746865206e657700"
         ); // raw bytes of the first qr code of the example
     }

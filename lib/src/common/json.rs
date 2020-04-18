@@ -138,19 +138,32 @@ pub struct ErrorJson {
     pub error: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct TxInOut {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub address: Option<String>,
+    pub value: String,
+    pub path: String,
+    pub wallet: String,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct PsbtPrettyPrint {
-    pub inputs: Vec<String>,
-    pub outputs: Vec<String>,
-    pub sizes: Size,
+    pub inputs: Vec<TxInOut>,
+    pub outputs: Vec<TxInOut>,
+    pub size: Size,
     pub fee: Fee,
     pub info: Vec<String>,
     pub psbt_file: PathBuf,
+    pub balances: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct Fee {
     pub absolute: u64,
+    pub absolute_fmt: String,
     pub rate: f64,
 }
 
@@ -158,6 +171,7 @@ pub struct Fee {
 pub struct Size {
     pub unsigned: usize,
     pub estimated: usize,
+    pub psbt: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

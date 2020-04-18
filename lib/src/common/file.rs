@@ -105,6 +105,9 @@ fn path_for(dirs: Vec<&str>) -> Result<PathBuf> {
             .ok_or_else(|| Error::Generic("Need at least 1".into()))?,
     );
     path = expand_tilde(path)?;
+    if !path.exists() {
+        fs::create_dir(&path)?;
+    }
     for dir in dirs.iter().skip(1) {
         path.push(&format!("{}/", dir));
         if !path.exists() {

@@ -67,7 +67,7 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         Dice(opt) => offline::dice::roll(datadir, net, &opt)?.try_into(),
         Sign(opt) => offline::sign::start(&opt, net)?.try_into(),
         Random(opt) => offline::random::create_key(datadir, net, &opt)?.try_into(),
-        Print(opt) => offline::print::start(&opt, net)?.try_into(),
+        Print(opt) => offline::print::start(datadir, net, &opt)?.try_into(),
         Restore(opt) => offline::restore::start(datadir, net, &opt)?.try_into(),
         DeriveKey(opt) => offline::derive_key::start(datadir, net, &opt)?.try_into(),
         List(opt) => common::list::list(datadir, net, &opt)?.try_into(),

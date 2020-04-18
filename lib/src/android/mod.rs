@@ -1,4 +1,5 @@
 use crate::common::list::ListOptions;
+use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
 use crate::offline::restore::RestoreOptions;
 use crate::offline::sign::SignOptions;
@@ -68,6 +69,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         Some("restore") => {
             let opts: RestoreOptions = serde_json::from_value(args.clone())?;
             let result = crate::offline::restore::start(datadir, network, &opts)?;
+            serde_json::to_value(result)?
+        }
+        Some("print") => {
+            let opts: PrintOptions = serde_json::from_value(args.clone())?;
+            let result = crate::offline::print::start(datadir, network, &opts)?;
             serde_json::to_value(result)?
         }
         _ => {

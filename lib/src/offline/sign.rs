@@ -31,7 +31,7 @@ pub struct SignOptions {
     /// File containing the wallet descriptor, show if outputs are mine.
     #[structopt(short, long, parse(from_os_str))]
     wallet_descriptor_file: PathBuf,
-
+    //TODO remove and read all the available wallets?
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
@@ -319,6 +319,7 @@ impl PSBTSigner {
                     fs::create_dir(&psbt_qr_path)?;
                 }
                 psbt_qr_path.push("filename");
+                let psbt_bytes = serde_json::to_vec(&psbt_json)?;
                 let _qr_files = qr::save_qrs(psbt_bytes, psbt_qr_path, qr_version)?;
 
                 /*let output = PsbtJsonOutput {
@@ -333,8 +334,8 @@ impl PSBTSigner {
         }
     }
 
-    fn pretty_print(&self, fingerprints: &HashSet<Fingerprint>) -> Result<PsbtPrettyPrint> {
-        pretty_print(&self.psbt, self.network, fingerprints)
+    fn pretty_print(&self, wallets: &[WalletJson]) -> Result<PsbtPrettyPrint> {
+        pretty_print(&self.psbt, self.network, wallets)
     }
 }
 
@@ -344,7 +345,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     debug!("{:?}", psbt_signer);
 
     let sign_result = psbt_signer.sign()?;
-    let mut psbt_print = psbt_signer.pretty_print(&wallet.fingerprints)?;
+    let mut psbt_print = psbt_signer.pretty_print(&vec![wallet])?;
 
     if sign_result.added_paths {
         psbt_print.info.push("Added paths".to_string());

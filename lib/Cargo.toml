@@ -12,7 +12,7 @@ bitcoincore-rpc = "0.10.0"
 base64 = "0.12.0"
 num-bigint = "0.2.6"
 #qrcode = "0.12.0"
-qrcode = { path = "../../qrcode-rust" }
+qrcode = { git = "https://github.com/RCasatta/qrcode-rust/", branch="append" }
 structopt = "0.3.12"
 log = "0.4.8"
 serde = { version = "1.0.105", features = [ "derive" ] }

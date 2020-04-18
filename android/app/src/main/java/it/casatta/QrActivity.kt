@@ -21,15 +21,11 @@ class QrActivity : AppCompatActivity() {
     val imagesAdapter = ImageItemsAdapter()
 
     companion object {
-        const val KEY = 1
-
-        fun comeHere(from: Activity, what: Int, files: List<String>) {
-            val intent = Intent(from, QrActivity::class.java)
-
-            intent.putExtra(C.WHAT, what)
-            intent.putStringArrayListExtra(C.QRS, ArrayList(files))
-
-            from.startActivityForResult(intent, what)
+        fun comeHere(from: Activity, titlePrefix: String, files: List<String>) {
+            val newIntent = Intent(from, QrActivity::class.java)
+            newIntent.putStringArrayListExtra(C.QRS, ArrayList(files))
+            newIntent.putExtra(C.TITLE_PREFIX, titlePrefix)
+            from.startActivityForResult(newIntent, 0)
         }
     }
 
@@ -58,10 +54,12 @@ class QrActivity : AppCompatActivity() {
                 count += 1
             }
         }
+
+        val titlePrefix = intent.getStringExtra(C.TITLE_PREFIX);
         if (count<=1) {
-            title = "Qr code"
+            title = "$titlePrefix - QR code"
         } else {
-            title = "$count Qr codes"
+            title = "$titlePrefix - $count QR codes"
         }
     }
 }

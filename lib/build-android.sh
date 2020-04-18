@@ -1,7 +1,17 @@
-export NDK_HOME=$HOME/android-ndk-r21
-#export NDK_HOME=$HOME/AndroidSDK/sdk/ndk/20.0.5594570
-export PATH=$PATH:$NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin
-export CC_i686_linux_android=i686-linux-android16-clang
+# configure this according to you system and your target
+export NDK=$HOME/android-ndk-r21
+export TARGET=i686-linux-android
+export API=16
+export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
+##### end configure
 
-cargo build --target i686-linux-android
-cp ../target/i686-linux-android/debug/libfirma.so ../android/app/src/main/jniLibs/x86/
+export CC=$TOOLCHAIN/bin/$TARGET$API-clang
+export LD=$TOOLCHAIN/bin/$TARGET-ld
+export RANLIB=$TOOLCHAIN/bin/$TARGET-ranlib
+export STRIP=$TOOLCHAIN/bin/$TARGET-strip
+export AR=$TOOLCHAIN/bin/$TARGET-ar
+export AS=$TOOLCHAIN/bin/$TARGET-as
+
+cargo build --target $TARGET
+cp ../target/$TARGET/debug/libfirma.so ../android/app/src/main/jniLibs/x86/
+

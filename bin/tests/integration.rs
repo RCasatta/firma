@@ -149,7 +149,7 @@ fn integration_test() {
     assert_ne!(print_a, sign_a);
     assert_eq!(print_a.inputs, sign_a.inputs);
     assert_eq!(print_a.outputs, sign_a.outputs);
-    assert_eq!(print_a.sizes, sign_a.sizes);
+    assert_ne!(print_a.size, sign_a.size);
     assert_eq!(print_a.fee, sign_a.fee);
     assert_ne!(print_a.info, sign_a.info);
     assert!(sign_a.info.iter().any(|msg| msg.contains("#Address_reuse")));
@@ -289,7 +289,7 @@ fn integration_test() {
     client_default.stop().unwrap();
     let ecode = bitcoind.wait().unwrap();
     assert!(ecode.success());
-    //thread::sleep(Duration::from_secs(1000));
+    thread::sleep(Duration::from_secs(1000));
 }
 
 struct FirmaCommand {
@@ -401,7 +401,7 @@ impl FirmaCommand {
     fn online_send_tx(&self, psbts: Vec<&str>) -> Result<SendTxOutput> {
         let mut args = vec!["--broadcast"];
         for psbt in psbts {
-            args.push("--psbt");
+            args.push("--psbt-file");
             args.push(psbt);
         }
         let value = self.online("send-tx", args).unwrap();
@@ -497,7 +497,7 @@ impl FirmaCommand {
     pub fn offline_print(&self, psbt_file: &str) -> Result<PsbtPrettyPrint> {
         let result = self.offline(
             "print",
-            vec![psbt_file, "--wallet-descriptor-file", &self.wallet_file()],
+            vec![psbt_file],
         );
         let value = map_json_error(result)?;
         let output = from_value(value)?;
