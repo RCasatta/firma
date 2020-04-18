@@ -289,7 +289,6 @@ fn integration_test() {
     client_default.stop().unwrap();
     let ecode = bitcoind.wait().unwrap();
     assert!(ecode.success());
-    thread::sleep(Duration::from_secs(1000));
 }
 
 struct FirmaCommand {

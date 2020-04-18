@@ -78,10 +78,12 @@ class Rust {
 
     data class Size (
         val unsigned: Int,
-        val estimated: Int
+        val estimated: Int,
+        val psbt: Int
     )
 
     data class Fee (
+        val absolute_fmt: String,
         val absolute: Long,
         val rate : Double
     )

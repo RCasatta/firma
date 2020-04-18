@@ -2,6 +2,7 @@
 export NDK=$HOME/android-ndk-r21
 export TARGET=i686-linux-android
 export API=16
+export HOST=darwin-x86_64
 export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
 ##### end configure
 

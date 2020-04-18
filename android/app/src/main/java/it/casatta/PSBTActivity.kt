@@ -19,6 +19,8 @@ import it.casatta.ListActivity.Companion.network
 import kotlinx.android.synthetic.main.activity_psbt.*
 import java.io.File
 import java.io.Serializable
+import java.util.*
+import kotlin.collections.ArrayList
 
 
 class PSBTActivity : AppCompatActivity() {
@@ -86,11 +88,13 @@ class PSBTActivity : AppCompatActivity() {
         if (!info.isEmpty()) {
             itemsAdapter.list.add(DescItem("Info", info))
         }
-        itemsAdapter.list.add(DescItem("Fee", psbtPretty.fee.absolute.toString()))
-        itemsAdapter.list.add(DescItem("Fee rate", psbtPretty.fee.rate.toString()))
-        itemsAdapter.list.add(DescItem("Estimated size", psbtPretty.size.estimated.toString()))
-        itemsAdapter.list.add(DescItem("Unsigned size", psbtPretty.size.unsigned.toString()))
+        val formattedRate = String.format(Locale.US, "%.2f sat/vB", psbtPretty.fee.rate) ;
+        itemsAdapter.list.add(DescItem("Fee", psbtPretty.fee.absolute_fmt))
+        itemsAdapter.list.add(DescItem("Fee rate", formattedRate))
         itemsAdapter.list.add(DescItem("Balances", psbtPretty.balances))
+        itemsAdapter.list.add(DescItem("Estimated size", "${psbtPretty.size.estimated} bytes"))
+        itemsAdapter.list.add(DescItem("Unsigned size", "${psbtPretty.size.unsigned} bytes"))
+        itemsAdapter.list.add(DescItem("PSBT size", "${psbtPretty.size.psbt} bytes"))
         itemsAdapter.list.add(DescItem("PSBT", psbtJson.psbt.psbt))
 
     }
