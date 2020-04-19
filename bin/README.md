@@ -1,6 +1,3 @@
-
-NOTE: written for firma 0.1.0 some command and/or output could be slightly different
-
 # Creating a 2of2 multisig wallet p2wsh
 
 During the following step we are going to create a multisig wallet 2of2 in testnet and we are going to sign and broadcast a transaction. 
@@ -18,11 +15,21 @@ firma-offline random --key-name r1
 ```json
 {
   "key": {
-    "xprv": "tprv8ZgxMBicQKsPfBh8CR3miH6A3pEi1Egu31m3PzmfqnuxCqhGqu3LcE3PAtxSFmfospHiANXrKse8HTHQgNCcb9ntyFwDiPJ1E4VFHFNyYar",
-    "xpub": "tpubD6NzVbkrYhZ4Yeiv64iN7gkGcqkeAZsocKMpgWoyG4iM3Kx3UHrvnifFM4mxCm9hpR22pcrSB3HLuhJsVt7xgBAgAE5NRZdWbt7gHTNLZWK"
+    "fingerprint": "ee72a8ec",
+    "name": "r1",
+    "seed": {
+      "bech32": "ts142ps3glsxq586xrglkhc55fznluw9hta8p436wveeedmuq79yvdqphw8h5",
+      "hex": "aa8308a3f030287d1868fdaf8a51229ff8e2dd7d386b1d3999ce5bbe03c5231a",
+      "network": "testnet"
+    },
+    "xprv": "tprv8ZgxMBicQKsPfCEMKKmhRud92Ypg3nWXegEeCNATw3aKvbQz5v4sbm2y9kjVD4YMx3oDZQotvTAjZGjSe7wbEYQTm9iqRRV5jsmwnfATNsu",
+    "xpub": "tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU"
   },
-  "private_file": "/Users/casatta/.firma/testnet/r1-PRIVATE.json",
-  "public_file": "/Users/casatta/.firma/testnet/r1-public.json"
+  "private_file": "~/.firma/testnet/keys/r1/PRIVATE.json",
+  "public_file": "~/.firma/testnet/keys/r1/public.json",
+  "public_qr_files": [
+    "~/.firma/testnet/keys/r1/qr/qr.png"
+  ]
 }
 ```
 
@@ -34,37 +41,57 @@ firma-offline random --key-name r2
 ```json
 {
   "key": {
-    "xprv": "tprv8ZgxMBicQKsPeX1gcQSpJ9XYAaRvJjZnthJ7uHKqUYMyXd78S44TS24aJbDALQ1KPNjNHHi6Yn8AAQ9ccC1WyAPWxwfHiYJQ7EVjsu3y8BU",
-    "xpub": "tpubD6NzVbkrYhZ4Xz3UW47QhZBejbwrU4khTztuBoN8tpANN7Mu4St3cWgSUkrZc8v9FbFZaLwCDPHo8gKW3R1GqNTADCSrHpGkAVMyEKUbz4q"
+    "fingerprint": "7d5d8203",
+    "name": "r2",
+    "seed": {
+      "bech32": "ts130ad4m9r3xs3af8c8n3snacqxk93udhqrzpvwn3ccskkmxh3x54q9fj039",
+      "hex": "8bfadaeca389a11ea4f83ce309f700358b1e36e01882c74e38c42d6d9af1352a",
+      "network": "testnet"
+    },
+    "xprv": "tprv8ZgxMBicQKsPdMsqUfg8aqwARoMKtQZRfpApqydPbPepm6vd6pZRxsMEHT8ETmfsko4XCdrUYUX8fRPj2xA3AUq83EqinnVTFcje3YeHocG",
+    "xpub": "tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN"
   },
-  "private_file": "/Users/casatta/.firma/testnet/r2-PRIVATE.json",
-  "public_file": "/Users/casatta/.firma/testnet/r2-public.json"
+  "private_file": "~/.firma/testnet/keys/r2/PRIVATE.json",
+  "public_file": "~/.firma/testnet/keys/r2/public.json",
+  "public_qr_files": [
+    "~/.firma/testnet/keys/r2/qr/qr.png"
+  ]
 }
 ```
 
 # Create the 2of2 multisig wallet
 
 For the example we are using the two master_key created in the previous step. From the offline machines 
-copy `$HOME/.firma/testnet/r1-public.json` and `$HOME/.firma/testnet/r2-public.json` to the 
+copy `$HOME/.firma/testnet/keys/r1/public.json` and `$HOME/.firma/testnet/keys/r2/public.json` to the 
 online machine. 
 `COOKIE_FILE` must point to the bitcoin node cookie file
 
 ```
-firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub $HOME/.firma/testnet/r1-public.json --xpub $HOME/.firma/testnet/r2-public.json
+firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub-file $HOME/.firma/testnet/keys/r1/public.json --xpub-file $HOME/.firma/testnet/keys/r2/public.json
 ```
 ```json
 {
-     "wallet": {
-       "daemon_opts": {
-         "cookie_file": "~/.bitcoin/testnet3/.cookie",
-         "url": "http://127.0.0.1:18332"
-       },
-       "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4Yeiv64iN7gkGcqkeAZsocKMpgWoyG4iM3Kx3UHrvnifFM4mxCm9hpR22pcrSB3HLuhJsVt7xgBAgAE5NRZdWbt7gHTNLZWK/1/*,tpubD6NzVbkrYhZ4Xz3UW47QhZBejbwrU4khTztuBoN8tpANN7Mu4St3cWgSUkrZc8v9FbFZaLwCDPHo8gKW3R1GqNTADCSrHpGkAVMyEKUbz4q/1/*))#4rapk0uk",
-       "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4Yeiv64iN7gkGcqkeAZsocKMpgWoyG4iM3Kx3UHrvnifFM4mxCm9hpR22pcrSB3HLuhJsVt7xgBAgAE5NRZdWbt7gHTNLZWK/0/*,tpubD6NzVbkrYhZ4Xz3UW47QhZBejbwrU4khTztuBoN8tpANN7Mu4St3cWgSUkrZc8v9FbFZaLwCDPHo8gKW3R1GqNTADCSrHpGkAVMyEKUbz4q/0/*))#krd5ntg9",
-       "name": "firma-wallet"
-     },
-     "wallet_file": "/Users/casatta/.firma/testnet/firma-wallet/descriptor.json"
-   }
+  "qr_files": [
+    "~/.firma/testnet/wallets/firma-wallet/qr/qr-0.png",
+    "~/.firma/testnet/wallets/firma-wallet/qr/qr-1.png"
+  ],
+  "wallet": {
+    "created_at_height": 1720454,
+    "daemon_opts": {
+      "cookie_file": "/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie",
+      "url": "http://127.0.0.1:18332"
+    },
+    "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/1/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/1/*))#hwq7rl67",
+    "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/0/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/0/*))#5wstxmwd",
+    "fingerprints": [
+      "ee72a8ec",
+      "7d5d8203"
+    ],
+    "name": "firma-wallet",
+    "required_sig": 2
+  },
+  "wallet_file": "~/.firma/testnet/wallets/firma-wallet/descriptor.json"
+}
 ```
 
 ## Create a receiving address
@@ -76,7 +103,7 @@ firma-online --wallet-name firma-wallet get-address
 ```
 ```json
 {
-  "address": "tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwkzv",
+  "address": "tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk",
   "indexes": {
     "change": 0,
     "main": 1
@@ -84,7 +111,7 @@ firma-online --wallet-name firma-wallet get-address
 }
 ```
 
-Send some funds to `tb1qqnldnf79cav7mu9f36f9r667mgucltzyr3ht0h2j67nfwtyvz4qscfwkzv`
+Send some funds to `tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk`
 
 ## Check balance and coins
 
@@ -93,8 +120,8 @@ firma-online --wallet-name firma-wallet balance
 ```
 ```json
 {
-  "btc": "0.00023134",
-  "satoshi": 23134
+  "btc": "0.00002222",
+  "satoshi": 2222
 }
 ```
 ```
@@ -104,8 +131,8 @@ firma-online --wallet-name firma-wallet list-coins
 {
   "coins": [
     {
-      "amount": 23134,
-      "outpoint": "232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1"
+      "amount": 2222,
+      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1"
     }
   ]
 }
@@ -116,95 +143,117 @@ firma-online --wallet-name firma-wallet list-coins
 After funds receive a confirmation we can create the PSBT specifiying the recipient and the amount, you can specify more than one recipient and you can explicitly spend specific utxo with `--coin`. See `firma-online create-tx --help`
 
 ```
-firma-online --wallet-name firma-wallet create-tx --recipient tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x:5234
+firma-online --wallet-name firma-wallet create-tx --recipient tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f:1934 --psbt-name test
 ```
 ```json
 {
-  "psbt_file": "~/.firma/psbt-0.json",
-  "result": {
-    "changepos": 1,
-    "fee": 1.93e-6,
-    "psbt": "cHNidP8BAIkCAAAAAQVA/hgjlczjqQNXAOrYFB6A1DDi2wKtNeEwqZUbNi0jAQAAAAD+////AnIUAAAAAAAAIgAgF3Xq1BrO+hTS1TTWJy2mEMw1hV0N5Mqw9cGj+JSSGYkrRQAAAAAAACIAIPw+DbBPtPjcpiitaD2hmdgrvsiyIg635s1W5ooKdjCvAAAAAAABASteWgAAAAAAACIAIAT+2afFx1nt8KmOklHrXto5j6xEHG633VLXppcsjBVBAQVHUiEDUXWB4Qh47xCKpto2HMdBsWTsRwYHfqq4zwLbjrkyWXshA6TTyJX+H1fHr5WESfNhUa0y9qF/L0RiXdjriThsre8gUq4iBgNRdYHhCHjvEIqm2jYcx0GxZOxHBgd+qrjPAtuOuTJZewyswi4WAAAAAAAAAAAiBgOk08iV/h9Xx6+VhEnzYVGtMvahfy9EYl3Y64k4bK3vIAw0YJNMAAAAAAAAAAAAAAEBR1IhA4A+BIno9JcanXaxLzE8maixH/PtiqT+l59202amEHK5IQJHbVNsy+rKmbMOmqwYYVl/uVoQN//Is7yAXr2sBckqPlKuIgICR21TbMvqypmzDpqsGGFZf7laEDf/yLO8gF69rAXJKj4MNGCTTAEAAAABAAAAIgIDgD4Eiej0lxqddrEvMTyZqLEf8+2KpP6Xn3bTZqYQcrkMrMIuFgEAAAABAAAAAA=="
-  }
+  "address_reused": [],
+  "funded_psbt": {
+    "changepos": -1,
+    "fee": 2.88e-6,
+    "name": "test",
+    "psbt": "cHNidP8BAF4CAAAAAeIAawU+m0hbgRpFAWX+IOPH8KwiisF8aVNdZEG4b1ZaAQAAAAD+////AY4HAAAAAAAAIgAgxCo5WnUgfjFEUX6pyvNNMgVQVAmxqA6PgJ0CFKrUZ2QAAAAAAAEBK64IAAAAAAAAIgAgpMY8oyE5SsmzvaMaE2HIP4tZAJE8+RfW36t87dclUTIBBUdSIQOiEGiE3ON0fGERrkaaG540mWPor9ti8nd1o6+QDkv5wSEC2QMn1YJTDcdOAXorh05UQmPdPO+pZT6L3A0jRrf9WEVSriIGAtkDJ9WCUw3HTgF6K4dOVEJj3TzvqWU+i9wNI0a3/VhFDH1dggMAAAAAAAAAACIGA6IQaITc43R8YRGuRpobnjSZY+iv22Lyd3Wjr5AOS/nBDO5yqOwAAAAAAAAAAAAA"
+  },
+  "psbt_file": "~/.firma/testnet/psbts/test/psbt.json",
+  "qr_files": [
+    "~/.firma/testnet/psbts/test/qr/qr-0.png",
+    "~/.firma/testnet/psbts/test/qr/qr-1.png"
+  ]
 }
 ```
-
-Copy `psbt-0.json` to the two offline nodes as `psbt-0-A.json` and `psbt-0-B.json`.
-Copy on the offline nodes also the wallet descriptor `$HOME/.firma/testnet/firma-wallet/descriptor.json`
 
 ## Sign from node A
 
 ```
-firma-offline sign psbt-0-A.json --key $HOME/.firma/testnet/r1-PRIVATE.json
+firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/testnet/keys/r1/PRIVATE.json --wallet-descriptor-file ~/.firma/testnet/wallets/firma-wallet/descriptor.json
 ```
 ```json
 {
   "fee": {
-    "absolute": 193,
-    "rate": 1.0157894736842106
+    "absolute": 288,
+    "rate": 1.9591836734693877
   },
   "info": [
     "Added paths",
     "Added signatures"
   ],
   "inputs": [
-    "#0 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 (m/0/0) 23134"
+    {
+      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1",
+      "path": "m/0/0",
+      "value": "0.00002222 BTC",
+      "wallet": "firma-wallet"
+    }
   ],
   "outputs": [
-    "#0 00201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f894921989 tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x () 5234",
-    "#1 0020fc3e0db04fb4f8dca628ad683da199d82bbec8b2220eb7e6cd56e68a0a7630af tb1qlslqmvz0knudef3g445rmgvemq4maj9jyg8t0ekd2mng5znkxzhsrnfan6 (m/1/1) 17707"
+    {
+      "address": "tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f",
+      "path": "",
+      "value": "0.00001934 BTC",
+      "wallet": ""
+    }
   ],
-  "psbt_file": "/Users/casatta/.firma/psbt-0-A.json",
-  "sizes": [
-    "unsigned tx        :    137   vbyte",
-    "estimated tx       :    190   vbyte"
-  ]
+  "psbt_file": "~/.firma/testnet/psbts/test-ee72a8ec/psbt.json",
+  "size": {
+    "estimated": 147,
+    "unsigned": 94
+  }
 }
 ```
+
+A new psbt.json has been created at `~/.firma/testnet/psbts/test-ee72a8ec/psbt.json` note the name has been postfixed with the fingerprint of the key that signed
 
 ## Sign from node B
 
 ```
-firma-offline sign psbt-0-B.json --key $HOME/.firma/testnet/r2-PRIVATE.json
+firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/testnet/keys/r1/PRIVATE.json --wallet-descriptor-file ~/.firma/testnet/wallets/firma-wallet/descriptor.json
 ```
 ```json
 {
   "fee": {
-    "absolute": 193,
-    "rate": 1.0157894736842106
+    "absolute": 288,
+    "rate": 1.9591836734693877
   },
   "info": [
     "Added paths",
     "Added signatures"
   ],
   "inputs": [
-    "#0 232d361b95a930e135ad02dbe230d4801e14d8ea005703a9e3cc952318fe4005:1 (m/0/0) 23134"
+    {
+      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1",
+      "path": "m/0/0",
+      "value": "0.00002222 BTC",
+      "wallet": "firma-wallet"
+    }
   ],
   "outputs": [
-    "#0 00201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f894921989 tb1qza6744q6emapf5k4xntzwtdxzrxrtp2aphjv4v84cx3l39yjrxys0cg47x () 5234",
-    "#1 0020fc3e0db04fb4f8dca628ad683da199d82bbec8b2220eb7e6cd56e68a0a7630af tb1qlslqmvz0knudef3g445rmgvemq4maj9jyg8t0ekd2mng5znkxzhsrnfan6 (m/1/1) 17707"
+    {
+      "address": "tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f",
+      "path": "",
+      "value": "0.00001934 BTC",
+      "wallet": ""
+    }
   ],
-  "psbt_file": "/Users/casatta/.firma/psbt-0-B.json",
-  "sizes": [
-    "unsigned tx        :    137   vbyte",
-    "estimated tx       :    190   vbyte"
-  ]
+  "psbt_file": "~/.firma/testnet/psbts/test-ee72a8ec/psbt.json",
+  "size": {
+    "estimated": 147,
+    "unsigned": 94
+  }
 }
 ```
 
 ## Combine, finalize and send TX
 
 ```
-firma-online --wallet-name firma-wallet send-tx --psbt psbt-0-A.json --psbt psbt-0-B.json --broadcast
-```
+firma-online --wallet-name firma-wallet send-tx --psbt-file ~/.firma/testnet/psbts/test-7d5d8203/psbt.json --psbt-file ~/.firma/testnet/psbts/test-ee72a8ec/psbt.json --broadcast```
 ```
 {
   "broadcasted": true,
-  "hex": "020000000001010540fe182395cce3a9035700ead8141e80d430e2db02ad35e130a9951b362d230100000000feffffff0272140000000000002200201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f8949219892b45000000000000220020fc3e0db04fb4f8dca628ad683da199d82bbec8b2220eb7e6cd56e68a0a7630af0400483045022100c79cdf100e069614d49c0dd69402c4ebd342d4dac508c092805ecd624231868702200327f903f7050b911487b4926ad5ab3544e04b6b795a8408ce0a9b943ea86ff401483045022100d2ada761237d45096f9dafa60a383cdca393c5b552b3acf94f067f8c4d6a058d02206f0dd20c197326648aa693fd3d27f5b34c4d27ded24881ade1ba603292e821cd0147522103517581e10878ef108aa6da361cc741b164ec4706077eaab8cf02db8eb932597b2103a4d3c895fe1f57c7af958449f36151ad32f6a17f2f44625dd8eb89386cadef2052ae00000000",
-  "txid": "7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122"
+  "hex": "02000000000101e2006b053e9b485b811a450165fe20e3c7f0ac228ac17c69535d6441b86f565a0100000000feffffff018e07000000000000220020c42a395a75207e3144517ea9caf34d3205505409b1a80e8f809d0214aad467640400483045022100c203ec0585270ace9afa2cf9a10f20365f1c491c693cf47bff3d6d5261492eca0220403f809419d8edefc66fdc0b417b5e86e57f1c2083b8220496c2eaec62b5a4e701483045022100851b1314178ef19fad9c9ef4e2c58b8ee73e31785fad3e779378180e312980190220637779f3959937512c1d403f627e4c0938d4207ad35133a18a1aa5c1a7a23fba0147522103a2106884dce3747c6111ae469a1b9e349963e8afdb62f27775a3af900e4bf9c12102d90327d582530dc74e017a2b874e544263dd3cefa9653e8bdc0d2346b7fd584552ae00000000",
+  "txid": "d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711"
 }
 ```
 
-View tx [7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122](https://blockstream.info/testnet/tx/7695016ce72c9ec2e13a5892f3ac28904c317c66a348cd1f5407c9128d12b122)
+View tx [d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711](https://blockstream.info/testnet/tx/d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711)
 
 

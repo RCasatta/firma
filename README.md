@@ -60,8 +60,9 @@ To build executables you need [rust](https://www.rust-lang.org/) (version >= 1.3
 git clone https://github.com/RCasatta/firma/
 cd firma
 cargo build --release
-export PATH=$PATH:$PWD/target/release/
 ```
+
+executables are `target/release/firma-online` and `target/release/firma-offline`
 
 ## Tests
 
