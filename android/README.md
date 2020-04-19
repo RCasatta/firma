@@ -28,7 +28,7 @@ At this point you should be able to launch the android app in the emulator, for 
 
 ## Example PSBT
 
-![qr-0](https://user-images.githubusercontent.com/6470319/79686978-745f2180-8244-11ea-8fd9-fc1a685ab0a3.png?v=4&s=200)
+![qr-0](https://user-images.githubusercontent.com/6470319/79686978-745f2180-8244-11ea-8fd9-fc1a685ab0a3.png | width=200)
 ![qr-1](https://user-images.githubusercontent.com/6470319/79686979-74f7b800-8244-11ea-82f9-f8d8b4a011f8.png?v=4&s=200)
 ![qr-2](https://user-images.githubusercontent.com/6470319/79686980-74f7b800-8244-11ea-9d1b-185080186bea.png?v=4&s=200)
 
