@@ -25,3 +25,14 @@ cd lib
 The script copy the file in the directory `android/app/src/main/jniLibs/x86/`
 
 At this point you should be able to launch the android app in the emulator, for using the app in the android phone you will need to launch also `build-android-release.sh`.
+
+## Example PSBT
+
+![qr-0](https://user-images.githubusercontent.com/6470319/79686978-745f2180-8244-11ea-8fd9-fc1a685ab0a3.png)
+![qr-1](https://user-images.githubusercontent.com/6470319/79686979-74f7b800-8244-11ea-82f9-f8d8b4a011f8.png)
+![qr-2](https://user-images.githubusercontent.com/6470319/79686980-74f7b800-8244-11ea-9d1b-185080186bea.png)
+
+## Example Wallet
+
+![qr-0](https://user-images.githubusercontent.com/6470319/79687010-a3759300-8244-11ea-9023-bfd91c7d3bad.png)
+![qr-1](https://user-images.githubusercontent.com/6470319/79687012-a40e2980-8244-11ea-82cc-6a9c803ad975.png)
