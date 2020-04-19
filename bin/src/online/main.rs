@@ -77,7 +77,10 @@ fn start() -> Result<Value> {
         Auth::CookieFile(daemon_opts.cookie_file.clone()),
         cmd.context.clone(),
     )?;
-    if !matches!(cmd.subcommand, CreateWallet(_)) {
+
+    if let CreateWallet(_) = cmd.subcommand {
+        // do nothing, I need the else branch (!matches!() require too recent rust version)
+    } else {
         wallet.load_if_unloaded(&cmd.context.wallet_name)?;
     }
 
