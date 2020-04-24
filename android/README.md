@@ -15,7 +15,7 @@ https://github.com/RCasatta/firma/releases/tag/beta_release_0.2.0
 
 To build the android app you need the rust lib built with the android [ndk](https://developer.android.com/ndk).
 
-For the emulator, modify the `build-android.sh` file to fit your system. Then launch the build.
+For the emulator, modify the `build-android.sh` file to fit your system. Then launch the build. Starting from the root of the repo:
 
 ```
 cd lib
