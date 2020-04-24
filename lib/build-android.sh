@@ -14,5 +14,6 @@ export AR=$TOOLCHAIN/bin/$TARGET-ar
 export AS=$TOOLCHAIN/bin/$TARGET-as
 
 cargo build --target $TARGET
+mkdir -p ../android/app/src/main/jniLibs/x86/
 cp ../target/$TARGET/debug/libfirma.so ../android/app/src/main/jniLibs/x86/
 
