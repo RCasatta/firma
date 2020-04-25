@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 class Rust {
-    val mapper = ObjectMapper().registerModule(KotlinModule())
+    private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     data class JsonRpc(
         val method: String,
@@ -98,9 +98,9 @@ class Rust {
         val balances: String
     )
 
-    external fun call(json: String): String
+    private external fun call(json: String): String
 
-    fun callJson(json: String): JsonNode {
+    private fun callJson(json: String): JsonNode {
         val strResult = call(json)
         val jsonResult = mapper.readTree(strResult)
         if (jsonResult.has("error")) {
@@ -109,77 +109,73 @@ class Rust {
         return jsonResult
     }
 
-    fun list(datadir: String, network: String, kind: String): ListOutput {
+    fun list(datadir: String, kind: String): ListOutput {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("kind", kind)
-        val req = JsonRpc("list", datadir, network, node)
+        val req = JsonRpc("list", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         val json = callJson(reqString)
-        val output = mapper.convertValue(json, ListOutput::class.java)
-        return output
+        return mapper.convertValue(json, ListOutput::class.java)
     }
 
-    fun random(datadir: String, network: String, keyName: String): JsonNode {
+    fun random(datadir: String, keyName: String): JsonNode {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("key_name", keyName)
         node.put("qr_version", 14)
-        val req = JsonRpc("random", datadir, network, node)
+        val req = JsonRpc("random", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         return callJson(reqString)
     }
 
-    fun merge_qrs(datadir: String, network: String, qrs_bytes: List<String>): String {
+    fun mergeQrs(datadir: String, qrs_bytes: List<String>): String {
         val node = JsonNodeFactory.instance.arrayNode()
         for (bytes in qrs_bytes) {
             node.add(bytes)
         }
-        val req = JsonRpc("merge_qrs", datadir, network, node)
+        val req = JsonRpc("merge_qrs", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         return callJson(reqString).asText()
     }
 
-    fun create_qrs(file: String, network: String) {
+    fun createQrs(file: String) {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("path", file)
         node.put("qr_version", 14)
-        val req = JsonRpc("create_qrs", "", network, node)
+        val req = JsonRpc("create_qrs", "", Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         callJson(reqString)
     }
 
-    fun sign(datadir: String, network: String, key: String, wallet: String, psbt: String): JsonNode {
+    fun sign(datadir: String, key: String, wallet: String, psbt: String): JsonNode {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("key", key)
         node.put("wallet_descriptor_file", wallet)
         node.put("psbt_file", psbt)
         node.put("total_derivations", 100)
         node.put("qr_version", 14)
-        val req = JsonRpc("sign", datadir, network, node)
+        val req = JsonRpc("sign", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
-        val json = callJson(reqString)
-        return json
+        return callJson(reqString)
     }
 
-    fun restore(datadir: String, network: String, key: String, nature: String, value: String): JsonNode {
+    fun restore(datadir: String, key: String, nature: String, value: String): JsonNode {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("key_name", key)
         node.put("nature", nature)
         node.put("value", value)
         node.put("qr_version", 14)
-        val req = JsonRpc("restore", datadir, network, node)
+        val req = JsonRpc("restore", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
-        val json = callJson(reqString)
-        return json
+        return callJson(reqString)
     }
 
-    fun print(datadir: String, network: String, psbt_file: String): PsbtPrettyPrint {
+    fun print(datadir: String, psbt_file: String): PsbtPrettyPrint {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("psbt_file", psbt_file)
-        val req = JsonRpc("print", datadir, network, node)
+        val req = JsonRpc("print", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         val json = callJson(reqString)
-        val output = mapper.convertValue(json, PsbtPrettyPrint::class.java)
-        return output
+        return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
 }
 

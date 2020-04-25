@@ -12,19 +12,18 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import kotlinx.android.synthetic.main.activity_key.*
 
 class KeyActivity : AppCompatActivity() {
-    val mapper = ObjectMapper().registerModule(KotlinModule())
-    val itemsAdapter = DescItemAdapter()
-    val hiddenItemsAdapter = DescItemAdapter()
+    private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
+    private val itemsAdapter = DescItemAdapter()
+    private val hiddenItemsAdapter = DescItemAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_key)
 
-        val network = intent.getStringExtra(C.NETWORK)
         val keyString = intent.getStringExtra(C.KEY)
-        Log.d("KEY", "$network $keyString")
+        Log.d("KEY", "${Network.TYPE} $keyString")
         val keyJson = mapper.readValue(keyString, Rust.MasterKeyOutput::class.java)
-        val keyTitle = "$network key: ${keyJson.key.name}"
+        val keyTitle = "key: ${keyJson.key.name}"
         title = keyTitle
 
         view_qr.setOnClickListener { QrActivity.comeHere(this, keyTitle, keyJson.public_qr_files ) }

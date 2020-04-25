@@ -13,39 +13,18 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.67" />
 
-    <TextView
-        android:id="@+id/network_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="network_text"
-        android:textSize="20sp"
-        app:layout_constraintBaseline_toBaselineOf="@id/network_switch"
-        app:layout_constraintBottom_toTopOf="@id/key_text"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="@id/guideline"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Switch
-        android:id="@+id/network_switch"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:layout_constraintVertical_bias="0.4"
-        app:layout_constraintBottom_toTopOf="@id/key_button"
-        app:layout_constraintLeft_toLeftOf="@id/guideline"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/key_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="key_text"
+        android:text="@string/select_key"
         android:textSize="20sp"
         app:layout_constraintBaseline_toBaselineOf="@id/key_button"
         app:layout_constraintBottom_toTopOf="@id/wallet_text"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="@id/guideline"
-        app:layout_constraintTop_toBottomOf="@id/network_text" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/key_button"
@@ -55,13 +34,13 @@
         app:layout_constraintBottom_toTopOf="@id/wallet_button"
         app:layout_constraintLeft_toLeftOf="@id/guideline"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/network_switch" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/wallet_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="wallet_text"
+        android:text="@string/select_wallet"
         android:textSize="20sp"
         app:layout_constraintBaseline_toBaselineOf="@id/wallet_button"
         app:layout_constraintBottom_toTopOf="@id/psbt_text"
@@ -83,7 +62,7 @@
         android:id="@+id/psbt_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="psbt_text"
+        android:text="@string/select_psbt"
         android:textSize="20sp"
         app:layout_constraintBaseline_toBaselineOf="@id/psbt_button"
         app:layout_constraintBottom_toTopOf="@id/sign_button"
@@ -107,7 +86,7 @@
         android:layout_height="wrap_content"
         android:enabled="false"
         android:text="Sign"
-        app:layout_constraintVertical_bias="0.7"
+
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

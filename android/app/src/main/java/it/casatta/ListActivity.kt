@@ -21,9 +21,9 @@ import java.io.File
 import java.io.Serializable
 
 class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
-    val itemsAdapter = ItemsAdapter()
-    var listOutput = Rust.ListOutput( emptyList(),  emptyList(),  emptyList())
-    val mapper = ObjectMapper().registerModule(KotlinModule())
+    private val itemsAdapter = ItemsAdapter()
+    private var listOutput = Rust.ListOutput( emptyList(),  emptyList(),  emptyList())
+    private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
 
     companion object {
         const val KEYS = 1
@@ -34,20 +34,14 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         const val WALLET = 6
         const val KEY = 7
 
-        fun comeHere(from: Activity, what: Int, network: String) {
+        fun comeHere(from: Activity, what: Int) {
             val newIntent = Intent(from, ListActivity::class.java)
 
             newIntent.putExtra(C.WHAT, what)
-            newIntent.putExtra(C.NETWORK, network)
 
             from.startActivityForResult(newIntent, what)
         }
 
-        var Intent.network: String?
-            get() = getStringExtra(C.NETWORK)
-            set(message) {
-                putExtra(C.NETWORK, message!!)
-            }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,14 +60,14 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         recyclerView.adapter = itemsAdapter
         when (intent.getIntExtra(C.WHAT, 0)) {
             KEYS -> {
-                title = "${intent.network} keys"
+                title = "keys"
                 updateKeys()
-                item_new.setOnClickListener { view ->
-                    comeHere(this, NEW_KEY, intent.network!!)
+                item_new.setOnClickListener {
+                    comeHere(this, NEW_KEY)
                 }
             }
             NEW_KEY -> {
-                title = "${intent.network} new key"
+                title = "new key"
                 itemsAdapter.list.add(Item("random", null, null, emptyList()))
                 itemsAdapter.list.add(Item("dice", null, null, emptyList()))
                 itemsAdapter.list.add(Item("import xprv", null, null, emptyList()))
@@ -81,16 +75,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 item_new.visibility = View.GONE
             }
             WALLETS -> {
-                title = "${intent.network} wallets"
+                title = "wallets"
                 updateWallets()
-                item_new.setOnClickListener { view ->
+                item_new.setOnClickListener {
                     launchScan("Scan a Wallet")
                 }
             }
             PSBTS -> {
-                title = "${intent.network} PSBTs"
+                title = "PSBTs"
                 updatePsbts()
-                item_new.setOnClickListener { view ->
+                item_new.setOnClickListener {
                     launchScan("Scan a PSBT")
                 }
             }
@@ -105,15 +99,15 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun launchScan(title: String) {
         val integrator = IntentIntegrator(this)
         integrator.setOrientationLocked(false)
-        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE);
-        integrator.setPrompt(title);
+        integrator.setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
+        integrator.setPrompt(title)
         integrator.initiateScan()
     }
 
     private fun updateKeys() {
         update("keys")
         for (key in listOutput.keys) {
-            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(key);
+            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(key)
             itemsAdapter.list.add(Item(key.key.name, key.key.fingerprint, details, key.public_qr_files))
         }
         itemsAdapter.notifyDataSetChanged()
@@ -122,7 +116,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun updateWallets() {
         update("wallets")
         for (wallet in listOutput.wallets) {
-            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet);
+            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet)
             itemsAdapter.list.add(Item(wallet.wallet.name, wallet.wallet.fingerprints.toString(), details, wallet.qr_files))
         }
         itemsAdapter.notifyDataSetChanged()
@@ -131,7 +125,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun updatePsbts() {
         update("psbts")
         for (psbt in listOutput.psbts) {
-            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(psbt);
+            val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(psbt)
             itemsAdapter.list.add(Item(psbt.psbt.name, null, details, psbt.qr_files))
         }
         itemsAdapter.notifyDataSetChanged()
@@ -140,7 +134,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun update(kind: String) {
         try {
             itemsAdapter.list.clear()
-            listOutput = Rust().list(filesDir.toString(), intent.network!!, kind)
+            listOutput = Rust().list(filesDir.toString(), kind)
         } catch (e: RustException) {
             Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
         }
@@ -155,7 +149,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
     override fun onItemClick(item: Item) {
         val what = intent.getIntExtra(C.WHAT, 0)
-        Log.d("LOG","onItemClick $item.name ${intent.network!!} $what")
+        Log.d("LOG","onItemClick $item.name ${Network.TYPE} $what")
 
         when(what) {
             NEW_KEY -> {
@@ -163,19 +157,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             }
             KEYS -> {
                 val newIntent = Intent(this, KeyActivity::class.java)
-                newIntent.putExtra(C.NETWORK, intent.network)
                 newIntent.putExtra(C.KEY, item.json)
                 startActivityForResult(newIntent, KEY)
             }
             WALLETS -> {
                 val newIntent = Intent(this, WalletActivity::class.java)
-                newIntent.putExtra(C.NETWORK, intent.network)
                 newIntent.putExtra(C.WALLET, item.json)
                 startActivityForResult(newIntent, WALLET)
             }
             PSBTS -> {
                 val newIntent = Intent(this, PSBTActivity::class.java)
-                newIntent.putExtra(C.NETWORK, intent.network)
                 newIntent.putExtra(C.PSBT, item.json)
                 startActivityForResult(newIntent, PSBT)
             }
@@ -191,18 +182,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         val dialog: AlertDialog = AlertDialog.Builder(this)
             .setTitle("Insert $nature")
             .setView(valueEditText)
-            .setPositiveButton("Ok") { dialog, which ->
-
-                val valueEditText = valueEditText.text.toString()
+            .setPositiveButton("Ok") { _, _ ->
+                val text = valueEditText.text.toString()
                 try {
-                    Rust().restore(filesDir.toString(), intent.network!!, name, nature, valueEditText)
+                    Rust().restore(filesDir.toString(), name, nature, text)
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
                     setResult(Activity.RESULT_CANCELED, Intent())
                 }
                 finish()
-
             }
             .setNegativeButton("Cancel", null)
             .create()
@@ -216,15 +205,15 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             .setTitle("New key")
             .setMessage("Give this key a unique name.")
             .setView(keyEditText)
-            .setPositiveButton("Ok") { dialog, which ->
+            .setPositiveButton("Ok") { _, _ ->
                 val keyName = keyEditText.text.toString()
-                val keyFile = File("$filesDir/${intent.network!!}/keys/$keyName/PRIVATE.json")
+                val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/PRIVATE.json")
                 if (keyFile.exists()) {
                     Toast.makeText(this, "This key already exist", Toast.LENGTH_LONG).show()
                 } else {
                     when (what)  {
                         "random" -> {
-                            Rust().random(filesDir.toString(), intent.network!!, keyName)
+                            Rust().random(filesDir.toString(), keyName)
                             setResult(Activity.RESULT_OK, Intent())
                             finish()
                         }
@@ -245,20 +234,20 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         dialog.show()
     }
 
-    fun saveWallet(content: String) {
-        Log.d("MAIN", "saveWallet " + content)
+    private fun saveWallet(content: String) {
+        Log.d("MAIN", "saveWallet $content")
         try {
             val json = mapper.readValue(content, Rust.WalletJson::class.java)
             val name = json.name
-            val networkDir = File(filesDir, intent.network!!)
+            val networkDir = File(filesDir, Network.TYPE)
             val wallets = File(networkDir, "wallets")
             val wallet = File(wallets, name)
             if (!wallet.exists()) {
                 wallet.mkdirs()
                 val desc = File(wallet, "descriptor.json")
-                Log.d("MAIN", "saveWallet path " + desc)
+                Log.d("MAIN", "saveWallet path $desc")
                 desc.writeText(content)
-                Rust().create_qrs(desc.toString(), intent.network!!)
+                Rust().createQrs(desc.toString())
                 updateWallets()
             } else {
                 Toast.makeText(this, "This wallet already exist", Toast.LENGTH_LONG).show()
@@ -268,20 +257,20 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         }
     }
 
-    fun savePsbt(content: String) {
-        Log.d("MAIN", "savePsbt " + content)
+    private fun savePsbt(content: String) {
+        Log.d("MAIN", "savePsbt $content")
         try {
             val json = mapper.readValue(content, Rust.PsbtJson::class.java)
             val name = json.name
-            val networkDir = File(filesDir, intent.network!!)
+            val networkDir = File(filesDir, Network.TYPE)
             val psbts = File(networkDir, "psbts")
             val psbt = File(psbts, name)
             if (!psbt.exists()) {
                 psbt.mkdirs()
                 val desc = File(psbt, "psbt.json")
-                Log.d("MAIN", "savePsbt path " + desc)
+                Log.d("MAIN", "savePsbt path $desc")
                 desc.writeText(content)
-                Rust().create_qrs(desc.toString(), intent.network!!)
+                Rust().createQrs(desc.toString())
                 updatePsbts()
             } else {
                 Toast.makeText(this, "This psbt already exist", Toast.LENGTH_LONG).show()
@@ -291,7 +280,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         }
     }
 
-    var rawBytes: ArrayList<String> = ArrayList()
+    private var rawBytes: ArrayList<String> = ArrayList()
     override fun onActivityResult(
         requestCode: Int,
         resultCode: Int,
@@ -307,7 +296,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 this.rawBytes.add(hexString)
                 if (hexString.startsWith("3")) {
                     try {
-                        val hexResult = Rust().merge_qrs(filesDir.toString(), intent.network!!, this.rawBytes)
+                        val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawBytes)
                         rawBytes = ArrayList()
                         Log.d("MAIN", "qr complete: $result")
                         val bytes = decodeHexString(hexResult)
@@ -377,7 +366,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
 data class Item(val name: String, val description: String?, val json: String?, val qrs: List<String>): Serializable
 
-class ItemsAdapter() : RecyclerView.Adapter<ItemHolder>() {
+class ItemsAdapter : RecyclerView.Adapter<ItemHolder>() {
 
     val list: ArrayList<Item> = ArrayList()
     var listener: ItemGesture? = null
@@ -387,7 +376,7 @@ class ItemsAdapter() : RecyclerView.Adapter<ItemHolder>() {
     }
 
     override fun onBindViewHolder(holder: ItemHolder, position: Int) {
-        var tx = list[position]
+        val tx = list[position]
         holder.update(tx)
         holder.itemView.setOnClickListener {
             listener?.onItemClick(tx)
@@ -399,7 +388,7 @@ class ItemsAdapter() : RecyclerView.Adapter<ItemHolder>() {
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemHolder {
-        var item = LayoutInflater.from(parent.context).inflate(R.layout.key_item, parent, false)
+        val item = LayoutInflater.from(parent.context).inflate(R.layout.key_item, parent, false)
         return ItemHolder(item)
     }
 

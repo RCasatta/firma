@@ -18,7 +18,7 @@ import java.io.Serializable
 
 
 class QrActivity : AppCompatActivity() {
-    val imagesAdapter = ImageItemsAdapter()
+    private val imagesAdapter = ImageItemsAdapter()
 
     companion object {
         fun comeHere(from: Activity, titlePrefix: String, files: List<String>) {
@@ -55,18 +55,18 @@ class QrActivity : AppCompatActivity() {
             }
         }
 
-        val titlePrefix = intent.getStringExtra(C.TITLE_PREFIX);
-        if (count<=1) {
-            title = "$titlePrefix - QR code"
+        val titlePrefix = intent.getStringExtra(C.TITLE_PREFIX)
+        title = if (count<=1) {
+            "$titlePrefix - QR code"
         } else {
-            title = "$titlePrefix - $count QR codes"
+            "$titlePrefix - $count QR codes"
         }
     }
 }
 
 data class ImageItem(val name: String): Serializable
 
-class ImageItemsAdapter() : RecyclerView.Adapter<ImageItemHolder>(){
+class ImageItemsAdapter : RecyclerView.Adapter<ImageItemHolder>(){
 
     val list: ArrayList<ImageItem> = ArrayList()
 
@@ -75,12 +75,12 @@ class ImageItemsAdapter() : RecyclerView.Adapter<ImageItemHolder>(){
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageItemHolder {
-        var item = LayoutInflater.from(parent?.context).inflate(R.layout.image_item, parent, false)
+        val item = LayoutInflater.from(parent.context).inflate(R.layout.image_item, parent, false)
         return ImageItemHolder(item)
     }
     override fun onBindViewHolder(holder: ImageItemHolder, position: Int) {
-        var image = list[position]
-        holder?.update(image)
+        val image = list[position]
+        holder.update(image)
     }
 }
 
@@ -91,7 +91,7 @@ class ImageItemHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
         val imgFile = File(item.name)
 
         if (imgFile.exists()) {
-            val myBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath())
+            val myBitmap = BitmapFactory.decodeFile(imgFile.absolutePath)
             imageView.setImageBitmap(myBitmap)
         }
     }

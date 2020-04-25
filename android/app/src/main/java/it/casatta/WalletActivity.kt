@@ -12,18 +12,17 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import kotlinx.android.synthetic.main.activity_wallet.*
 
 class WalletActivity : AppCompatActivity() {
-    val mapper = ObjectMapper().registerModule(KotlinModule())
-    val itemsAdapter = DescItemAdapter()
+    private val mapper = ObjectMapper().registerModule(KotlinModule())
+    private val itemsAdapter = DescItemAdapter()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_wallet)
 
-        val network = intent.getStringExtra(C.NETWORK)
         val walletString = intent.getStringExtra(C.WALLET)
-        Log.d("WALLET", "$network $walletString")
+        Log.d("WALLET", "${Network.TYPE} $walletString")
         val walletJson = mapper.readValue(walletString, Rust.CreateWalletOutput::class.java)
-        val walletTitle = "$network wallet: ${walletJson.wallet.name}"
+        val walletTitle = "wallet: ${walletJson.wallet.name}"
         title = walletTitle
 
         view_qr.setOnClickListener { QrActivity.comeHere(this, walletTitle, walletJson.qr_files ) }

@@ -21,6 +21,21 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    flavorDimensions "network"
+    productFlavors {
+        networkMainnet {
+            dimension "network"
+            applicationIdSuffix ".mainnet"
+            versionNameSuffix "-mainnet"
+        }
+        networkTestnet {
+            dimension "network"
+            applicationIdSuffix ".testnet"
+            versionNameSuffix "-testnet"
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
