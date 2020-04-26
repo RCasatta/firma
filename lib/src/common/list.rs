@@ -1,3 +1,4 @@
+use crate::offline::print::pretty_print;
 use crate::offline::sign::read_key;
 use crate::*;
 use bitcoin::Network;
@@ -45,10 +46,13 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                     path.push("psbt.json");
                     debug!("try to read psbt {:?}", path);
                     match read_psbt_json(&path) {
-                        Ok(psbt) => {
+                        Ok(psbt_json) => {
+                            let (_, psbt) = psbt_from_base64(&psbt_json.psbt)?;
+                            let pretty = pretty_print(&psbt, network, &vec![])?;
                             let qr_files = read_qrs(&path)?;
                             let psbt_out = PsbtJsonOutput {
-                                psbt,
+                                psbt: psbt_json,
+                                signatures: signatures_needed(&pretty.inputs),
                                 file: path.clone(),
                                 qr_files,
                             };
@@ -83,6 +87,16 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
     }
 
     Ok(list)
+}
+
+fn signatures_needed(inputs: &Vec<TxIn>) -> String {
+    // TODO reasoning on the first input, should reason as a total?
+    let number = inputs.first().map(|i| i.signatures.len()).unwrap_or(0);
+    match number {
+        0 => "No signatures".to_string(),
+        1 => "1 signature".to_string(),
+        n => format!("{} signatures", n),
+    }
 }
 
 fn read_qrs(path: &PathBuf) -> Result<Vec<PathBuf>> {

@@ -36,8 +36,12 @@ class MainActivity : AppCompatActivity() {
                 val keyFile = "$filesDir/${Network.TYPE}/keys/${key_text.text}/PRIVATE.json"
                 val walletFile = "$filesDir/${Network.TYPE}/wallets/${wallet_text.text}/descriptor.json"
                 val psbtFile = "$filesDir/${Network.TYPE}/psbts/${psbt_text.text}/psbt.json"
-                val result = Rust().sign(filesDir.toString(), keyFile,walletFile, psbtFile )
-                AlertDialog.Builder(this).setMessage(result.toString()).create().show()
+                val result = Rust().sign(filesDir.toString(), keyFile, walletFile, psbtFile )
+                if (result.info.contains("Added signatures")) {
+                    AlertDialog.Builder(this).setMessage("Added signatures").create().show()
+                } else {
+                    AlertDialog.Builder(this).setMessage("No signatures added").create().show()
+                }
             }
         }
     }
@@ -63,3 +67,5 @@ class MainActivity : AppCompatActivity() {
 }
 
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
+fun String.hexStringToByteArray() = ByteArray(this.length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+

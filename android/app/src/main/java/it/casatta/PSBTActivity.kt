@@ -57,7 +57,7 @@ class PSBTActivity : AppCompatActivity() {
             val dialog: AlertDialog = AlertDialog.Builder(this)
                 .setTitle("Are you sure?")
                 .setMessage("Delete ${psbtJson.psbt.name}")
-                .setPositiveButton("Ok") { dialog, which ->
+                .setPositiveButton("Ok") { _, _ ->
                     File(psbtFileDir).deleteRecursively()
                     val intent = Intent(this, MainActivity::class.java)
                     intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
@@ -70,12 +70,12 @@ class PSBTActivity : AppCompatActivity() {
 
         for (i in psbtPretty.inputs.indices) {
             val input = psbtPretty.inputs[i]
-            inputsAdapter.list.add(TxInOutItem("input #$i",input.outpoint!!, input.value, "${input.path} ${input.wallet}"))
+            inputsAdapter.list.add(TxInOutItem("input #$i", input.outpoint, input.value, "${input.path} ${input.wallet} ${input.signatures.joinToString()}"))
         }
 
         for (i in psbtPretty.outputs.indices) {
             val output = psbtPretty.outputs[i]
-            outputsAdapter.list.add(TxInOutItem("output #$i",output.address!!, output.value, "${output.path} ${output.wallet}"))
+            outputsAdapter.list.add(TxInOutItem("output #$i", output.address, output.value, "${output.path} ${output.wallet}"))
         }
 
         items.layoutManager = LinearLayoutManager(this)

@@ -63,14 +63,22 @@ class Rust {
     )
 
     data class PsbtJsonOutput (
+        val signatures: String,
         val psbt: PsbtJson,
         val file: String,
         val qr_files: List<String>
     )
 
-    data class TxInOut (
-        val outpoint: String?,
-        val address: String?,
+    data class TxIn (
+        val outpoint: String,
+        val signatures: List<String>,
+        val value: String,
+        val path: String,
+        val wallet: String?
+    )
+
+    data class TxOut (
+        val address: String,
         val value: String,
         val path: String,
         val wallet: String?
@@ -89,8 +97,8 @@ class Rust {
     )
 
     data class PsbtPrettyPrint (
-        val inputs: List<TxInOut>,
-        val outputs: List<TxInOut>,
+        val inputs: List<TxIn>,
+        val outputs: List<TxOut>,
         val size: Size,
         val fee: Fee,
         val info: List<String>,
@@ -146,7 +154,7 @@ class Rust {
         callJson(reqString)
     }
 
-    fun sign(datadir: String, key: String, wallet: String, psbt: String): JsonNode {
+    fun sign(datadir: String, key: String, wallet: String, psbt: String): PsbtPrettyPrint {
         val node = JsonNodeFactory.instance.objectNode()
         node.put("key", key)
         node.put("wallet_descriptor_file", wallet)
@@ -155,7 +163,8 @@ class Rust {
         node.put("qr_version", 14)
         val req = JsonRpc("sign", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
-        return callJson(reqString)
+        val json = callJson(reqString)
+        return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
 
     fun restore(datadir: String, key: String, nature: String, value: String): JsonNode {
@@ -177,6 +186,16 @@ class Rust {
         val json = callJson(reqString)
         return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
+
+    fun savePSBT(datadir: String, psbtHex: String) {
+        val node = JsonNodeFactory.instance.objectNode()
+        node.put("qr_version", 14)
+        node.put("psbt_hex", psbtHex)
+        val req = JsonRpc("save_psbt", datadir, Network.TYPE, node)
+        val reqString = mapper.writeValueAsString(req)
+        callJson(reqString)
+    }
+
 }
 
 class RustException(message:String): Exception(message)

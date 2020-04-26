@@ -1,5 +1,7 @@
-use crate::DaemonOpts;
+use crate::offline::sign::get_psbt_name;
+use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
+use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{bech32, Address, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
@@ -52,14 +54,13 @@ pub struct PublicMasterKey {
 pub struct PsbtJson {
     pub name: String,
     pub psbt: String,
-    pub fee: f64,
-    pub changepos: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PsbtJsonOutput {
     pub psbt: PsbtJson,
     pub file: PathBuf,
+    pub signatures: String,
     pub qr_files: Vec<PathBuf>,
 }
 
@@ -139,11 +140,22 @@ pub struct ErrorJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct TxInOut {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub outpoint: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub address: Option<String>,
+pub struct TxIn {
+    pub outpoint: String,
+    pub signatures: HashSet<Fingerprint>,
+    #[serde(flatten)]
+    pub common: TxCommonInOut,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct TxOut {
+    pub address: String,
+    #[serde(flatten)]
+    pub common: TxCommonInOut,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct TxCommonInOut {
     pub value: String,
     pub path: String,
     pub wallet: String,
@@ -151,8 +163,8 @@ pub struct TxInOut {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct PsbtPrettyPrint {
-    pub inputs: Vec<TxInOut>,
-    pub outputs: Vec<TxInOut>,
+    pub inputs: Vec<TxIn>,
+    pub outputs: Vec<TxOut>,
     pub size: Size,
     pub fee: Fee,
     pub info: Vec<String>,
@@ -180,14 +192,35 @@ pub struct CreateQrOptions {
     pub qr_version: i16,
 }
 
-impl PsbtJson {
-    pub fn from_rpc(psbt: WalletCreateFundedPsbtResult, name: &str) -> Self {
-        PsbtJson {
-            psbt: psbt.psbt,
-            fee: psbt.fee.as_btc(),
-            changepos: psbt.change_position,
-            name: name.to_string(),
-        }
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SavePSBTOptions {
+    pub psbt_hex: String, //hex value
+    pub qr_version: i16,
+}
+
+pub fn get_name_key() -> raw::Key {
+    raw::Key {
+        type_value: 0xFC,
+        key: b"name".to_vec(),
+    }
+}
+
+pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> crate::Result<PSBT> {
+    let (_, mut psbt_with_name) = psbt_from_base64(&psbt.psbt)?;
+
+    let pair = raw::Pair {
+        key: get_name_key(),
+        value: name.as_bytes().to_vec(),
+    };
+    psbt_with_name.global.insert_pair(pair)?;
+    Ok(psbt_with_name)
+}
+
+impl From<&PSBT> for PsbtJson {
+    fn from(psbt: &PSBT) -> Self {
+        let (_, base64) = psbt_to_base64(psbt);
+        let name = get_psbt_name(psbt).expect("PSBT without name"); //TODO
+        PsbtJson { psbt: base64, name }
     }
 }
 

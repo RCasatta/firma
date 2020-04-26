@@ -1,17 +1,18 @@
 use crate::offline::print::pretty_print;
+use crate::qr::save_qrs;
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
-use bitcoin::consensus::serialize;
+use bitcoin::consensus::deserialize;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
-use bitcoin::util::psbt::Map;
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{Network, Script, SigHashType};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -48,13 +49,86 @@ pub struct SignResult {
 #[derive(Debug)]
 struct PSBTSigner {
     pub psbt: PSBT,
-    psbt_json: Option<PsbtJson>,
-    psbt_file: Option<PathBuf>,
+    psbts_dir: PathBuf,
     xprv: ExtendedPrivKey,
     secp: Secp256k1<SignOnly>,
     network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
     derivations: u32,
-    signed_by: HashSet<Fingerprint>,
+}
+
+/// extract field name in the PSBT extra field if present
+pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
+    psbt.global.unknown.get(&get_name_key()).map(|v| {
+        std::str::from_utf8(v)
+            .expect("PSBT name not utf8")
+            .to_string()
+    }) // TODO remove expect
+}
+
+pub fn save_psbt_opt(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
+    info!("save_psbt_opt {:?}", opt);
+    let bytes = hex::decode(&opt.psbt_hex)?;
+    let mut psbt: PSBT = deserialize(&bytes)?;
+    let mut psbts_dir: PathBuf = datadir.into();
+    psbts_dir.push(format!("{}", network));
+    psbts_dir.push("psbts");
+    save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
+    Ok(())
+}
+
+fn get_not_existing_name(psbts_dir: &PathBuf) -> String {
+    let mut count = 0usize;
+    let mut psbts_name = psbts_dir.clone();
+    psbts_name.push("dummy");
+    loop {
+        let name = format!("psbt-{}", count);
+        psbts_name.set_file_name(&name);
+        if !psbts_name.exists() {
+            return name;
+        }
+        count += 1;
+    }
+}
+
+/// psbts_dir is general psbts dir, name is extracted from PSBT
+/// if file exists file are overwritten, presumably because updated with signatures
+pub fn save_psbt(
+    psbt: &mut PSBT,
+    psbts_dir: &mut PathBuf,
+    qr_version: i16,
+) -> Result<(PathBuf, Vec<PathBuf>)> {
+    info!("save_psbt dir {:?}", psbts_dir);
+    let name = get_psbt_name(psbt).unwrap_or_else(|| {
+        let new_name = get_not_existing_name(&psbts_dir);
+        info!("psbt without name, giving one: {}", new_name);
+        let pair = raw::Pair {
+            key: get_name_key(),
+            value: new_name.as_bytes().to_vec(),
+        };
+        let _ = psbt.global.insert_pair(pair);
+        new_name
+    });
+    let (psbt_bytes, psbt_base64) = psbt_to_base64(psbt);
+    info!("save_psbt name {:?}", name);
+    psbts_dir.push(&name);
+    if !psbts_dir.exists() {
+        fs::create_dir_all(&psbts_dir)?;
+    }
+    info!("save_psbt in dir {:?}", psbts_dir);
+    let psbt_json = PsbtJson {
+        name,
+        psbt: psbt_base64,
+    };
+
+    psbts_dir.push("psbt.json");
+    let psbt_file = psbts_dir.clone();
+    let contents = serde_json::to_string_pretty(&psbt_json)?;
+    fs::write(&psbts_dir, contents.as_bytes())?;
+
+    psbts_dir.set_file_name("qr");
+    let qrs = save_qrs(psbt_bytes, psbts_dir.clone(), qr_version)?;
+
+    Ok((psbt_file, qrs))
 }
 
 impl PSBTSigner {
@@ -63,6 +137,7 @@ impl PSBTSigner {
         xprv: &ExtendedPrivKey,
         network: Network,
         derivations: u32,
+        psbts_dir: PathBuf,
     ) -> Result<Self> {
         let exception = network == Network::Regtest && xprv.network == Network::Testnet;
         if !(network == xprv.network || exception) {
@@ -74,41 +149,29 @@ impl PSBTSigner {
 
         Ok(PSBTSigner {
             psbt: psbt.clone(),
-            psbt_json: None,
-            psbt_file: None,
+            psbts_dir,
             xprv: *xprv,
             secp,
             derivations,
             network,
-            signed_by: HashSet::new(),
         })
     }
 
     fn from_opt(opt: &SignOptions, network: Network) -> Result<Self> {
         let psbt = read_psbt(&opt.psbt_file)?;
-        let psbt_json = read_psbt_json(&opt.psbt_file)?;
         let psbt_file = opt.psbt_file.clone();
+        let psbts_dir = psbt_file.parent().unwrap().parent().unwrap().to_path_buf(); //TODO remove unwrap
 
         let xprv_json = read_key(&opt.key)?;
 
-        let mut signer = PSBTSigner::new(&psbt, &xprv_json.xprv, network, opt.total_derivations)?;
-        signer.psbt_json = Some(psbt_json);
-        signer.psbt_file = Some(psbt_file);
+        let signer = PSBTSigner::new(
+            &psbt,
+            &xprv_json.xprv,
+            network,
+            opt.total_derivations,
+            psbts_dir,
+        )?;
         Ok(signer)
-    }
-
-    pub fn _get_partial_sigs(&self) -> Result<Vec<u8>> {
-        let mut only_partial_sigs = vec![];
-        for input in self.psbt.inputs.iter() {
-            for pair in input.get_pairs()?.iter() {
-                if pair.key.type_value == 2u8 {
-                    let vec = serialize(pair);
-                    debug!("partial sig pair {}", hex::encode(&vec));
-                    only_partial_sigs.extend(vec);
-                }
-            }
-        }
-        Ok(only_partial_sigs)
     }
 
     pub fn sign(&mut self) -> Result<SignResult> {
@@ -276,62 +339,12 @@ impl PSBTSigner {
             let mut signature = signature.serialize_der().to_vec();
             signature.push(sighash.as_u32() as u8); // TODO how to properly do this?
             input.partial_sigs.insert(pubkey.clone(), signature);
-            self.signed_by.insert(fing.clone());
         }
         Ok(())
     }
 
-    fn save_signed_psbt_file(&self, qr_version: i16) -> Result<PathBuf> {
-        match (&self.psbt_file, &self.psbt_json) {
-            (Some(psbt_file), Some(psbt_json)) => {
-                let psbt_bytes = serialize(&self.psbt);
-                let psbt = base64::encode(&psbt_bytes);
-                let mut psbt_signed_file = psbt_file
-                    .parent()
-                    .ok_or_else(fn_err("no parent"))?
-                    .to_path_buf();
-                let psbt_name = psbt_signed_file
-                    .file_name()
-                    .ok_or_else(fn_err("no name"))?
-                    .to_str()
-                    .ok_or_else(fn_err("OsStr"))?;
-                let signed_by: Vec<String> = self.signed_by.iter().map(|f| f.to_string()).collect();
-                let new_name = format!("{}-{}", psbt_name, signed_by.join("-"));
-                psbt_signed_file.set_file_name(&new_name);
-                if !psbt_signed_file.exists() {
-                    fs::create_dir(&psbt_signed_file)?;
-                }
-                psbt_signed_file.push("psbt.json");
-
-                let psbt_json = PsbtJson {
-                    name: new_name,
-                    psbt,
-                    changepos: psbt_json.changepos,
-                    fee: psbt_json.fee,
-                };
-
-                std::fs::write(&psbt_signed_file, serde_json::to_string_pretty(&psbt_json)?)?;
-
-                // TODO deduplicate following code similar in create_tx
-                let mut psbt_qr_path = psbt_signed_file.parent().unwrap().to_path_buf();
-                psbt_qr_path.push("qr");
-                if !psbt_qr_path.exists() {
-                    fs::create_dir(&psbt_qr_path)?;
-                }
-                psbt_qr_path.push("filename");
-                let psbt_bytes = serde_json::to_vec(&psbt_json)?;
-                let _qr_files = qr::save_qrs(psbt_bytes, psbt_qr_path, qr_version)?;
-
-                /*let output = PsbtJsonOutput {
-                    psbt: psbt_json,
-                    file: psbt_signed_file,
-                    qr_files
-                };*/
-
-                Ok(psbt_signed_file)
-            }
-            _ => Err("empty psbt_file or psbt_json".into()),
-        }
+    fn save_signed_psbt_file(&mut self, qr_version: i16) -> Result<(PathBuf, Vec<PathBuf>)> {
+        save_psbt(&mut self.psbt, &mut self.psbts_dir.clone(), qr_version)
     }
 
     fn pretty_print(&self, wallets: &[WalletJson]) -> Result<PsbtPrettyPrint> {
@@ -351,9 +364,9 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
         psbt_print.info.push("Added paths".to_string());
     }
     if sign_result.signed {
-        let psbt_new_file = psbt_signer.save_signed_psbt_file(opt.qr_version)?;
+        let (psbt_file, _) = psbt_signer.save_signed_psbt_file(opt.qr_version)?;
+        psbt_print.psbt_file = psbt_file;
         psbt_print.info.push("Added signatures".to_string());
-        psbt_print.psbt_file = psbt_new_file;
     } else {
         psbt_print.info.push("No signature added".to_string());
     }
@@ -389,18 +402,19 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 mod tests {
     use crate::offline::sign::*;
     use crate::{psbt_from_base64, PsbtJson, PSBT};
-    use bitcoin::consensus::serialize;
     use bitcoin::util::bip32::ExtendedPubKey;
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
     use std::io::Write;
+    use tempdir::TempDir;
 
     fn test_sign(
         psbt_to_sign: &mut PSBT,
         psbt_signed: &PSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10)?;
+        let temp_dir = TempDir::new("test_sign").unwrap().into_path();
+        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir)?;
         psbt_signer.sign()?;
         assert_eq!(&psbt_signer.psbt, psbt_signed);
         Ok(())
@@ -532,12 +546,8 @@ mod tests {
 
         assert_eq!(psbt_1, psbt_complete);
         assert_eq!(
-            psbt_to_base64(&psbt_1),
+            psbt_to_base64(&psbt_1).1,
             base64::encode(&psbt_complete_bytes)
         );
-    }
-
-    pub fn psbt_to_base64(psbt: &PSBT) -> String {
-        base64::encode(&serialize(psbt))
     }
 }

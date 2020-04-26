@@ -1,7 +1,7 @@
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
-use bitcoin::consensus::deserialize;
+use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::key;
 use bitcoin::Script;
 use log::{LevelFilter, Metadata, Record};
@@ -30,7 +30,7 @@ impl log::Log for SimpleLogger {
             let file = OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("log")
+                .open("firma.log")
                 .expect("can't open log");
             let mut stream = BufWriter::new(file);
             stream
@@ -58,6 +58,12 @@ pub fn psbt_from_base64(s: &str) -> Result<(Vec<u8>, PSBT)> {
     let bytes = base64::decode(s)?;
     let psbt = deserialize(&bytes)?;
     Ok((bytes, psbt))
+}
+
+pub fn psbt_to_base64(psbt: &PSBT) -> (Vec<u8>, String) {
+    let bytes = serialize(psbt);
+    let string = base64::encode(&bytes);
+    (bytes, string)
 }
 
 pub fn estimate_weight(psbt: &PSBT) -> Result<usize> {

@@ -37,8 +37,7 @@ impl Context {
     }
 
     pub fn path_for_qr(&self, kind: Kind, name: Option<String>) -> Result<PathBuf> {
-        self.path_builder_for(kind, name)
-            .file_with_subdir(Some("qr"), "filename")
+        self.path_builder_for(kind, name).file("qr")
     }
 
     pub fn path_for_wallet_qr(&self) -> Result<PathBuf> {
@@ -50,9 +49,8 @@ impl Context {
             .file(name)
     }
 
-    pub fn filename_for_psbt(&self, name: &str) -> Result<PathBuf> {
-        self.path_builder_for(Kind::PSBT, Some(name.to_string()))
-            .file("psbt.json")
+    pub fn psbts_dir(&self) -> Result<PathBuf> {
+        self.path_builder_for(Kind::PSBT, None).type_path()
     }
 
     pub fn save_wallet(&self, wallet: &WalletJson) -> Result<PathBuf> {

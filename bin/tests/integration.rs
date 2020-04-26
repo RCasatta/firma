@@ -147,7 +147,7 @@ fn integration_test() {
         .offline_sign(psbt_file_str, &r1.private_file.to_str().unwrap())
         .unwrap(); //TODO test passing public key
     assert_ne!(print_a, sign_a);
-    assert_eq!(print_a.inputs, sign_a.inputs);
+    assert_ne!(print_a.inputs, sign_a.inputs);
     assert_eq!(print_a.outputs, sign_a.outputs);
     assert_ne!(print_a.size, sign_a.size);
     assert_eq!(print_a.fee, sign_a.fee);
@@ -281,7 +281,7 @@ fn integration_test() {
         .iter()
         .any(|w| w.wallet.name == name_2of2));
     let list_psbt = firma_2of2.offline_list(Kind::PSBT).unwrap();
-    assert_eq!(list_psbt.psbts.len(), 5);
+    assert_eq!(list_psbt.psbts.len(), 2);
     let result = firma_2of3.online_rescan(); // TODO test restore a wallet, find funds with rescan
     assert!(result.is_ok());
 
@@ -375,7 +375,9 @@ impl FirmaCommand {
     }
 
     fn online_rescan(&self) -> Result<usize> {
-        Ok(from_value(self.online("rescan", vec!["--start-from", "0"]).unwrap())?)
+        Ok(from_value(
+            self.online("rescan", vec!["--start-from", "0"]).unwrap(),
+        )?)
     }
 
     fn online_create_tx(
@@ -494,10 +496,7 @@ impl FirmaCommand {
     }
 
     pub fn offline_print(&self, psbt_file: &str) -> Result<PsbtPrettyPrint> {
-        let result = self.offline(
-            "print",
-            vec![psbt_file],
-        );
+        let result = self.offline("print", vec![psbt_file]);
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)

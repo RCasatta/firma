@@ -4,6 +4,6 @@
 *~
 data/
 firma.iml
-log
+firma.log
 android/app/src/main/jniLibs
 android/app/release

@@ -1,4 +1,5 @@
-use crate::online::{save_psbt, Wallet};
+use crate::offline::sign::save_psbt;
+use crate::online::Wallet;
 use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::bitcoincore_rpc_json::{
@@ -7,7 +8,6 @@ use bitcoincore_rpc::bitcoincore_rpc_json::{
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
 use std::collections::{HashMap, HashSet};
-use std::fs;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -121,11 +121,12 @@ impl Wallet {
                 return Err(format!("error creating psbt ({:?})", e).into());
             }
         };
-        let funded_psbt = PsbtJson::from_rpc(funded_psbt, &opt.psbt_name);
 
-        let psbt_file = self.context.filename_for_psbt(&opt.psbt_name)?;
-        save_psbt(&funded_psbt, &psbt_file)?;
+        let mut psbt = psbt_from_rpc(&funded_psbt, &opt.psbt_name)?;
+        let mut psbts_dir = self.context.psbts_dir()?;
+        let (psbt_file, qr_files) = save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
 
+        // detect address reuse
         let transactions = self
             .client
             .list_transactions(None, Some(1000), None, Some(true))
@@ -141,17 +142,8 @@ impl Wallet {
             }
         }
 
-        let mut psbt_qr_path = psbt_file.parent().unwrap().to_path_buf();
-        psbt_qr_path.push("qr");
-        if !psbt_qr_path.exists() {
-            fs::create_dir(&psbt_qr_path)?;
-        }
-        psbt_qr_path.push("filename");
-        let psbt_bytes = serde_json::to_vec(&funded_psbt)?;
-        let qr_files = qr::save_qrs(psbt_bytes, psbt_qr_path, opt.qr_version)?;
-
         let create_tx = CreateTxOutput {
-            funded_psbt,
+            funded_psbt: (&psbt).into(),
             psbt_file,
             address_reused,
             qr_files,

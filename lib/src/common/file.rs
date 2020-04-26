@@ -70,20 +70,14 @@ impl PathBuilder {
     }
 
     pub fn file(&self, filename: &str) -> Result<PathBuf> {
-        self.file_with_subdir(None, filename)
-    }
-
-    pub fn file_with_subdir(&self, subdir: Option<&str>, filename: &str) -> Result<PathBuf> {
         let content = self
             .name
             .as_ref()
             .ok_or_else(|| Error::Generic("missing name".into()))?;
         let kind = self.kind.to_string();
         let network_string = format!("{}", self.network);
-        let mut paths: Vec<&str> = vec![&self.datadir, &network_string, &kind, &content];
-        if let Some(subdir) = subdir {
-            paths.push(subdir);
-        }
+        let paths: Vec<&str> = vec![&self.datadir, &network_string, &kind, &content];
+
         let mut path = path_for(paths)?;
         path.push(filename);
 
@@ -173,8 +167,7 @@ pub fn save_keys(
     let public_master_key = key.clone().into();
     save_public(&public_master_key, &public_key_file)?;
 
-    let path_for_qr = PathBuilder::new(datadir, network, Kind::Key, option_name)
-        .file_with_subdir(Some("qr"), "filename")?;
+    let path_for_qr = PathBuilder::new(datadir, network, Kind::Key, option_name).file("qr")?;
 
     let public_qr_files = qr::save_qrs(
         public_master_key.xpub.to_string().as_bytes().to_vec(),

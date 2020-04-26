@@ -76,6 +76,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
             let result = crate::offline::print::start(datadir, network, &opts)?;
             serde_json::to_value(result)?
         }
+        Some("save_psbt") => {
+            let opts: SavePSBTOptions = serde_json::from_value(args.clone())?;
+            let result = crate::offline::sign::save_psbt_opt(datadir, network, &opts)?;
+            serde_json::to_value(result)?
+        }
         _ => {
             let error: Error = "invalid method".into();
             error.to_json()

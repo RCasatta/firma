@@ -24,6 +24,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private val itemsAdapter = ItemsAdapter()
     private var listOutput = Rust.ListOutput( emptyList(),  emptyList(),  emptyList())
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
+    private var rawHexes: ArrayList<String> = ArrayList()
 
     companion object {
         const val KEYS = 1
@@ -126,7 +127,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         update("psbts")
         for (psbt in listOutput.psbts) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(psbt)
-            itemsAdapter.list.add(Item(psbt.psbt.name, null, details, psbt.qr_files))
+            itemsAdapter.list.add(Item(psbt.psbt.name, psbt.signatures, details, psbt.qr_files))
         }
         itemsAdapter.notifyDataSetChanged()
     }
@@ -257,30 +258,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         }
     }
 
-    private fun savePsbt(content: String) {
-        Log.d("MAIN", "savePsbt $content")
+    private fun savePsbt(psbtHex: String) {
+        Log.d("MAIN", "savePsbt ${psbtHex.length} bytes length")
         try {
-            val json = mapper.readValue(content, Rust.PsbtJson::class.java)
-            val name = json.name
-            val networkDir = File(filesDir, Network.TYPE)
-            val psbts = File(networkDir, "psbts")
-            val psbt = File(psbts, name)
-            if (!psbt.exists()) {
-                psbt.mkdirs()
-                val desc = File(psbt, "psbt.json")
-                Log.d("MAIN", "savePsbt path $desc")
-                desc.writeText(content)
-                Rust().createQrs(desc.toString())
-                updatePsbts()
-            } else {
-                Toast.makeText(this, "This psbt already exist", Toast.LENGTH_LONG).show()
-            }
+            Rust().savePSBT(filesDir.toString(), psbtHex)
+            updatePsbts()
         } catch (e: Exception) {
             Toast.makeText(this, "This is not a psbt", Toast.LENGTH_LONG).show()
         }
     }
 
-    private var rawBytes: ArrayList<String> = ArrayList()
     override fun onActivityResult(
         requestCode: Int,
         resultCode: Int,
@@ -289,23 +276,23 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
             if (result.contents == null) {
-                rawBytes = ArrayList()
+                rawHexes = ArrayList()
                 Toast.makeText(this, "Cancelled", Toast.LENGTH_LONG).show()
             } else {
                 val hexString = result.rawBytes.toHexString()
-                this.rawBytes.add(hexString)
+                this.rawHexes.add(hexString)
                 if (hexString.startsWith("3")) {
                     try {
-                        val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawBytes)
-                        rawBytes = ArrayList()
+                        val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawHexes)
+                        rawHexes = ArrayList()
                         Log.d("MAIN", "qr complete: $result")
-                        val bytes = decodeHexString(hexResult)
                         when (intent.getIntExtra(C.WHAT, 0)) {
                             WALLETS -> {
+                                val bytes = decodeHexString(hexResult)
                                 saveWallet(bytes!!.toString(Charsets.UTF_8))
                             }
                             PSBTS -> {
-                                savePsbt(bytes!!.toString(Charsets.UTF_8))
+                                savePsbt(hexResult)
                             }
                         }
                     } catch (e: RustException) {

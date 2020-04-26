@@ -51,14 +51,11 @@ pub fn create_qrs(opt: &CreateQrOptions) -> Result<Vec<PathBuf>> {
     let bytes = fs::read(&opt.path)?;
     let mut path = opt.path.clone();
     path.set_file_name("qr");
-    if !path.exists() {
-        fs::create_dir(&path)?;
-    }
-    path.push("filename");
     save_qrs(bytes, path, opt.qr_version)
 }
 
-pub fn save_qrs(bytes: Vec<u8>, mut path: PathBuf, version: i16) -> Result<Vec<PathBuf>> {
+/// path contains up to the filename (use dummy value) that will be replaced by qr file name
+pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<PathBuf>> {
     match version {
         0 => return Ok(vec![]),
         5..=20 => info!("save_qrs data len:{} version:{}", bytes.len(), version),
@@ -73,26 +70,44 @@ pub fn save_qrs(bytes: Vec<u8>, mut path: PathBuf, version: i16) -> Result<Vec<P
     let mut text_qr = vec![String::new(); 2];
     let single = qrs.len() == 1;
 
+    if qr_dir.exists() {
+        // delete existing QR if any
+        if qr_dir.is_dir() {
+            info!("listing {:?}", qr_dir);
+            for entry in std::fs::read_dir(&qr_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                info!("deleting {:?}", path);
+                fs::remove_file(path)?;
+            }
+        } else {
+            return Err("save_qrs qr_dir is not a dir".into());
+        }
+    } else {
+        fs::create_dir(&qr_dir)?;
+    }
+
+    let mut qr_file = PathBuf::from(qr_dir);
+    qr_file.push("dummy");
     for (i, qr) in qrs.iter().enumerate() {
         if single {
-            path.set_file_name("qr.png");
+            qr_file.set_file_name("qr.png");
         } else {
-            path.set_file_name(&format!("qr-{}.png", i));
+            qr_file.set_file_name(&format!("qr-{}.png", i));
         }
-        info!("rendering qr");
         let image = qr.render::<Luma<u8>>().build();
-        info!("Saving qr in {:?}", &path);
-        image.save(&path)?;
-        wallet_qr_files.push(path.clone());
+        info!("Saving qr in {:?}", &qr_file);
+        image.save(&qr_file)?;
+        wallet_qr_files.push(qr_file.clone());
 
         for b in &[true, false] {
             let qr_txt = print_qr(&qr, *b)?;
             text_qr[*b as usize].push_str(&qr_txt);
         }
     }
-    path.set_file_name("qrs.txt");
-    info!("Saving qr in {:?}", &path);
-    let mut qr_txt_file = File::create(&path)?;
+    qr_file.set_file_name("qrs.txt");
+    info!("Saving qr in {:?}", &qr_file);
+    let mut qr_txt_file = File::create(&qr_file)?;
     qr_txt_file.write_all(text_qr[0].as_bytes())?;
     qr_txt_file.write_all(text_qr[1].as_bytes())?;
     Ok(wallet_qr_files)

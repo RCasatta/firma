@@ -60,12 +60,19 @@ pub fn pretty_print(
     for (i, input) in tx.input.iter().enumerate() {
         let keypaths = &psbt.inputs[i].hd_keypaths;
         let wallets = which_wallet(keypaths, &wallets);
-        let txin = TxInOut {
-            outpoint: Some(input.previous_output.to_string()),
-            address: None,
-            value: Amount::from_sat(previous_outputs[i].value).to_string(),
-            path: derivation_paths(keypaths),
-            wallet: wallets.join(", "),
+        let signatures: HashSet<Fingerprint> = psbt.inputs[i]
+            .partial_sigs
+            .iter()
+            .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
+            .collect();
+        let txin = json::TxIn {
+            outpoint: input.previous_output.to_string(),
+            signatures,
+            common: TxCommonInOut {
+                value: Amount::from_sat(previous_outputs[i].value).to_string(),
+                path: derivation_paths(keypaths),
+                wallet: wallets.join(", "),
+            },
         };
         for wallet in wallets {
             *balances.entry(wallet).or_insert(0i64) -= previous_outputs[i].value as i64
@@ -78,12 +85,13 @@ pub fn pretty_print(
             .ok_or_else(fn_err("non default script"))?;
         let keypaths = &psbt.outputs[i].hd_keypaths;
         let wallets = which_wallet(keypaths, &wallets);
-        let txout = TxInOut {
-            outpoint: None,
-            address: Some(addr.to_string()),
-            value: Amount::from_sat(output.value).to_string(),
-            path: derivation_paths(keypaths),
-            wallet: wallets.join(" ,"),
+        let txout = json::TxOut {
+            address: addr.to_string(),
+            common: TxCommonInOut {
+                value: Amount::from_sat(output.value).to_string(),
+                path: derivation_paths(keypaths),
+                wallet: wallets.join(" ,"),
+            },
         };
         for wallet in wallets {
             *balances.entry(wallet).or_insert(0i64) += output.value as i64

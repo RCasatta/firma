@@ -27,15 +27,6 @@ impl Wallet {
     }
 }
 
-fn save_psbt(psbt: &PsbtJson, path: &PathBuf) -> Result<()> {
-    if path.exists() {
-        return Err(Error::FileExist(path.clone()));
-    }
-    info!("Saving psbt in {:?}", path);
-    fs::write(&path, serde_json::to_string_pretty(psbt)?)?;
-    Ok(())
-}
-
 fn read_xpubs_files(paths: &[PathBuf]) -> Result<Vec<ExtendedPubKey>> {
     let mut xpubs = vec![];
     for xpub_path in paths.iter() {
