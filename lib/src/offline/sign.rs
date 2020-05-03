@@ -111,7 +111,14 @@ pub fn save_psbt(
     let (psbt_bytes, psbt_base64) = psbt_to_base64(psbt);
     info!("save_psbt name {:?}", name);
     psbts_dir.push(&name);
-    if !psbts_dir.exists() {
+    if psbts_dir.exists() {
+        let mut old_psbt = psbts_dir.clone();
+        old_psbt.push("psbt.json");
+        if let Ok(old_psbt) = read_psbt(&old_psbt) {
+            info!("old psbt exist, merging together");
+            psbt.merge(old_psbt)?;
+        }
+    } else {
         fs::create_dir_all(&psbts_dir)?;
     }
     info!("save_psbt in dir {:?}", psbts_dir);
