@@ -1,4 +1,5 @@
 use crate::common::list::ListOptions;
+use crate::offline::dice::DiceOptions;
 use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
 use crate::offline::restore::RestoreOptions;
@@ -39,6 +40,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         Some("random") => {
             let random_opts: RandomOptions = serde_json::from_value(args.clone())?;
             let result = crate::offline::random::create_key(datadir, network, &random_opts)?;
+            serde_json::to_value(result)?
+        }
+        Some("dice") => {
+            let dice_opts: DiceOptions = serde_json::from_value(args.clone())?;
+            let result = crate::offline::dice::roll(datadir, network, &dice_opts)?;
             serde_json::to_value(result)?
         }
         Some("list") => {

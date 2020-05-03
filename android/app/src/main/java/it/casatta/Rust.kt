@@ -38,7 +38,7 @@ class Rust {
     )
 
     data class Seed(val hex: String, val bech32: String, val network: String)
-    data class Dice(val launches: String, val faces: Int)
+    data class Dice(val launches: String, val faces: Int, val value: String)
 
     data class CreateWalletOutput(
         val wallet_file: String,
@@ -138,6 +138,21 @@ class Rust {
         node.put("key_name", keyName)
         node.put("qr_version", 14)
         val req = JsonRpc("random", datadir, Network.TYPE, node)
+        val reqString = mapper.writeValueAsString(req)
+        return callJson(reqString)
+    }
+
+    fun dice(datadir: String, keyName: String, faces: String, launches: ArrayList<Int>): JsonNode {
+        val node = JsonNodeFactory.instance.objectNode()
+        node.put("key_name", keyName)
+        node.put("qr_version", 14)
+        node.put("faces", "_$faces")
+        node.put("bits", "_256")
+        val array = node.putArray("launches")
+        for (el in launches) {
+            array.add(el)
+        }
+        val req = JsonRpc("dice", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         return callJson(reqString)
     }

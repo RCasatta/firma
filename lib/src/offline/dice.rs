@@ -1,12 +1,13 @@
 use crate::*;
 use bitcoin::Network;
 use num_bigint::BigUint;
+use serde::{Deserialize, Serialize};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
 
 /// Dice generate a bitcoin master key in bip32
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, Serialize, Deserialize)]
 #[structopt(name = "dice")]
 pub struct DiceOptions {
     /// Number of faces of the dice, only platonic solid are valid (4, 6, 8, 12, 20) or a coin (2)
@@ -30,14 +31,14 @@ pub struct DiceOptions {
     pub qr_version: i16,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 enum Bits {
     _128,
     _192,
     _256,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 enum Base {
     _2 = 2,
     _4 = 4,

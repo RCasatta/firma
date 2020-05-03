@@ -16,6 +16,8 @@ class C {
         const val WALLET = "wallet"
         const val KEY = "key"
         const val TITLE_PREFIX = "title_prefix"
+        const val FACES = "faces"
+        const val LAUNCH_NUMBER = "launch_number"
 
         fun showDeleteDialog(context: Context, name: String, dir: String) {
             val valueEditText = EditText(context)
