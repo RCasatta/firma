@@ -1,5 +1,6 @@
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
+use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{bech32, Address, Network, OutPoint, Txid};
@@ -62,6 +63,7 @@ pub struct PsbtJsonOutput {
     pub file: PathBuf,
     pub signatures: String,
     pub qr_files: Vec<PathBuf>,
+    pub unsigned_txid: Txid,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -194,8 +196,29 @@ pub struct CreateQrOptions {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SavePSBTOptions {
-    pub psbt_hex: String, //hex value
+    pub psbt: StringEncoding,
     pub qr_version: i16,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(tag = "t", content = "c", rename_all = "lowercase")]
+pub enum StringEncoding {
+    Base64(String),
+    Hex(String),
+    Bech32(String),
+}
+
+impl StringEncoding {
+    pub fn as_bytes(&self) -> crate::Result<Vec<u8>> {
+        Ok(match self {
+            StringEncoding::Base64(s) => base64::decode(s)?,
+            StringEncoding::Hex(s) => hex::decode(s)?,
+            StringEncoding::Bech32(s) => {
+                let (_, vec_u5) = bech32::decode(s)?;
+                Vec::<u8>::from_base32(&vec_u5)?
+            }
+        })
+    }
 }
 
 pub fn get_name_key() -> raw::Key {

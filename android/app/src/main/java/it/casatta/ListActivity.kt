@@ -1,6 +1,9 @@
 package it.casatta
 
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -34,6 +37,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         const val PSBT = 5
         const val WALLET = 6
         const val KEY = 7
+        const val IMPORT_PSBT = 8
+        const val IMPORT_WALLET = 9
+        const val DICE_FACES = 10
+        const val DICE_LAUNCH = 11
 
         fun comeHere(from: Activity, what: Int) {
             val newIntent = Intent(from, ListActivity::class.java)
@@ -61,34 +68,47 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         recyclerView.adapter = itemsAdapter
         when (intent.getIntExtra(C.WHAT, 0)) {
             KEYS -> {
-                title = "keys"
+                title = "Keys"
                 updateKeys()
                 item_new.setOnClickListener {
                     comeHere(this, NEW_KEY)
                 }
             }
             NEW_KEY -> {
-                title = "new key"
-                itemsAdapter.list.add(Item("random", null, null, emptyList()))
-                itemsAdapter.list.add(Item("dice", null, null, emptyList()))
-                itemsAdapter.list.add(Item("import xprv", null, null, emptyList()))
-                itemsAdapter.list.add(Item("import bech32 seed", null, null, emptyList()))
-                item_new.visibility = View.GONE
+                title = "New key"
+                itemsAdapter.list.add(Item(getString( R.string.random), null, null, emptyList()))
+                itemsAdapter.list.add(Item(getString( R.string.dice), null, null, emptyList()))
+                itemsAdapter.list.add(Item(getString( R.string.import_xprv), null, null, emptyList()))
+                itemsAdapter.list.add(Item(getString( R.string.import_bech32_seed), null, null, emptyList()))
+                item_new.hide()
             }
             WALLETS -> {
-                title = "wallets"
+                title = "Wallets"
                 updateWallets()
                 item_new.setOnClickListener {
-                    launchScan("Scan a Wallet")
+                    comeHere(this, IMPORT_WALLET)
                 }
             }
             PSBTS -> {
                 title = "PSBTs"
                 updatePsbts()
                 item_new.setOnClickListener {
-                    launchScan("Scan a PSBT")
+                    comeHere(this, IMPORT_PSBT)
                 }
             }
+            IMPORT_PSBT -> {
+                title = "Import PSBT"
+                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "base64", null, emptyList()))
+                item_new.hide()
+            }
+            IMPORT_WALLET -> {
+                title = "Import WALLET"
+                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "json", null, emptyList()))
+                item_new.hide()
+            }
+
             else -> {
                 Log.d("LIST", "others" )
             }
@@ -171,6 +191,38 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 newIntent.putExtra(C.PSBT, item.json)
                 startActivityForResult(newIntent, PSBT)
             }
+            IMPORT_PSBT -> {
+                when(item.name) {
+                    getString(R.string.scan) -> {
+                        launchScan("Scan a PSBT")
+                    }
+                    getString(R.string.from_clipboard) -> {
+                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip: ClipData? = clipboard.primaryClip
+                        if ( clip != null ) {
+                            val text = clip.getItemAt(0)?.text.toString()
+                            savePsbt(text, "base64")
+                            finish()
+                        }
+                    }
+                }
+            }
+            IMPORT_WALLET -> {
+                when(item.name) {
+                    getString(R.string.scan) -> {
+                        launchScan("Scan a Wallet")
+                    }
+                    getString(R.string.from_clipboard) -> {
+                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip: ClipData? = clipboard.primaryClip
+                        if ( clip != null ) {
+                            val text = clip.getItemAt(0)?.text.toString()
+                            saveWallet(text)
+                            finish()
+                        }
+                    }
+                }
+            }
             else -> {
                 Log.w("LIST", "not mapped")
             }
@@ -213,20 +265,14 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     Toast.makeText(this, "This key already exist", Toast.LENGTH_LONG).show()
                 } else {
                     when (what)  {
-                        "random" -> {
+                        getString(R.string.random) -> {
                             Rust().random(filesDir.toString(), keyName)
                             setResult(Activity.RESULT_OK, Intent())
                             finish()
                         }
-                        "dice" -> {
-                            Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
-                        }
-                        "import xprv" -> {
-                            valueDialog(keyName, "Xprv" )
-                        }
-                        "import bech32 seed" -> {
-                            valueDialog(keyName, "Bech32Seed")
-                        }
+                        getString(R.string.dice) -> Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
+                        getString(R.string.import_xprv) -> valueDialog(keyName, "Xprv" )
+                        getString(R.string.import_bech32_seed) -> valueDialog(keyName, "Bech32Seed")
                     }
                 }
             }
@@ -249,7 +295,6 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 Log.d("MAIN", "saveWallet path $desc")
                 desc.writeText(content)
                 Rust().createQrs(desc.toString())
-                updateWallets()
             } else {
                 Toast.makeText(this, "This wallet already exist", Toast.LENGTH_LONG).show()
             }
@@ -258,13 +303,20 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         }
     }
 
-    private fun savePsbt(psbtHex: String) {
-        Log.d("MAIN", "savePsbt ${psbtHex.length} bytes length")
+    private fun savePsbt(psbt: String, encoding: String) {
+        Log.d("MAIN", "savePsbt ${psbt.length} chars length, encoding: $encoding")
         try {
-            Rust().savePSBT(filesDir.toString(), psbtHex)
-            updatePsbts()
+            Rust().savePSBT(filesDir.toString(), psbt, encoding)
         } catch (e: Exception) {
             Toast.makeText(this, "This is not a psbt", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        when(intent.getIntExtra(C.WHAT, 0)) {
+            PSBTS -> updatePsbts()
+            WALLETS -> updateWallets()
         }
     }
 
@@ -290,9 +342,11 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             WALLETS -> {
                                 val bytes = decodeHexString(hexResult)
                                 saveWallet(bytes!!.toString(Charsets.UTF_8))
+                                updateWallets()
                             }
                             PSBTS -> {
-                                savePsbt(hexResult)
+                                savePsbt(hexResult, "hex")
+                                updatePsbts()
                             }
                         }
                     } catch (e: RustException) {
@@ -302,9 +356,11 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     when (intent.getIntExtra(C.WHAT, 0)) {
                         WALLETS -> {
                             saveWallet(result.contents)
+                            updateWallets()
                         }
                         PSBTS -> {
-                            savePsbt(result.contents)
+                            savePsbt(result.contents, "base64")
+                            updatePsbts()
                         }
                     }
                 }

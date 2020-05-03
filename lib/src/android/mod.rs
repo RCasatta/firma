@@ -14,6 +14,7 @@ use serde_json::Value;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::str::FromStr;
+use std::sync::Once;
 
 fn rust_call(c_str: &CStr) -> Result<CString> {
     let str = c_str.to_str()?;
@@ -91,9 +92,14 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
     Ok(CString::new(result)?)
 }
 
+static START: Once = Once::new();
+
 #[no_mangle]
 pub extern "C" fn c_call(to: *const c_char) -> *mut c_char {
-    android_logger::init_once(Config::default().with_min_level(Level::Debug));
+    START.call_once(|| {
+        android_logger::init_once(Config::default().with_min_level(Level::Debug));
+    });
+
     let input = unsafe { CStr::from_ptr(to) };
     info!("<-- ({:?})", input);
     let output = rust_call(input)

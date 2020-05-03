@@ -53,19 +53,9 @@ class PSBTActivity : AppCompatActivity() {
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         }
+
         delete.setOnClickListener {
-            val dialog: AlertDialog = AlertDialog.Builder(this)
-                .setTitle("Are you sure?")
-                .setMessage("Delete ${psbtJson.psbt.name}")
-                .setPositiveButton("Ok") { _, _ ->
-                    File(psbtFileDir).deleteRecursively()
-                    val intent = Intent(this, MainActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(intent)
-                }
-                .setNegativeButton("Cancel", null)
-                .create()
-            dialog.show()
+            C.showDeleteDialog(this, psbtJson.psbt.name, psbtFileDir)
         }
 
         for (i in psbtPretty.inputs.indices) {

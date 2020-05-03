@@ -1,15 +1,18 @@
 package it.casatta
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 import kotlinx.android.synthetic.main.activity_wallet.*
+import java.io.File
 
 class WalletActivity : AppCompatActivity() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
@@ -33,6 +36,11 @@ class WalletActivity : AppCompatActivity() {
             finish()
         }
 
+        val walletDir = "$filesDir/${Network.TYPE}/wallets/${walletJson.wallet.name}/"
+        delete.setOnClickListener {
+            C.showDeleteDialog(this, walletJson.wallet.name , walletDir)
+        }
+
         items.layoutManager = LinearLayoutManager(this)
         items.adapter = itemsAdapter
 
@@ -41,5 +49,8 @@ class WalletActivity : AppCompatActivity() {
         itemsAdapter.list.add(DescItem("Descriptor change", walletJson.wallet.descriptor_change ))
         itemsAdapter.list.add(DescItem("Required sig", walletJson.wallet.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.wallet.created_at_height.toString() ))
+        itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson.wallet) ))
     }
+
+
 }

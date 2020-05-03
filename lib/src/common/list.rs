@@ -53,6 +53,7 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                             let psbt_out = PsbtJsonOutput {
                                 psbt: psbt_json,
                                 signatures: signatures_needed(&pretty.inputs),
+                                unsigned_txid: psbt.global.unsigned_tx.txid(),
                                 file: path.clone(),
                                 qr_files,
                             };

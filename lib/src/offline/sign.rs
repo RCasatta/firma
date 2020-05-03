@@ -9,7 +9,7 @@ use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SighashComponents;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::psbt::{raw, Map};
-use bitcoin::{Network, Script, SigHashType};
+use bitcoin::{Network, Script, SigHashType, Txid};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -67,7 +67,7 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
 
 pub fn save_psbt_opt(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
     info!("save_psbt_opt {:?}", opt);
-    let bytes = hex::decode(&opt.psbt_hex)?;
+    let bytes = opt.psbt.as_bytes()?;
     let mut psbt: PSBT = deserialize(&bytes)?;
     let mut psbts_dir: PathBuf = datadir.into();
     psbts_dir.push(format!("{}", network));
@@ -76,7 +76,20 @@ pub fn save_psbt_opt(datadir: &str, network: Network, opt: &SavePSBTOptions) -> 
     Ok(())
 }
 
-fn get_not_existing_name(psbts_dir: &PathBuf) -> String {
+/// Search existing psbt, if one matches the txid, return that name, otherwise it gives a new unused name
+fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
+    for entry in std::fs::read_dir(psbts_dir)? {
+        let entry = entry?;
+        let mut path = entry.path();
+        path.push("psbt.json");
+        if let Ok(psbt_json) = read_psbt_json(&path) {
+            if let Ok((_, psbt)) = psbt_from_base64(&psbt_json.psbt) {
+                if &psbt.global.unsigned_tx.txid() == txid {
+                    return Ok(psbt_json.name);
+                }
+            }
+        }
+    }
     let mut count = 0usize;
     let mut psbts_name = psbts_dir.clone();
     psbts_name.push("dummy");
@@ -84,23 +97,22 @@ fn get_not_existing_name(psbts_dir: &PathBuf) -> String {
         let name = format!("psbt-{}", count);
         psbts_name.set_file_name(&name);
         if !psbts_name.exists() {
-            return name;
+            return Ok(name);
         }
         count += 1;
     }
 }
 
 /// psbts_dir is general psbts dir, name is extracted from PSBT
-/// if file exists file are overwritten, presumably because updated with signatures
+/// if file exists a PSBT merge will be attempted
 pub fn save_psbt(
     psbt: &mut PSBT,
     psbts_dir: &mut PathBuf,
     qr_version: i16,
 ) -> Result<(PathBuf, Vec<PathBuf>)> {
-    info!("save_psbt dir {:?}", psbts_dir);
     let name = get_psbt_name(psbt).unwrap_or_else(|| {
-        let new_name = get_not_existing_name(&psbts_dir);
-        info!("psbt without name, giving one: {}", new_name);
+        let new_name = get_name(&psbts_dir, &psbt.global.unsigned_tx.txid()).unwrap(); // TODO remove unwrap
+        info!("PSBT without name, giving one: {}", new_name);
         let pair = raw::Pair {
             key: get_name_key(),
             value: new_name.as_bytes().to_vec(),
@@ -108,8 +120,7 @@ pub fn save_psbt(
         let _ = psbt.global.insert_pair(pair);
         new_name
     });
-    let (psbt_bytes, psbt_base64) = psbt_to_base64(psbt);
-    info!("save_psbt name {:?}", name);
+
     psbts_dir.push(&name);
     if psbts_dir.exists() {
         let mut old_psbt = psbts_dir.clone();
@@ -121,12 +132,14 @@ pub fn save_psbt(
     } else {
         fs::create_dir_all(&psbts_dir)?;
     }
-    info!("save_psbt in dir {:?}", psbts_dir);
+
+    let (psbt_bytes, psbt_base64) = psbt_to_base64(psbt);
+    info!("save_psbt name {:?} dir {:?}", name, psbts_dir);
+
     let psbt_json = PsbtJson {
         name,
         psbt: psbt_base64,
     };
-
     psbts_dir.push("psbt.json");
     let psbt_file = psbts_dir.clone();
     let contents = serde_json::to_string_pretty(&psbt_json)?;

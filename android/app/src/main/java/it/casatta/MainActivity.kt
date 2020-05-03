@@ -10,6 +10,12 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        init {
+            System.loadLibrary("firma")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -53,12 +59,10 @@ class MainActivity : AppCompatActivity() {
     ) {
         if (resultCode == Activity.RESULT_OK) {
             val result = data?.getStringExtra(C.RESULT)
-            if (requestCode == ListActivity.KEYS) {
-                key_text.text = result
-            } else if (requestCode == ListActivity.WALLETS) {
-                wallet_text.text = result
-            } else if (requestCode == ListActivity.PSBTS) {
-                psbt_text.text = result
+            when (requestCode) {
+                ListActivity.KEYS -> key_text.text = result
+                ListActivity.WALLETS -> wallet_text.text = result
+                ListActivity.PSBTS -> psbt_text.text = result
             }
         } else {
             super.onActivityResult(requestCode, resultCode, data)
@@ -67,5 +71,5 @@ class MainActivity : AppCompatActivity() {
 }
 
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
-fun String.hexStringToByteArray() = ByteArray(this.length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+//fun String.hexStringToByteArray() = ByteArray(this.length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 

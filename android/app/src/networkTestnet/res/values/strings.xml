@@ -3,4 +3,12 @@
     <string name="select_key">Select key</string>
     <string name="select_wallet">Select wallet</string>
     <string name="select_psbt">Select PSBT</string>
+    <string name="from_clipboard">From clipboard</string>
+    <string name="scan">Scan</string>
+
+    <string name="random">Random</string>
+    <string name="dice">Dice</string>
+    <string name="import_xprv">Import xprv</string>
+    <string name="import_bech32_seed">Import bech32 seed</string>
+
 </resources>

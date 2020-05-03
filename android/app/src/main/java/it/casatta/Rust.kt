@@ -52,7 +52,13 @@ class Rust {
         val descriptor_change: String,
         val fingerprints: List<String>,
         val required_sig: Int,
-        val created_at_height: Int
+        val created_at_height: Int,
+        val daemon_opts: DaemonOpts?
+    )
+
+    data class DaemonOpts (
+        val url: String,
+        val cookie_file: String
     )
 
     data class PsbtJson (
@@ -66,7 +72,8 @@ class Rust {
         val signatures: String,
         val psbt: PsbtJson,
         val file: String,
-        val qr_files: List<String>
+        val qr_files: List<String>,
+        val unsigned_txid: String
     )
 
     data class TxIn (
@@ -187,10 +194,13 @@ class Rust {
         return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
 
-    fun savePSBT(datadir: String, psbtHex: String) {
+    fun savePSBT(datadir: String, psbt: String, encoding: String) {  //TODO enum for encoding
         val node = JsonNodeFactory.instance.objectNode()
         node.put("qr_version", 14)
-        node.put("psbt_hex", psbtHex)
+        val psbtNode = JsonNodeFactory.instance.objectNode()
+        psbtNode.put("t", encoding)
+        psbtNode.put("c", psbt)
+        node.set("psbt", psbtNode)
         val req = JsonRpc("save_psbt", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         callJson(reqString)

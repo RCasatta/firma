@@ -10,6 +10,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import kotlinx.android.synthetic.main.activity_key.*
+import kotlinx.android.synthetic.main.activity_key.delete
+import kotlinx.android.synthetic.main.activity_key.items
+import kotlinx.android.synthetic.main.activity_key.select
+import kotlinx.android.synthetic.main.activity_key.view_qr
+import kotlinx.android.synthetic.main.activity_wallet.*
 
 class KeyActivity : AppCompatActivity() {
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
@@ -39,6 +44,10 @@ class KeyActivity : AppCompatActivity() {
             } else {
                 hidden_items.visibility = View.GONE
             }
+        }
+        val keyDir = "$filesDir/${Network.TYPE}/keys/${keyJson.key.name}/"
+        delete.setOnClickListener {
+            C.showDeleteDialog(this, keyJson.key.name , keyDir)
         }
 
         items.layoutManager = LinearLayoutManager(this)
