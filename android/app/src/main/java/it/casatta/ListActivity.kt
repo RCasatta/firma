@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.*
 import android.widget.EditText
@@ -24,10 +25,16 @@ import java.io.File
 import java.io.Serializable
 
 class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
+
     private val itemsAdapter = ItemsAdapter()
     private var listOutput = Rust.ListOutput( emptyList(),  emptyList(),  emptyList())
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
     private var rawHexes: ArrayList<String> = ArrayList()
+    private var diceLaunches: ArrayList<Int> = ArrayList()
+    private var faces: Int = 0
+    private var keyName: String? = null
+    private val PERFECT_SOLID_FACES = listOf(2, 4, 6, 8, 12, 20)
+    private val LAUNCHES_FOR_256_BIT = listOf(256, 128, 99, 85, 71, 59)
 
     companion object {
         const val KEYS = 1
@@ -44,9 +51,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
         fun comeHere(from: Activity, what: Int) {
             val newIntent = Intent(from, ListActivity::class.java)
-
             newIntent.putExtra(C.WHAT, what)
-
             from.startActivityForResult(newIntent, what)
         }
 
@@ -108,7 +113,23 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "json", null, emptyList()))
                 item_new.hide()
             }
-
+            DICE_FACES -> {
+                title = "How many faces has the dice?"
+                for (el in PERFECT_SOLID_FACES) {
+                    itemsAdapter.list.add(Item(el.toString(), null, null, emptyList()))
+                }
+                item_new.hide()
+            }
+            DICE_LAUNCH -> {
+                val a = intent.getIntExtra(C.LAUNCH_NUMBER,0)
+                val b = launchesRequired(intent.getIntExtra(C.FACES,0))
+                title = "$a dice launch of $b?"
+                val faces = intent.getIntExtra(C.FACES, 0)
+                for (el in (1..faces)) {
+                    itemsAdapter.list.add(Item(el.toString(), null, null, emptyList()))
+                }
+                item_new.hide()
+            }
             else -> {
                 Log.d("LIST", "others" )
             }
@@ -162,10 +183,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     override fun onItemLongClick(item: Item) {
-        val returnIntent = Intent()
-        returnIntent.putExtra(C.RESULT, item.name)
-        setResult(Activity.RESULT_OK, returnIntent)
-        finish()
+        setResultAndFinish(item)
     }
 
     override fun onItemClick(item: Item) {
@@ -223,14 +241,29 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     }
                 }
             }
+            DICE_FACES -> {
+                setResultAndFinish(item)
+            }
+            DICE_LAUNCH -> {
+                setResultAndFinish(item)
+            }
             else -> {
                 Log.w("LIST", "not mapped")
             }
         }
     }
 
+    private fun setResultAndFinish(item: Item) {
+        val returnIntent = Intent()
+        returnIntent.putExtra(C.RESULT, item.name)
+        setResult(Activity.RESULT_OK, returnIntent)
+        finish()
+    }
+
     private fun valueDialog(name: String, nature: String) {
         val valueEditText = EditText(this)
+        valueEditText.maxLines = 1
+        valueEditText.inputType = InputType.TYPE_CLASS_TEXT
 
         val dialog: AlertDialog = AlertDialog.Builder(this)
             .setTitle("Insert $nature")
@@ -253,6 +286,8 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
     private fun keyNameDialog(what: String) {
         val keyEditText = EditText(this)
+        keyEditText.maxLines = 1
+        keyEditText.inputType = InputType.TYPE_CLASS_TEXT
 
         val dialog: AlertDialog = AlertDialog.Builder(this)
             .setTitle("New key")
@@ -270,7 +305,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             setResult(Activity.RESULT_OK, Intent())
                             finish()
                         }
-                        getString(R.string.dice) -> Toast.makeText(this, "Not yet implemented", Toast.LENGTH_LONG).show()
+                        getString(R.string.dice) -> {
+                            this.keyName = keyName
+                            comeHere(this, DICE_FACES)
+                        }
                         getString(R.string.import_xprv) -> valueDialog(keyName, "Xprv" )
                         getString(R.string.import_bech32_seed) -> valueDialog(keyName, "Bech32Seed")
                     }
@@ -317,6 +355,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         when(intent.getIntExtra(C.WHAT, 0)) {
             PSBTS -> updatePsbts()
             WALLETS -> updateWallets()
+            KEYS -> updateKeys()
         }
     }
 
@@ -328,7 +367,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
             if (result.contents == null) {
-                rawHexes = ArrayList()
+                rawHexes.clear()
                 Toast.makeText(this, "Cancelled", Toast.LENGTH_LONG).show()
             } else {
                 val hexString = result.rawBytes.toHexString()
@@ -336,7 +375,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 if (hexString.startsWith("3")) {
                     try {
                         val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawHexes)
-                        rawHexes = ArrayList()
+                        rawHexes.clear()
                         Log.d("MAIN", "qr complete: $result")
                         when (intent.getIntExtra(C.WHAT, 0)) {
                             WALLETS -> {
@@ -367,14 +406,47 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             }
         } else if (requestCode == NEW_KEY && resultCode == Activity.RESULT_OK) {
             updateKeys()
-        }  else if (requestCode in arrayOf(PSBT,WALLET,KEY) && resultCode == Activity.RESULT_OK) {
+        } else if (requestCode == DICE_FACES && resultCode== Activity.RESULT_OK) {
+            faces = data?.getStringExtra(C.RESULT)!!.toInt()
+            Log.d("LIST", "faces are $faces")
+            launchDice(1)
+        } else if (requestCode == DICE_LAUNCH && resultCode== Activity.RESULT_OK) {
+            val launch = data?.getStringExtra(C.RESULT)!!
+            Log.d("LIST", "launch is $launch")
+            diceLaunches.add(launch.toInt())
+            if (diceLaunches.size == launchesRequired(faces)) {
+                Log.d("LIST", "finish diceLaunches $diceLaunches")
+                Rust().dice(filesDir.toString(), keyName!!, faces.toString(), diceLaunches)
+                resetFields()
+                finish()
+            } else {
+                launchDice(diceLaunches.size+1)
+            }
+        } else if (requestCode in arrayOf(PSBT,WALLET,KEY) && resultCode == Activity.RESULT_OK) {
             val returnIntent = Intent()
             returnIntent.putExtra(C.RESULT, data!!.getStringExtra(C.RESULT))
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         } else {
+            resetFields()
             super.onActivityResult(requestCode, resultCode, data)
         }
+    }
+
+    private fun resetFields() {
+        diceLaunches.clear()
+        faces = 0
+        keyName = null
+    }
+
+    private fun launchesRequired(faces: Int) = LAUNCHES_FOR_256_BIT[PERFECT_SOLID_FACES.indexOf(faces)]
+
+    private fun launchDice(launchNumber: Int) {
+        val newIntent = Intent(this, ListActivity::class.java)
+        newIntent.putExtra(C.WHAT, DICE_LAUNCH)
+        newIntent.putExtra(C.FACES, faces)
+        newIntent.putExtra(C.LAUNCH_NUMBER, launchNumber)
+        startActivityForResult(newIntent, DICE_LAUNCH)
     }
 
     private fun hexToByte(hexString: String): Byte {

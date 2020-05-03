@@ -63,5 +63,11 @@ class KeyActivity : AppCompatActivity() {
         if (keyJson.key.seed != null) {
             hiddenItemsAdapter.list.add(DescItem("Seed", keyJson.key.seed.bech32))
         }
+
+        if (keyJson.key.dice != null) {
+            hiddenItemsAdapter.list.add(DescItem("Faces", keyJson.key.dice.faces.toString() ))
+            hiddenItemsAdapter.list.add(DescItem("Launches", keyJson.key.dice.launches ))
+            hiddenItemsAdapter.list.add(DescItem("Value", keyJson.key.dice.value ))
+        }
     }
 }
