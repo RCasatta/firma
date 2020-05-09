@@ -1,9 +1,9 @@
 [package]
 name = "firma"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
-#rust = "1.42"
+#rust = "1.38"
 
 [dependencies]
 hex = "0.4.2"
