@@ -14,7 +14,6 @@ import kotlinx.android.synthetic.main.activity_key.delete
 import kotlinx.android.synthetic.main.activity_key.items
 import kotlinx.android.synthetic.main.activity_key.select
 import kotlinx.android.synthetic.main.activity_key.view_qr
-import kotlinx.android.synthetic.main.activity_wallet.*
 
 class KeyActivity : AppCompatActivity() {
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
