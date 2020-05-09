@@ -376,16 +376,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     try {
                         val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawHexes)
                         rawHexes.clear()
-                        Log.d("MAIN", "qr complete: $result")
+                        Log.d("MAIN", "qr complete: $hexResult")
                         when (intent.getIntExtra(C.WHAT, 0)) {
-                            WALLETS -> {
+                            IMPORT_WALLET -> {
                                 val bytes = decodeHexString(hexResult)
                                 saveWallet(bytes!!.toString(Charsets.UTF_8))
-                                updateWallets()
+                                finish()
                             }
-                            PSBTS -> {
+                            IMPORT_PSBT -> {
                                 savePsbt(hexResult, "hex")
-                                updatePsbts()
+                                finish()
                             }
                         }
                     } catch (e: RustException) {
