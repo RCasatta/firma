@@ -372,10 +372,12 @@ dependencies = [
  "image",
  "jni",
  "log 0.4.8",
+ "miniscript",
  "num-bigint",
  "qrcode",
  "rand 0.7.3",
  "serde",
+ "serde_cbor",
  "serde_json",
  "structopt",
  "tempdir",
@@ -434,6 +436,12 @@ dependencies = [
  "color_quant",
  "lzw",
 ]
+
+[[package]]
+name = "half"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f36b5f248235f45773d4944f555f83ea61fe07b18b561ccf99d7483d7381e54d"
 
 [[package]]
 name = "heck"
@@ -652,6 +660,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba626b8a6de5da682e1caa06bdb42a335aee5a84db8e5046a3e8ab17ba0a3ae0"
 dependencies = [
  "log 0.3.9",
+]
+
+[[package]]
+name = "miniscript"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4656dd1f35c3192c4056f48c80eab67ddfb6222cc5525f1df5f880dc055fca75"
+dependencies = [
+ "bitcoin",
 ]
 
 [[package]]
@@ -1019,6 +1036,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36df6ac6412072f67cf767ebbde4133a5b2e88e76dc6187fa7104cd16f783399"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_cbor"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e18acfa2f90e8b735b2836ab8d538de304cbb6729a7360729ea5a895d15a622"
+dependencies = [
+ "half",
+ "serde",
 ]
 
 [[package]]
