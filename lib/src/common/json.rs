@@ -3,7 +3,7 @@ use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
-use bitcoin::{bech32, Address, Network, OutPoint, Txid};
+use bitcoin::{bech32, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -85,9 +85,16 @@ pub struct WalletIndexes {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct BalanceOutput {
+pub struct BalanceSatBtc {
     pub satoshi: u64,
     pub btc: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct BalanceOutput {
+    pub confirmed: BalanceSatBtc,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending: Option<BalanceSatBtc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -134,6 +141,8 @@ pub struct ListCoinsOutput {
 pub struct Coin {
     pub outpoint: OutPoint,
     pub amount: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unconfirmed: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -206,6 +215,22 @@ pub enum StringEncoding {
     Base64(String),
     Hex(String),
     Bech32(String),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Balance {
+    #[serde(with = "bitcoin::util::amount::serde::as_btc")]
+    pub trusted: Amount,
+    #[serde(with = "bitcoin::util::amount::serde::as_btc")]
+    pub untrusted_pending: Amount,
+    #[serde(with = "bitcoin::util::amount::serde::as_btc")]
+    pub immature: Amount,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Balances {
+    pub mine: Balance,
+    pub watchonly: Balance,
 }
 
 impl StringEncoding {

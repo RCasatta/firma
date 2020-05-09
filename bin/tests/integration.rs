@@ -126,11 +126,11 @@ fn integration_test() {
 
     // check balances 2of2
     let balance_2of2 = firma_2of2.online_balance().unwrap();
-    assert_eq!(fund_2of2, balance_2of2.satoshi);
+    assert_eq!(fund_2of2, balance_2of2.confirmed.satoshi);
 
     // check balances 2of3
     let balance_2of3 = firma_2of3.online_balance().unwrap();
-    assert_eq!(fund_2of3, balance_2of3.satoshi);
+    assert_eq!(fund_2of3, balance_2of3.confirmed.satoshi);
 
     // create a tx from firma 2of2 wallet and send back to myself (detecting script reuse)
     let value_sent = rng.gen_range(1_000, 1_000_000);
@@ -168,7 +168,7 @@ fn integration_test() {
     client_default.generate_to_address(1, &address).unwrap();
     let balance_2of2 = firma_2of2.online_balance().unwrap();
     let expected = fund_2of2 - sign_a.fee.absolute; // since sending to myself deduct just the fee
-    assert_eq!(expected, balance_2of2.satoshi);
+    assert_eq!(expected, balance_2of2.confirmed.satoshi);
 
     // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysis
     let value_sent = 1_000_000;
@@ -216,7 +216,7 @@ fn integration_test() {
     client_default.generate_to_address(1, &address).unwrap();
     let balance_2of3 = firma_2of3.online_balance().unwrap();
     let expected = fund_2of3 - value_sent - sign_a.fee.absolute;
-    assert_eq!(expected, balance_2of3.satoshi);
+    assert_eq!(expected, balance_2of3.confirmed.satoshi);
 
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 1 and 2
     let value_sent = rng.gen_range(1_000, 1_000_000);
@@ -241,8 +241,8 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     client_default.generate_to_address(1, &address).unwrap();
     let balance_2of3_2 = firma_2of3.online_balance().unwrap();
-    let expected = balance_2of3.satoshi - value_sent - sign_a.fee.absolute;
-    assert_eq!(expected, balance_2of3_2.satoshi);
+    let expected = balance_2of3.confirmed.satoshi - value_sent - sign_a.fee.absolute;
+    assert_eq!(expected, balance_2of3_2.confirmed.satoshi);
 
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 2
     // sending in serial psbt->signer_a->signer_b->broadcast
@@ -266,8 +266,8 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     client_default.generate_to_address(1, &address).unwrap();
     let balance_2of3_3 = firma_2of3.online_balance().unwrap();
-    let expected = balance_2of3_2.satoshi - value_sent - sign_a.fee.absolute;
-    assert_eq!(expected, balance_2of3_3.satoshi);
+    let expected = balance_2of3_2.confirmed.satoshi - value_sent - sign_a.fee.absolute;
+    assert_eq!(expected, balance_2of3_3.confirmed.satoshi);
 
     let coins_output = firma_2of3.online_list_coins().unwrap();
     assert!(!coins_output.coins.is_empty());
