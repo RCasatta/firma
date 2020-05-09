@@ -338,3 +338,19 @@ impl_try_into!(BalanceOutput);
 impl_try_into!(ListCoinsOutput);
 impl_try_into!(GetAddressOutput);
 impl_try_into!(ListOutput);
+
+#[cfg(test)]
+mod tests {
+    use crate::WalletJson;
+
+    #[test]
+    fn test_cbor_wallet() {
+        let wallet: WalletJson = serde_json::from_str("{\"name\":\"w3of5\",\"descriptor_main\":\"wsh(multi(3,tpubD6NzVbkrYhZ4XuzR59W1JHQpXcufQVj64NDa4eiALMJxC2xAwpY7wy2J9RVQ7BHDYK3eWrVRsuMUcdwGn9xVBmC9wfpVawpNGLyrdgAhehd/0/*,tpubD6NzVbkrYhZ4WarEBpY5okLrjRQ8sgfoEsxZfprQDEbAjWM585LhNeT9GuSeFRGL7yLheiRgtCQCBb73y21EsLzRfwdrRmfaAT4yUTEKtu7/0/*,tpubD6NzVbkrYhZ4WRwbTYgdGDMxPUzq5WwX8HwnAR6PYB291uUH63pCU1WFV6RRWGyA2Xy8okiFAqfAXEErx1SVh7mKSVQa34hFaa8GcmuEeds/0/*,tpubD6NzVbkrYhZ4YkVm13NDmMPEHEWXHoqGXBPCrtHbB1hE6GoTjdvXEKrtRBMtSe4gQQUSyvU78jgyrK5AfwLewr1cTkkojQbYTuyNtgQFEDb/0/*,tpubD6NzVbkrYhZ4YGeACdA4t1ZjEfJm8ExF818xG2ndsNoT61PwPnotxVQXDLZAZ5ut7t1iHR2FLEYnTzJTN5DGxQTKgwQpt7ftPzRwjugwuYg/0/*))#we4l0t0l\",\"descriptor_change\":\"wsh(multi(3,tpubD6NzVbkrYhZ4XuzR59W1JHQpXcufQVj64NDa4eiALMJxC2xAwpY7wy2J9RVQ7BHDYK3eWrVRsuMUcdwGn9xVBmC9wfpVawpNGLyrdgAhehd/1/*,tpubD6NzVbkrYhZ4WarEBpY5okLrjRQ8sgfoEsxZfprQDEbAjWM585LhNeT9GuSeFRGL7yLheiRgtCQCBb73y21EsLzRfwdrRmfaAT4yUTEKtu7/1/*,tpubD6NzVbkrYhZ4WRwbTYgdGDMxPUzq5WwX8HwnAR6PYB291uUH63pCU1WFV6RRWGyA2Xy8okiFAqfAXEErx1SVh7mKSVQa34hFaa8GcmuEeds/1/*,tpubD6NzVbkrYhZ4YkVm13NDmMPEHEWXHoqGXBPCrtHbB1hE6GoTjdvXEKrtRBMtSe4gQQUSyvU78jgyrK5AfwLewr1cTkkojQbYTuyNtgQFEDb/1/*,tpubD6NzVbkrYhZ4YGeACdA4t1ZjEfJm8ExF818xG2ndsNoT61PwPnotxVQXDLZAZ5ut7t1iHR2FLEYnTzJTN5DGxQTKgwQpt7ftPzRwjugwuYg/1/*))#5tp6lvkf\",\"fingerprints\":[\"171f9233\",\"37439b38\",\"ab4343d4\",\"deb8f1ba\",\"214c5f36\"],\"required_sig\":3,\"daemon_opts\":{\"url\":\"http://127.0.0.1:18332\",\"cookie_file\":\"/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie\"},\"created_at_height\":1720730}").unwrap();
+
+        let vec_json = serde_json::to_vec(&wallet).unwrap();
+        let vec_cbor = serde_cbor::to_vec(&wallet).unwrap();
+
+        assert_eq!(vec_json.len(), 1496);
+        assert_eq!(vec_cbor.len(), 1437);
+    }
+}
