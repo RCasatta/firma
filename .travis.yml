@@ -6,6 +6,8 @@ matrix:
     - rust: stable
     - rust: nightly
       env: DO_COV=true CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
+  allow_failures:
+    - rust: nightly
 
 addons:
   apt:
