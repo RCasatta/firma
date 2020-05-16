@@ -1,3 +1,4 @@
+use crate::mnemonic::Mnemonic;
 use crate::*;
 use bitcoin::Network;
 use num_bigint::BigUint;
@@ -113,7 +114,9 @@ fn calculate_key(
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
-    let mut key = PrivateMasterKey::new(network, &sec, name)?;
+    let mnemonic = Mnemonic::new(&sec)?;
+
+    let mut key = PrivateMasterKey::new(network, &mnemonic, name)?;
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),
@@ -182,7 +185,7 @@ mod tests {
     fn test_roll() {
         let temp_dir = TempDir::new("test_derive_key").unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
-        let launches = vec![1u32; 29];
+        let launches = vec![2u32; 29];
         let mut opt = DiceOptions {
             faces: Base::_20,
             bits: Bits::_128,
@@ -211,15 +214,15 @@ mod tests {
             "Numbers must be from 1 to 20 included"
         );
 
-        let mut launches = vec![1u32; 29];
-        if let Some(last) = launches.last_mut() {
-            *last = 2;
-        }
+        let launches = vec![2u32; 29];
         opt.launches = launches;
         opt.key_name = "d".to_string();
         let master_key = roll(&temp_dir_str, Network::Bitcoin, &opt).unwrap();
-        assert_eq!(master_key.key.dice.unwrap().value, "1");
-        assert_eq!("xprv9s21ZrQH143K3YSbAXLMPCzJso5QAarQksAGc5rQCyZCBfw4Rj2PqVLFNgezSBhktYkiL3Ta2stLPDF9yZtLMaxk6Spiqh3DNFG8p8MVeEC", master_key.key.xprv.to_string());
+        assert_eq!(
+            master_key.key.dice.unwrap().value,
+            "2825636378947368421052631578947368421"
+        );
+        assert_eq!("xprv9s21ZrQH143K3yGb6gtghzHH4MPaEHGPN48sxoyYd4EdrQcaSVP2dxZS2vRwoKny1KRS5xMMyGunA3WkToah7ZmJ2fFtGK8vBBBiBkVFmTM", master_key.key.xprv.to_string());
     }
 
     #[test]
@@ -271,25 +274,24 @@ mod tests {
     fn test_master_from_dice() {
         // priv1.key and priv2.key taken from https://github.com/tyler-smith/go-bip32/blob/master/bip32_test.go
 
+        /*
         let bytes = include_bytes!("../../test_data/dice/priv1.key");
         let expected: PrivateMasterKey = serde_json::from_slice(bytes).unwrap();
         let calculated = calculate_key(&vec![2], 2, Network::Bitcoin, "name").unwrap();
 
         assert_eq!(calculated, expected);
+        */
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
         let expected: PrivateMasterKey = serde_json::from_slice(bytes).unwrap();
-        let calculated = calculate_key(
-            &vec![2, 3, 4, 5, 6, 7, 8, 9, 10, 1],
-            256,
-            Network::Bitcoin,
-            "name",
-        )
-        .unwrap();
+        let calculated =
+            calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
         assert_eq!(
             calculated.fingerprint.to_string(),
             expected.fingerprint.to_string()
         );
+        assert_eq!(calculated.xprv.to_string(), expected.xprv.to_string());
+        assert_eq!(calculated.xpub.to_string(), expected.xpub.to_string());
         assert_eq!(calculated, expected);
     }
 }

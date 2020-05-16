@@ -1,3 +1,4 @@
+use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
 use bitcoin::bech32::FromBase32;
@@ -13,10 +14,10 @@ use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKey {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mnemonic: Option<String>,
     pub xpub: ExtendedPubKey,
     pub xprv: ExtendedPrivKey,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub seed: Option<Seed>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dice: Option<Dice>,
     pub name: String,
@@ -28,13 +29,6 @@ pub struct Dice {
     pub launches: String,
     pub faces: u32,
     pub value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct Seed {
-    pub hex: String,
-    pub bech32: String,
-    pub network: Network,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -272,18 +266,6 @@ impl From<&PSBT> for PsbtJson {
     }
 }
 
-impl Seed {
-    pub fn new(sec: &[u8], network: Network) -> crate::Result<Seed> {
-        let hex = hex::encode(&sec);
-        let bech32 = bech32::encode(&network.to_hrp(), bech32::ToBase32::to_base32(&sec))?;
-        Ok(Seed {
-            hex,
-            bech32,
-            network,
-        })
-    }
-}
-
 impl MasterKeyOutput {
     pub fn public_file_str(&self) -> Option<String> {
         self.public_file
@@ -297,17 +279,21 @@ impl MasterKeyOutput {
 }
 
 impl PrivateMasterKey {
-    pub fn new(network: Network, sec: &[u8], name: &str) -> crate::Result<PrivateMasterKey> {
+    pub fn new(
+        network: Network,
+        mnemonic: &Mnemonic,
+        name: &str,
+    ) -> crate::Result<PrivateMasterKey> {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+        let seed = mnemonic.to_seed(None);
 
-        let xprv = ExtendedPrivKey::new_master(network, &sec)?;
+        let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-        let seed = Some(Seed::new(&sec, network)?);
 
         Ok(PrivateMasterKey {
+            mnemonic: Some(mnemonic.to_string()),
             xprv,
             xpub,
-            seed,
             dice: None,
             name: name.to_string(),
             fingerprint: xpub.fingerprint(),
@@ -320,7 +306,7 @@ impl PrivateMasterKey {
         PrivateMasterKey {
             xprv,
             xpub,
-            seed: None,
+            mnemonic: None,
             dice: None,
             name: name.to_string(),
             fingerprint: xpub.fingerprint(),

@@ -9,6 +9,7 @@ pub enum Error {
     // Internal
     InvalidStructuredQr(String),
     FileExist(PathBuf),
+    Mnemonic(&'static str),
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -98,6 +99,7 @@ impl ToString for Error {
             Error::Regex(e) => e.to_string(),
             Error::ParseInt(e) => e.to_string(),
             Error::Miniscript(e) => e.to_string(),
+            Error::Mnemonic(e) => e.to_string(),
         }
     }
 }
