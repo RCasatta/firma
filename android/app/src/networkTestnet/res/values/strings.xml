@@ -9,6 +9,6 @@
     <string name="random">Random</string>
     <string name="dice">Dice</string>
     <string name="import_xprv">Import xprv</string>
-    <string name="import_bech32_seed">Import bech32 seed</string>
+    <string name="import_mnemonic">Import mnemonic</string>
 
 </resources>

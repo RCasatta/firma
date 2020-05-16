@@ -59,8 +59,8 @@ class KeyActivity : AppCompatActivity() {
         hidden_items.adapter = hiddenItemsAdapter
         hiddenItemsAdapter.list.add(DescItem("Xpriv", keyJson.key.xprv))
 
-        if (keyJson.key.seed != null) {
-            hiddenItemsAdapter.list.add(DescItem("Seed", keyJson.key.seed.bech32))
+        if (keyJson.key.mnemonic != null) {
+            hiddenItemsAdapter.list.add(DescItem("Mnemonic", keyJson.key.mnemonic))
         }
 
         if (keyJson.key.dice != null) {

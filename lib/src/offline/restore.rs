@@ -44,7 +44,7 @@ impl FromStr for Nature {
             "mnemonic" => Ok(Nature::Mnemonic),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("({}) valid values are: xprv, hex-seed, bech32-seed", s),
+                format!("({}) valid values are: xprv, mnemonic", s),
             )),
         }
     }
@@ -96,18 +96,20 @@ mod tests {
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
         assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
+        assert_ne!(key_orig.key.mnemonic, key_restored.key.mnemonic);
 
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
             key_name,
             nature: Nature::Mnemonic,
-            value: key_orig.key.mnemonic.unwrap().to_string(),
+            value: key_orig.key.mnemonic.as_ref().unwrap().to_string(),
             qr_version: 14,
         };
         let key_restored =
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
         assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
+        assert_eq!(&key_orig.key.mnemonic, &key_restored.key.mnemonic);
 
         // TODO add restore mnemonic
 
