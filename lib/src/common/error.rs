@@ -30,6 +30,9 @@ pub enum Error {
     Utf8(std::str::Utf8Error),
     Nul(std::ffi::NulError),
     Image(image::error::ImageError),
+    Regex(regex::Error),
+    ParseInt(std::num::ParseIntError),
+    Miniscript(miniscript::Error),
 }
 
 macro_rules! impl_error {
@@ -61,6 +64,9 @@ impl_error!(std::env::VarError, Env);
 impl_error!(std::str::Utf8Error, Utf8);
 impl_error!(std::ffi::NulError, Nul);
 impl_error!(image::error::ImageError, Image);
+impl_error!(regex::Error, Regex);
+impl_error!(std::num::ParseIntError, ParseInt);
+impl_error!(miniscript::Error, Miniscript);
 
 impl ToString for Error {
     fn to_string(&self) -> String {
@@ -89,6 +95,9 @@ impl ToString for Error {
             Error::Utf8(e) => e.to_string(),
             Error::Nul(e) => e.to_string(),
             Error::Image(e) => e.to_string(),
+            Error::Regex(e) => e.to_string(),
+            Error::ParseInt(e) => e.to_string(),
+            Error::Miniscript(e) => e.to_string(),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
 use bitcoin::bech32::FromBase32;
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey, Fingerprint};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{bech32, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
@@ -100,7 +100,7 @@ pub struct BalanceOutput {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct GetAddressOutput {
     pub address: Address,
-    pub indexes: WalletIndexes,
+    pub path: DerivationPath,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -168,8 +168,8 @@ pub struct TxOut {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct TxCommonInOut {
     pub value: String,
-    pub path: String,
-    pub wallet: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub wallet_with_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
