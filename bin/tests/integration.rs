@@ -20,7 +20,7 @@ fn rnd_string() -> String {
 fn integration_test() {
     let mut rng = rand::thread_rng();
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
-    let bitcoin_exe_dir = env::var("BITCOIN_EXE_DIR").unwrap();
+    let bitcoin_exe_dir = env::var("BITCOIN_EXE_DIR").expect("BITCOIN_EXE_DIR env var must be set");
     let bitcoin_work_dir = TempDir::new("bitcoin_test").unwrap();
     let cookie_file = bitcoin_work_dir.path().join("regtest").join(".cookie");
     let cookie_file_str = format!("{}", cookie_file.display());
@@ -327,6 +327,9 @@ impl FirmaCommand {
             .args(&args)
             .output()
             .unwrap();
+        if !output.status.success() {
+            println!("{}", std::str::from_utf8(&output.stderr)?);
+        }
         assert!(
             output.status.success(),
             format!("online subcmd:{} args:{:?}", subcmd, args)
@@ -419,6 +422,9 @@ impl FirmaCommand {
             .args(&args)
             .output()
             .unwrap();
+        if !output.status.success() {
+            println!("{}", std::str::from_utf8(&output.stderr)?);
+        }
         assert!(
             output.status.success(),
             format!("offline subcmd:{} args:{:?}", subcmd, args)

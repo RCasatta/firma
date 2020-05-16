@@ -376,6 +376,7 @@ dependencies = [
  "num-bigint",
  "qrcode",
  "rand 0.7.3",
+ "regex",
  "serde",
  "serde_cbor",
  "serde_json",
@@ -665,8 +666,7 @@ dependencies = [
 [[package]]
 name = "miniscript"
 version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4656dd1f35c3192c4056f48c80eab67ddfb6222cc5525f1df5f880dc055fca75"
+source = "git+https://github.com/apoelstra/rust-miniscript/?rev=5427ceb852c393743a23b7fc22390bb12b6f8e45#5427ceb852c393743a23b7fc22390bb12b6f8e45"
 dependencies = [
  "bitcoin",
 ]
@@ -804,7 +804,7 @@ dependencies = [
 [[package]]
 name = "qrcode"
 version = "0.12.0"
-source = "git+https://github.com/RCasatta/qrcode-rust/?branch=append#9dddab008b587de333ea33c9c8be3712207d4ca0"
+source = "git+https://github.com/RCasatta/qrcode-rust/?rev=9dddab008b587de333ea33c9c8be3712207d4ca0#9dddab008b587de333ea33c9c8be3712207d4ca0"
 dependencies = [
  "checked_int_cast",
  "image",

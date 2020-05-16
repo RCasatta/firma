@@ -39,6 +39,10 @@ pub struct SignOptions {
 
     /// PSBT json file
     psbt_file: PathBuf,
+
+    /// Allow any derivations (to avoid ramson attacks, by default only 2 levels are allowed, and the first level must be 0 or 1)
+    #[structopt(long)]
+    allow_any_derivations: bool,
 }
 
 pub struct SignResult {
@@ -54,6 +58,7 @@ struct PSBTSigner {
     secp: Secp256k1<SignOnly>,
     network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
     derivations: u32,
+    allow_any_derivations: bool,
 }
 
 /// extract field name in the PSBT extra field if present
@@ -158,6 +163,7 @@ impl PSBTSigner {
         network: Network,
         derivations: u32,
         psbts_dir: PathBuf,
+        allow_any_derivations: bool,
     ) -> Result<Self> {
         let exception = network == Network::Regtest && xprv.network == Network::Testnet;
         if !(network == xprv.network || exception) {
@@ -174,6 +180,7 @@ impl PSBTSigner {
             secp,
             derivations,
             network,
+            allow_any_derivations,
         })
     }
 
@@ -190,6 +197,7 @@ impl PSBTSigner {
             network,
             opt.total_derivations,
             psbts_dir,
+            opt.allow_any_derivations,
         )?;
         Ok(signer)
     }
@@ -334,6 +342,16 @@ impl PSBTSigner {
             if fing != &my_fing {
                 continue;
             }
+            if !self.allow_any_derivations {
+                let path_slice = child.as_ref();
+                if path_slice.len() != 2 {
+                    return Err(format!("{} only two derivation paths allowed", child).into());
+                } else {
+                    if !(path_slice[0] == 0.into() || path_slice[0] == 1.into()) {
+                        return Err(format!("{} first derivation must be Soft 0 or 1", child).into());
+                    }
+                }
+            }
             let privkey = self.xprv.derive_priv(&self.secp, &child)?;
             let derived_pubkey =
                 secp256k1::PublicKey::from_secret_key(&self.secp, &privkey.private_key.key);
@@ -376,7 +394,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     let wallet = read_wallet(&opt.wallet_descriptor_file)?;
     let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
     debug!("{:?}", psbt_signer);
-
+    //TODO refuse to sign if my address has first level different from 0/1 and more than one level?
     let sign_result = psbt_signer.sign()?;
     let mut psbt_print = psbt_signer.pretty_print(&vec![wallet])?;
 
@@ -434,7 +452,7 @@ mod tests {
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
         let temp_dir = TempDir::new("test_sign").unwrap().into_path();
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir)?;
+        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir, true)?;
         psbt_signer.sign()?;
         assert_eq!(&psbt_signer.psbt, psbt_signed);
         Ok(())

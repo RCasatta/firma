@@ -1,7 +1,8 @@
 use crate::list::ListOptions;
+use crate::offline::descriptor::derive_address;
 use crate::*;
 use bitcoin::consensus::serialize;
-use bitcoin::util::bip32::{DerivationPath, Fingerprint};
+use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use bitcoin::util::key;
 use bitcoin::{Address, Amount, Network, OutPoint, Script, SignedAmount, TxOut};
 use serde::{Deserialize, Serialize};
@@ -58,25 +59,26 @@ pub fn pretty_print(
     let mut balances = HashMap::new();
 
     for (i, input) in tx.input.iter().enumerate() {
+        let addr = Address::from_script(&previous_outputs[i].script_pubkey, network)
+            .ok_or_else(fn_err("non default script"))?;
         let keypaths = &psbt.inputs[i].hd_keypaths;
-        let wallets = which_wallet(keypaths, &wallets);
         let signatures: HashSet<Fingerprint> = psbt.inputs[i]
             .partial_sigs
             .iter()
             .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
             .collect();
+        let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
+        if let Some((wallet, _)) = &wallet_if_any {
+            *balances.entry(wallet.clone()).or_insert(0i64) -= previous_outputs[i].value as i64
+        }
         let txin = json::TxIn {
             outpoint: input.previous_output.to_string(),
             signatures,
             common: TxCommonInOut {
                 value: Amount::from_sat(previous_outputs[i].value).to_string(),
-                path: derivation_paths(keypaths),
-                wallet: wallets.join(", "),
+                wallet_with_path: wallet_if_any.map(|(w, p)| format!("[{}]{}", w, p)),
             },
         };
-        for wallet in wallets {
-            *balances.entry(wallet).or_insert(0i64) -= previous_outputs[i].value as i64
-        }
         result.inputs.push(txin);
     }
 
@@ -84,18 +86,17 @@ pub fn pretty_print(
         let addr = Address::from_script(&output.script_pubkey, network)
             .ok_or_else(fn_err("non default script"))?;
         let keypaths = &psbt.outputs[i].hd_keypaths;
-        let wallets = which_wallet(keypaths, &wallets);
+        let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
+        if let Some((wallet, _)) = &wallet_if_any {
+            *balances.entry(wallet.clone()).or_insert(0i64) += output.value as i64
+        }
         let txout = json::TxOut {
             address: addr.to_string(),
             common: TxCommonInOut {
                 value: Amount::from_sat(output.value).to_string(),
-                path: derivation_paths(keypaths),
-                wallet: wallets.join(" ,"),
+                wallet_with_path: wallet_if_any.map(|(w, p)| format!("[{}]{}", w, p)),
             },
         };
-        for wallet in wallets {
-            *balances.entry(wallet).or_insert(0i64) += output.value as i64
-        }
         result.outputs.push(txout);
         output_values.push(output.value);
     }
@@ -193,29 +194,34 @@ fn script_type(script: &Script) -> Option<usize> {
     SCRIPT_TYPE_FN.iter().position(|f| f(script))
 }
 
-pub fn derivation_paths(hd_keypaths: &HDKeypaths) -> String {
-    let mut vec: Vec<String> = hd_keypaths
-        .iter()
-        .map(|(_, (_, p))| format!("{:?}", p))
-        .collect();
-    vec.sort();
-    vec.dedup();
-    vec.join(", ")
-}
-
-fn which_wallet(hd_keypaths: &HDKeypaths, wallets: &[WalletJson]) -> Vec<String> {
-    // TODO this should be done with miniscript
-    let mut result = vec![];
+/// returns a wallet name and a derivation iif the address parameter is the same as the one derived from the wallet
+fn wallet_with_path(
+    hd_keypaths: &HDKeypaths,
+    wallets: &[WalletJson],
+    address: &Address,
+) -> Option<(String, DerivationPath)> {
     for wallet in wallets {
-        if !hd_keypaths.is_empty()
-            && hd_keypaths
-                .iter()
-                .all(|(_, (f, _))| wallet.fingerprints.contains(f))
-        {
-            result.push(wallet.name.to_string())
+        for (_, (finger, path)) in hd_keypaths.iter() {
+            if wallet.fingerprints.contains(finger) {
+                let path_vec: Vec<ChildNumber> = path.clone().into();
+                if let ChildNumber::Normal { index } = path_vec.first()? {
+                    let descriptor = match index {
+                        0 => &wallet.descriptor_main,
+                        1 => &wallet.descriptor_change,
+                        _ => return None,
+                    };
+                    if let ChildNumber::Normal { index } = path_vec.last()? {
+                        if let Ok(derived) = derive_address(descriptor, *index, address.network) {
+                            if &derived.address == address {
+                                return Some((wallet.name.clone(), path.clone()));
+                            }
+                        }
+                    }
+                };
+            }
         }
     }
-    result
+    None
 }
 
 #[cfg(test)]
