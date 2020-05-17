@@ -60,12 +60,12 @@ class PSBTActivity : AppCompatActivity() {
 
         for (i in psbtPretty.inputs.indices) {
             val input = psbtPretty.inputs[i]
-            inputsAdapter.list.add(TxInOutItem("input #$i", input.outpoint, input.value, "${input.path} ${input.wallet} ${input.signatures.joinToString()}"))
+            inputsAdapter.list.add(TxInOutItem("input #$i", input.outpoint, input.value, "${input.wallet_with_path} ${input.signatures.joinToString()}"))
         }
 
         for (i in psbtPretty.outputs.indices) {
             val output = psbtPretty.outputs[i]
-            outputsAdapter.list.add(TxInOutItem("output #$i", output.address, output.value, "${output.path} ${output.wallet}"))
+            outputsAdapter.list.add(TxInOutItem("output #$i", output.address, output.value, output.wallet_with_path ))
         }
 
         items.layoutManager = LinearLayoutManager(this)
@@ -117,7 +117,7 @@ class TxInOutItemHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
         index.text = item.index
         title.text = item.title
         value.text = item.value
-        description.text = item.description
+        description.text = item.description ?: ""
     }
 }
 

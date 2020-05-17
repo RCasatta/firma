@@ -79,15 +79,14 @@ class Rust {
         val outpoint: String,
         val signatures: List<String>,
         val value: String,
-        val path: String,
-        val wallet: String?
+        val wallet_with_path: String?
     )
 
     data class TxOut (
         val address: String,
         val value: String,
-        val path: String,
-        val wallet: String?
+        val wallet_with_path: String?
+
     )
 
     data class Size (
