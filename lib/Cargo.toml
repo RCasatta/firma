@@ -1,6 +1,6 @@
 [package]
 name = "firma"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
 #rust = "1.38"
