@@ -348,7 +348,9 @@ impl PSBTSigner {
                     return Err(format!("{} only two derivation paths allowed", child).into());
                 } else {
                     if !(path_slice[0] == 0.into() || path_slice[0] == 1.into()) {
-                        return Err(format!("{} first derivation must be Soft 0 or 1", child).into());
+                        return Err(
+                            format!("{} first derivation must be Soft 0 or 1", child).into()
+                        );
                     }
                 }
             }
@@ -452,7 +454,8 @@ mod tests {
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
         let temp_dir = TempDir::new("test_sign").unwrap().into_path();
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir, true)?;
+        let mut psbt_signer =
+            PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir, true)?;
         psbt_signer.sign()?;
         assert_eq!(&psbt_signer.psbt, psbt_signed);
         Ok(())

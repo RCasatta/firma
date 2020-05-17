@@ -1,5 +1,6 @@
 use crate::*;
 use bitcoin::Network;
+use common::mnemonic::Mnemonic;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
@@ -29,7 +30,8 @@ impl RandomOptions {
 
 pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Result<MasterKeyOutput> {
     let sec = rand::thread_rng().gen::<[u8; 32]>();
-    let master_key = PrivateMasterKey::new(network, &sec, &opt.key_name)?;
+    let mnemonic = Mnemonic::new(&sec)?;
+    let master_key = PrivateMasterKey::new(network, &mnemonic, &opt.key_name)?;
     let output = save_keys(datadir, network, &opt.key_name, master_key, opt.qr_version)?;
 
     Ok(output)

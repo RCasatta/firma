@@ -84,7 +84,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 itemsAdapter.list.add(Item(getString( R.string.random), null, null, emptyList()))
                 itemsAdapter.list.add(Item(getString( R.string.dice), null, null, emptyList()))
                 itemsAdapter.list.add(Item(getString( R.string.import_xprv), null, null, emptyList()))
-                itemsAdapter.list.add(Item(getString( R.string.import_bech32_seed), null, null, emptyList()))
+                itemsAdapter.list.add(Item(getString( R.string.import_mnemonic), null, null, emptyList()))
                 item_new.hide()
             }
             WALLETS -> {
@@ -310,7 +310,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             comeHere(this, DICE_FACES)
                         }
                         getString(R.string.import_xprv) -> valueDialog(keyName, "Xprv" )
-                        getString(R.string.import_bech32_seed) -> valueDialog(keyName, "Bech32Seed")
+                        getString(R.string.import_mnemonic) -> valueDialog(keyName, "Mnemonic")
                     }
                 }
             }

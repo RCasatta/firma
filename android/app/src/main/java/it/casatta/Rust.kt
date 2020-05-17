@@ -32,12 +32,11 @@ class Rust {
         val name: String,
         val xpub: String,
         val xprv: String,
-        val seed: Seed?,
+        val mnemonic: String?,
         val dice: Dice?,
         val fingerprint: String
     )
 
-    data class Seed(val hex: String, val bech32: String, val network: String)
     data class Dice(val launches: String, val faces: Int, val value: String)
 
     data class CreateWalletOutput(

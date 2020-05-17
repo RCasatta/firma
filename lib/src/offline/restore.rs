@@ -1,6 +1,6 @@
+use crate::mnemonic::Mnemonic;
+use crate::Result;
 use crate::{save_keys, MasterKeyOutput, PrivateMasterKey};
-use crate::{Result, ToHrp};
-use bitcoin::bech32::{self, FromBase32};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
 use log::debug;
@@ -32,8 +32,7 @@ pub struct RestoreOptions {
 #[derive(Debug, Deserialize, Serialize)]
 enum Nature {
     Xprv,
-    HexSeed,
-    Bech32Seed,
+    Mnemonic,
 }
 
 impl FromStr for Nature {
@@ -42,11 +41,10 @@ impl FromStr for Nature {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "xprv" => Ok(Nature::Xprv),
-            "hex-seed" => Ok(Nature::HexSeed),
-            "bech32-seed" => Ok(Nature::Bech32Seed),
+            "mnemonic" => Ok(Nature::Mnemonic),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("({}) valid values are: xprv, hex-seed, bech32-seed", s),
+                format!("({}) valid values are: xprv, mnemonic", s),
             )),
         }
     }
@@ -58,23 +56,9 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
         Nature::Xprv => {
             PrivateMasterKey::from_xprv(ExtendedPrivKey::from_str(&opt.value)?, &opt.key_name)
         }
-        Nature::Bech32Seed => {
-            //TODO bech32 lib does not support error detection
-            let (hrp, vec_u5) = bech32::decode(&opt.value)?;
-            if hrp != network.to_hrp() {
-                return Err(format!(
-                    "in network {} bech32 seed must start with '{}'",
-                    network,
-                    network.to_hrp()
-                )
-                .into());
-            }
-            let sec = Vec::<u8>::from_base32(&vec_u5)?;
-            PrivateMasterKey::new(network, &sec, &opt.key_name)?
-        }
-        Nature::HexSeed => {
-            let sec = hex::decode(&opt.value)?;
-            PrivateMasterKey::new(network, &sec, &opt.key_name)?
+        Nature::Mnemonic => {
+            let mnemonic = Mnemonic::from_str(&opt.value)?;
+            PrivateMasterKey::new(network, &mnemonic, &opt.key_name)?
         }
     };
 
@@ -95,14 +79,15 @@ mod tests {
         let temp_dir_str = format!("{}/", temp_dir.path().display());
         let key_name_random = "test_restore_random".to_string();
         let rand_opts = RandomOptions::new(key_name_random);
+        let name_counter = 0;
 
         let key_orig =
             crate::offline::random::create_key(&temp_dir_str, Network::Testnet, &rand_opts)
                 .unwrap();
 
-        let key_name_restored = "test_restore_restored".to_string();
+        let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
+            key_name,
             nature: Nature::Xprv,
             value: key_orig.key.xprv.to_string(),
             qr_version: 14,
@@ -111,62 +96,41 @@ mod tests {
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
         assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
+        assert_ne!(key_orig.key.mnemonic, key_restored.key.mnemonic);
 
-        let key_name_restored = "test_restore_seed".to_string();
-        assert!(key_orig.key.seed.is_some());
+        let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
-            nature: Nature::Bech32Seed,
-            value: key_orig.key.seed.as_ref().unwrap().bech32.clone(),
+            key_name,
+            nature: Nature::Mnemonic,
+            value: key_orig.key.mnemonic.as_ref().unwrap().to_string(),
             qr_version: 14,
         };
         let key_restored =
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
         assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
+        assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
+        assert_eq!(&key_orig.key.mnemonic, &key_restored.key.mnemonic);
 
-        let key_name_restored = "test_restore_seed_hex".to_string();
-        let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
-            nature: Nature::HexSeed,
-            value: key_orig.key.seed.as_ref().unwrap().hex.clone(),
-            qr_version: 14,
-        };
-        let key_restored =
-            crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
-        assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
+        // TODO add restore mnemonic
 
-        let key_name_restored = "test_restore_fail".to_string();
+        let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
-            nature: Nature::HexSeed,
+            key_name,
+            nature: Nature::Xprv,
             value: "X".to_string(),
             qr_version: 14,
         };
         let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
         assert!(result.is_err());
 
-        let key_name_restored = "test_restore_fail".to_string();
+        let (key_name, _name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
+            key_name,
             nature: Nature::Xprv,
             value: key_orig.key.xpub.to_string(),
             qr_version: 14,
         };
         let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
         assert!(result.is_err());
-
-        let key_name_restored = "test_restore_fail".to_string();
-        let restore_opts = RestoreOptions {
-            key_name: key_name_restored,
-            nature: Nature::Bech32Seed,
-            value: "bc1q5lx5j4vedq9vj8rjm577annwxrppfda9hexah6".to_string(),
-            qr_version: 14,
-        };
-        let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
-        assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "in network testnet bech32 seed must start with 'ts'"
-        );
     }
 }

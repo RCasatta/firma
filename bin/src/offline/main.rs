@@ -36,7 +36,7 @@ enum FirmaOfflineSubcommands {
     /// Decode and print a PSBT
     Print(offline::print::PrintOptions),
 
-    /// Restore a json key from xprv, hex seed or bech32 seed
+    /// Restore a json key from xprv or mnemonic
     Restore(offline::restore::RestoreOptions),
 
     /// List wallets and keys

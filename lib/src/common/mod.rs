@@ -14,6 +14,7 @@ pub mod error;
 pub mod file;
 pub mod json;
 pub mod list;
+pub mod mnemonic;
 pub mod qr;
 
 static LOGGER: SimpleLogger = SimpleLogger;
