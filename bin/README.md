@@ -7,54 +7,52 @@ In the first steps we are going to create two master keys.
 
 ## Create first Master Key
 
-This step creates the first master key. (It is possible to create the key with dice, see `firma-online dice --help`)
+This step creates the first master key. (It is possible to create the key with dice, see `firma-offline dice --help`)
 
 ```
-firma-offline random --key-name r1
+firma-offline random --key-name a1
 ```
 ```json
 {
   "key": {
-    "fingerprint": "ee72a8ec",
-    "name": "r1",
-    "seed": {
-      "bech32": "ts142ps3glsxq586xrglkhc55fznluw9hta8p436wveeedmuq79yvdqphw8h5",
-      "hex": "aa8308a3f030287d1868fdaf8a51229ff8e2dd7d386b1d3999ce5bbe03c5231a",
-      "network": "testnet"
-    },
-    "xprv": "tprv8ZgxMBicQKsPfCEMKKmhRud92Ypg3nWXegEeCNATw3aKvbQz5v4sbm2y9kjVD4YMx3oDZQotvTAjZGjSe7wbEYQTm9iqRRV5jsmwnfATNsu",
-    "xpub": "tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU"
+    "fingerprint": "cabe32d7",
+    "mnemonic": "bunker shed useless about build taste comfort acquire food defense nation cement oblige race manual narrow merit lumber slight pattern plate budget armed undo",
+    "name": "a1",
+    "xprv": "tprv8ZgxMBicQKsPd1QusvXvAjuJN8yhsR94QMwEaiLXZ6sBaDUZfWcXqvisortPkUoAk1vdsMn6rCSv6dhRP5J4igdouEV5gcBgWNPE4ZuHfbZ",
+    "xpub": "tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6"
   },
-  "private_file": "~/.firma/testnet/keys/r1/PRIVATE.json",
-  "public_file": "~/.firma/testnet/keys/r1/public.json",
+  "private_file": "$HOME/.firma/testnet/keys/a1/PRIVATE.json",
+  "public_file": "$HOME/.firma/testnet/keys/a1/public.json",
   "public_qr_files": [
-    "~/.firma/testnet/keys/r1/qr/qr.png"
+    "$HOME/.firma/testnet/keys/a1/qr/qr.png"
   ]
 }
 ```
 
 ## Create second Master Key
 
+This one is created providing dice launches:
 ```
-firma-offline random --key-name r2
+firma-offline dice --key-name a2 --faces 20 -l 12 -l 11 -l 1 -l 1 -l 16 -l 8 -l 1 -l 12 -l 7 -l 4 -l 12 -l 8 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 1 -l 18 -l 19 -l 12 -l 1 -l 16 -l 1 -l 18 -l 1 -l 13 -l 1 -l 1 -l 16 -l 4 -l 3 -l 1 -l 1 -l 1 -l 1 -l 1 -l 20 -l 19 -l 18 -l 17 -l 12 -l 2
 ```
 ```json
 {
   "key": {
-    "fingerprint": "7d5d8203",
-    "name": "r2",
-    "seed": {
-      "bech32": "ts130ad4m9r3xs3af8c8n3snacqxk93udhqrzpvwn3ccskkmxh3x54q9fj039",
-      "hex": "8bfadaeca389a11ea4f83ce309f700358b1e36e01882c74e38c42d6d9af1352a",
-      "network": "testnet"
+    "dice": {
+      "faces": 20,
+      "launches": "[12, 11, 1, 1, 16, 8, 1, 12, 7, 4, 12, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 18, 19, 12, 1, 16, 1, 18, 1, 13, 1, 1, 16, 4, 3, 1, 1, 1, 1, 1, 20, 19, 18, 17, 12, 2]",
+      "value": "33146769803929392242686007705600000000000000300775117168313561497600063822621"
     },
-    "xprv": "tprv8ZgxMBicQKsPdMsqUfg8aqwARoMKtQZRfpApqydPbPepm6vd6pZRxsMEHT8ETmfsko4XCdrUYUX8fRPj2xA3AUq83EqinnVTFcje3YeHocG",
-    "xpub": "tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN"
+    "fingerprint": "7938c502",
+    "mnemonic": "enable drive anxiety pigeon bag hole invest motion notable rigid eyebrow annual meat promote embark boss pottery prison post tomorrow never plunge hockey say",
+    "name": "a2",
+    "xprv": "tprv8ZgxMBicQKsPdGNW7N9EPsGpWBc56L8kKncoZfxC83M5ipBV2fMhujCBnxiTx33HnqiERg6fYsgKVBdSMNKm8nEcESHfUXAUecnyWnrx6Ls",
+    "xpub": "tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y"
   },
-  "private_file": "~/.firma/testnet/keys/r2/PRIVATE.json",
-  "public_file": "~/.firma/testnet/keys/r2/public.json",
+  "private_file": "$HOME/.firma/testnet/keys/a2/PRIVATE.json",
+  "public_file": "$HOME/.firma/testnet/keys/a2/public.json",
   "public_qr_files": [
-    "~/.firma/testnet/keys/r2/qr/qr.png"
+    "$HOME/.firma/testnet/keys/a2/qr/qr.png"
   ]
 }
 ```
@@ -62,35 +60,34 @@ firma-offline random --key-name r2
 # Create the 2of2 multisig wallet
 
 For the example we are using the two master_key created in the previous step. From the offline machines 
-copy `$HOME/.firma/testnet/keys/r1/public.json` and `$HOME/.firma/testnet/keys/r2/public.json` to the 
+copy `$HOME/.firma/testnet/keys/a1/public.json` and `$HOME/.firma/testnet/keys/a2/public.json` to the 
 online machine. 
 `COOKIE_FILE` must point to the bitcoin node cookie file
 
 ```
-firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub-file $HOME/.firma/testnet/keys/r1/public.json --xpub-file $HOME/.firma/testnet/keys/r2/public.json
-```
+firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub-file $HOME/.firma/testnet/keys/a1/public.json --xpub-file $HOME/.firma/testnet/keys/a2/public.json```
 ```json
 {
   "qr_files": [
-    "~/.firma/testnet/wallets/firma-wallet/qr/qr-0.png",
-    "~/.firma/testnet/wallets/firma-wallet/qr/qr-1.png"
+    "$HOME/.firma/testnet/wallets/firma-wallet/qr/qr-0.png",
+    "$HOME/.firma/testnet/wallets/firma-wallet/qr/qr-1.png"
   ],
   "wallet": {
-    "created_at_height": 1720454,
+    "created_at_height": 1746374,
     "daemon_opts": {
       "cookie_file": "/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie",
       "url": "http://127.0.0.1:18332"
     },
-    "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/1/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/1/*))#hwq7rl67",
-    "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/0/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/0/*))#5wstxmwd",
+    "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6/1/*,tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y/1/*))#wa245p6k",
+    "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6/0/*,tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y/0/*))#da6q39w9",
     "fingerprints": [
-      "ee72a8ec",
-      "7d5d8203"
+      "7938c502",
+      "cabe32d7"
     ],
     "name": "firma-wallet",
     "required_sig": 2
   },
-  "wallet_file": "~/.firma/testnet/wallets/firma-wallet/descriptor.json"
+  "wallet_file": "$HOME/.firma/testnet/wallets/firma-wallet/descriptor.json"
 }
 ```
 
@@ -103,15 +100,19 @@ firma-online --wallet-name firma-wallet get-address
 ```
 ```json
 {
-  "address": "tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk",
-  "indexes": {
-    "change": 0,
-    "main": 1
-  }
+  "address": "tb1qz2h8n70cnp0w6290scdl5ycvm0z7sqkrlgy5kgkds0n0fp7wwk6qyn8ywd",
+  "path": "m/0/0"
+}
+```
+State of indexes is saved in `.firma/testnet/wallets/firma-wallet/indexes.json` and by calling the command again we have:
+```json
+{
+  "address": "tb1qmttlaqltr5kmhxuqvha9cul92c5gt9rp3zmqgu4l7pghn7z8qqascs0dfx",
+  "path": "m/0/1"
 }
 ```
 
-Send some funds to `tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk`
+Send some funds to `tb1qz2h8n70cnp0w6290scdl5ycvm0z7sqkrlgy5kgkds0n0fp7wwk6qyn8ywd`
 
 ## Check balance and coins
 
@@ -120,8 +121,14 @@ firma-online --wallet-name firma-wallet balance
 ```
 ```json
 {
-  "btc": "0.00002222",
-  "satoshi": 2222
+  "confirmed": {
+    "btc": "0.00000000",
+    "satoshi": 0
+  },
+  "pending": {
+    "btc": "0.00002000",
+    "satoshi": 2000
+  }
 }
 ```
 ```
@@ -131,8 +138,9 @@ firma-online --wallet-name firma-wallet list-coins
 {
   "coins": [
     {
-      "amount": 2222,
-      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1"
+      "amount": 2000,
+      "outpoint": "1c9bbb8df5a03433f9cc3e77c102e06eda016ba7ae846166fa005c3db8b97ea1:0",
+      "unconfirmed": true
     }
   ]
 }
@@ -143,21 +151,19 @@ firma-online --wallet-name firma-wallet list-coins
 After funds receive a confirmation we can create the PSBT specifiying the recipient and the amount, you can specify more than one recipient and you can explicitly spend specific utxo with `--coin`. See `firma-online create-tx --help`
 
 ```
-firma-online --wallet-name firma-wallet create-tx --recipient tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f:1934 --psbt-name test
+firma-online --wallet-name firma-wallet create-tx --recipient tb1qnxv2x36fk6qhg3623jmsvy0x8d97jsvf0n5vyy:1400 --psbt-name test
 ```
 ```json
 {
   "address_reused": [],
   "funded_psbt": {
-    "changepos": -1,
-    "fee": 2.88e-6,
     "name": "test",
-    "psbt": "cHNidP8BAF4CAAAAAeIAawU+m0hbgRpFAWX+IOPH8KwiisF8aVNdZEG4b1ZaAQAAAAD+////AY4HAAAAAAAAIgAgxCo5WnUgfjFEUX6pyvNNMgVQVAmxqA6PgJ0CFKrUZ2QAAAAAAAEBK64IAAAAAAAAIgAgpMY8oyE5SsmzvaMaE2HIP4tZAJE8+RfW36t87dclUTIBBUdSIQOiEGiE3ON0fGERrkaaG540mWPor9ti8nd1o6+QDkv5wSEC2QMn1YJTDcdOAXorh05UQmPdPO+pZT6L3A0jRrf9WEVSriIGAtkDJ9WCUw3HTgF6K4dOVEJj3TzvqWU+i9wNI0a3/VhFDH1dggMAAAAAAAAAACIGA6IQaITc43R8YRGuRpobnjSZY+iv22Lyd3Wjr5AOS/nBDO5yqOwAAAAAAAAAAAAA"
+    "psbt": "cHNidP8BAH0CAAAAAaF+ubg9XAD6ZmGErqdrAdpu4ALBdz7M+TM0oPWNu5scAAAAAAD+////AqMBAAAAAAAAIgAgaMI+YcHlEUY9mvkIVax3/a4d42jXZgcjrbWqpKNFp7l4BQAAAAAAABYAFJmYo0dJtoF0R0qMtwYR5jtL6UGJAAAAAAX8bmFtZQZ0ZXN0LWEAAQEr0AcAAAAAAAAiACASrnn5+Jhe7Sivhhv6EwzbxegCw/oJSyLNg+b0h851tAEFR1IhAuOPRdJj6043K51DVaw+MIyMHEBOuEGrv89me8fOaQLpIQLgQluouXrqa42FwP/Ki9mwFxHFQy/50SN4Zcn73HSwZFKuIgYC4EJbqLl66muNhcD/yovZsBcRxUMv+dEjeGXJ+9x0sGQMeTjFAgAAAAAAAAAAIgYC449F0mPrTjcrnUNVrD4wjIwcQE64Qau/z2Z7x85pAukMyr4y1wAAAAAAAAAAAAEBR1IhAkiG9PSdcBAS08R6LIRS6iGFbQ5ZbjY2an2EMxXcmGbPIQM2XzQNCYGxaFTBlw1c4XU4hQxj7p7ntZZDaVLjrJg39VKuIgICSIb09J1wEBLTxHoshFLqIYVtDlluNjZqfYQzFdyYZs8Myr4y1wEAAAABAAAAIgIDNl80DQmBsWhUwZcNXOF1OIUMY+6e57WWQ2lS46yYN/UMeTjFAgEAAAABAAAAAAA="
   },
-  "psbt_file": "~/.firma/testnet/psbts/test/psbt.json",
+  "psbt_file": "$HOME/.firma/testnet/psbts/test/psbt.json",
   "qr_files": [
-    "~/.firma/testnet/psbts/test/qr/qr-0.png",
-    "~/.firma/testnet/psbts/test/qr/qr-1.png"
+    "$HOME/.firma/testnet/psbts/test/qr/qr-0.png",
+    "$HOME/.firma/testnet/psbts/test/qr/qr-1.png"
   ]
 }
 ```
@@ -165,43 +171,52 @@ firma-online --wallet-name firma-wallet create-tx --recipient tb1qcs4rjkn4yplrz3
 ## Sign from node A
 
 ```
-firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/testnet/keys/r1/PRIVATE.json --wallet-descriptor-file ~/.firma/testnet/wallets/firma-wallet/descriptor.json
+firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/testnet/keys/a1/PRIVATE.json --wallet-descriptor-file ~/.firma/testnet/wallets/firma-wallet/descriptor.json
 ```
 ```json
 {
+  "balances": "firma-wallet: -0.00001581 BTC",
   "fee": {
-    "absolute": 288,
-    "rate": 1.9591836734693877
+    "absolute": 181,
+    "absolute_fmt": "0.00000181 BTC",
+    "rate": 1.0168539325842696
   },
   "info": [
+    "Privacy: outputs have different script types https://en.bitcoin.it/wiki/Privacy#Sending_to_a_different_script_type",
     "Added paths",
     "Added signatures"
   ],
   "inputs": [
     {
-      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1",
-      "path": "m/0/0",
-      "value": "0.00002222 BTC",
-      "wallet": "firma-wallet"
+      "outpoint": "1c9bbb8df5a03433f9cc3e77c102e06eda016ba7ae846166fa005c3db8b97ea1:0",
+      "signatures": [
+        "cabe32d7"
+      ],
+      "value": "0.00002000 BTC",
+      "wallet_with_path": "[firma-wallet]m/0/0"
     }
   ],
   "outputs": [
     {
-      "address": "tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f",
-      "path": "",
-      "value": "0.00001934 BTC",
-      "wallet": ""
+      "address": "tb1qdrprucwpu5g5v0v6lyy9ttrhlkhpmcmg6anqwgadkk42fg6957uscl8cc6",
+      "value": "0.00000419 BTC",
+      "wallet_with_path": "[firma-wallet]m/1/1"
+    },
+    {
+      "address": "tb1qnxv2x36fk6qhg3623jmsvy0x8d97jsvf0n5vyy",
+      "value": "0.00001400 BTC"
     }
   ],
-  "psbt_file": "~/.firma/testnet/psbts/test-ee72a8ec/psbt.json",
+  "psbt_file": "$HOME/.firma/testnet/psbts/test/psbt.json",
   "size": {
-    "estimated": 147,
-    "unsigned": 94
+    "estimated": 178,
+    "psbt": 643,
+    "unsigned": 125
   }
 }
 ```
 
-A new psbt.json has been created at `~/.firma/testnet/psbts/test-ee72a8ec/psbt.json` note the name has been postfixed with the fingerprint of the key that signed
+The psbt.json  at `~/.firma/testnet/psbts/test/psbt.json` now has 1 signature.
 
 ## Sign from node B
 
@@ -210,34 +225,44 @@ firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/test
 ```
 ```json
 {
+  "balances": "firma-wallet: -0.00001581 BTC",
   "fee": {
-    "absolute": 288,
-    "rate": 1.9591836734693877
+    "absolute": 181,
+    "absolute_fmt": "0.00000181 BTC",
+    "rate": 1.0168539325842696
   },
   "info": [
+    "Privacy: outputs have different script types https://en.bitcoin.it/wiki/Privacy#Sending_to_a_different_script_type",
     "Added paths",
     "Added signatures"
   ],
   "inputs": [
     {
-      "outpoint": "5a566fb841645d53697cc18a22acf0c7e320fe6501451a815b489b3e056b00e2:1",
-      "path": "m/0/0",
-      "value": "0.00002222 BTC",
-      "wallet": "firma-wallet"
+      "outpoint": "1c9bbb8df5a03433f9cc3e77c102e06eda016ba7ae846166fa005c3db8b97ea1:0",
+      "signatures": [
+        "7938c502",
+        "cabe32d7"
+      ],
+      "value": "0.00002000 BTC",
+      "wallet_with_path": "[firma-wallet]m/0/0"
     }
   ],
   "outputs": [
     {
-      "address": "tb1qcs4rjkn4yplrz3z3065u4u6dxgz4q4qfkx5qaruqn5ppf2k5vajqqd2y2f",
-      "path": "",
-      "value": "0.00001934 BTC",
-      "wallet": ""
+      "address": "tb1qdrprucwpu5g5v0v6lyy9ttrhlkhpmcmg6anqwgadkk42fg6957uscl8cc6",
+      "value": "0.00000419 BTC",
+      "wallet_with_path": "[firma-wallet]m/1/1"
+    },
+    {
+      "address": "tb1qnxv2x36fk6qhg3623jmsvy0x8d97jsvf0n5vyy",
+      "value": "0.00001400 BTC"
     }
   ],
-  "psbt_file": "~/.firma/testnet/psbts/test-ee72a8ec/psbt.json",
+  "psbt_file": "$HOME/.firma/testnet/psbts/test/psbt.json",
   "size": {
-    "estimated": 147,
-    "unsigned": 94
+    "estimated": 178,
+    "psbt": 751,
+    "unsigned": 125
   }
 }
 ```
@@ -245,15 +270,15 @@ firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/test
 ## Combine, finalize and send TX
 
 ```
-firma-online --wallet-name firma-wallet send-tx --psbt-file ~/.firma/testnet/psbts/test-7d5d8203/psbt.json --psbt-file ~/.firma/testnet/psbts/test-ee72a8ec/psbt.json --broadcast```
+firma-online --wallet-name firma-wallet send-tx --psbt-file ~/.firma/testnet/psbts/test/psbt.json  --broadcast```
 ```
 {
   "broadcasted": true,
-  "hex": "02000000000101e2006b053e9b485b811a450165fe20e3c7f0ac228ac17c69535d6441b86f565a0100000000feffffff018e07000000000000220020c42a395a75207e3144517ea9caf34d3205505409b1a80e8f809d0214aad467640400483045022100c203ec0585270ace9afa2cf9a10f20365f1c491c693cf47bff3d6d5261492eca0220403f809419d8edefc66fdc0b417b5e86e57f1c2083b8220496c2eaec62b5a4e701483045022100851b1314178ef19fad9c9ef4e2c58b8ee73e31785fad3e779378180e312980190220637779f3959937512c1d403f627e4c0938d4207ad35133a18a1aa5c1a7a23fba0147522103a2106884dce3747c6111ae469a1b9e349963e8afdb62f27775a3af900e4bf9c12102d90327d582530dc74e017a2b874e544263dd3cefa9653e8bdc0d2346b7fd584552ae00000000",
-  "txid": "d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711"
+  "hex": "02000000000101a17eb9b83d5c00fa666184aea76b01da6ee002c1773eccf93334a0f58dbb9b1c0000000000feffffff02a30100000000000022002068c23e61c1e511463d9af90855ac77fdae1de368d7660723adb5aaa4a345a7b978050000000000001600149998a34749b68174474a8cb70611e63b4be941890400473044022035d77e5540f64b785430469965bcb015472a69461eaf29b628b3852c4d16217c022072bd4d1790ce201761f316a7ce87976fe2f470031141d0b26d61777e3b5ed9e101483045022100b735d13b126178fd929b69fe0601fa3b08111618083ed884f95d8e1eabe3561c02203a8fff2ef514a4bdb46b9d37474c9bb39f343f6e19b35e04b47faffdd294bd8f0147522102e38f45d263eb4e372b9d4355ac3e308c8c1c404eb841abbfcf667bc7ce6902e92102e0425ba8b97aea6b8d85c0ffca8bd9b01711c5432ff9d1237865c9fbdc74b06452ae00000000",
+  "txid": "54233ffea203f5dd2810ed12cd811bab53b441d51a75c26cbf6fef862fe984ec"
 }
 ```
 
-View tx [d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711](https://blockstream.info/testnet/tx/d6d19cad1df29117ad3c9ad0de43d1ab2e64c735212c8c457d7eb0bc8e929711)
+View tx [54233ffea203f5dd2810ed12cd811bab53b441d51a75c26cbf6fef862fe984ec](https://blockstream.info/testnet/tx/54233ffea203f5dd2810ed12cd811bab53b441d51a75c26cbf6fef862fe984ec)
 
 

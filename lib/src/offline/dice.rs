@@ -23,7 +23,7 @@ pub struct DiceOptions {
     #[structopt(short, long)]
     key_name: String,
 
-    /// Value of the die launch
+    /// Value of the die launch, to be repeated multiple times
     #[structopt(short, required = true)]
     launches: Vec<u32>,
 

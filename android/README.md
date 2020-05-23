@@ -1,15 +1,14 @@
 # Android
 
-![Screenshot_20200418-211935](https://user-images.githubusercontent.com/6470319/79669281-bfcced80-81ba-11ea-83af-564f57875bcb.png)
-![Screenshot_20200418-145729](https://user-images.githubusercontent.com/6470319/79639852-79fa3000-818e-11ea-97eb-14d493b059b3.png)
-![Screenshot_20200418-145740](https://user-images.githubusercontent.com/6470319/79639850-79fa3000-818e-11ea-82ad-4823264634cb.png)
-![Screenshot_20200418-150030](https://user-images.githubusercontent.com/6470319/79639849-79619980-818e-11ea-82b7-985636a0eb3b.png)
-![Screenshot_20200418-150041](https://user-images.githubusercontent.com/6470319/79639847-78c90300-818e-11ea-8041-5a08618caa23.png)
-![Screenshot_20200418-160141](https://user-images.githubusercontent.com/6470319/79639843-76ff3f80-818e-11ea-955a-24a03c75c989.png)
+![Screenshot_20200523-172426](https://images.casatta.it/Screenshot_20200523-172426.png?h=500)
+![Screenshot_20200523-172608](https://images.casatta.it/Screenshot_20200523-172608.png?h=500)
+![Screenshot_20200523-172628](https://images.casatta.it/Screenshot_20200523-172628.png?h=500)
 
 ## Beta test
 
-https://github.com/RCasatta/firma/releases/tag/beta_release_0.2.0
+Checkout releases at https://github.com/RCasatta/firma/releases 
+
+Get testnet version from google play https://play.google.com/store/apps/details?id=it.casatta.testnet&hl=en
 
 ## Building
 
@@ -26,13 +25,31 @@ The script copy the file in the directory `android/app/src/main/jniLibs/x86/`
 
 At this point you should be able to launch the android app in the emulator, for using the app in the android phone you will need to launch also `build-android-release.sh`.
 
-## Example PSBT
+## Example Transaction
 
-![qr-0](https://user-images.githubusercontent.com/6470319/79686978-745f2180-8244-11ea-8fd9-fc1a685ab0a3.png)
-![qr-1](https://user-images.githubusercontent.com/6470319/79686979-74f7b800-8244-11ea-82f9-f8d8b4a011f8.png)
-![qr-2](https://user-images.githubusercontent.com/6470319/79686980-74f7b800-8244-11ea-9d1b-185080186bea.png)
+To import the following transaction (PSBT) copy the text, go to "select transaction" -> "+" -> "From Clipboard"
+```
+cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAABAwQBAAAAAQRHUiEClYO/Oa4KYJdHrRma3dY0+mEIVZ1sXNObTCGD8auW4H8hAtq2H/SaFNtqfQKwzR+7ePxLGDErW05U2uTbovv+9TbXUq4iBgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfxDZDGpPAAAAgAAAAIAAAACAIgYC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtcQ2QxqTwAAAIAAAACAAQAAgAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohwEDBAEAAAABBCIAIIwjUxc3Q7WV37Sge3K6jkLjeX2nTof+fZ10l+OyAokDAQVHUiEDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwhAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zUq4iBgI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8OcxDZDGpPAAAAgAAAAIADAACAIgYDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwQ2QxqTwAAAIAAAACAAgAAgAAiAgOppMN/WZbTqiXbrGtXCvBlA5RJKUJGCzVHU+2e7KWHcRDZDGpPAAAAgAAAAIAEAACAACICAn9jmXV9Lv9VoTatAsaEsYOLZVbl8bazQoKpS2tQBRCWENkMak8AAACAAAAAgAUAAIAA
+```
 
 ## Example Wallet
 
-![qr-0](https://user-images.githubusercontent.com/6470319/79687010-a3759300-8244-11ea-9023-bfd91c7d3bad.png)
-![qr-1](https://user-images.githubusercontent.com/6470319/79687012-a40e2980-8244-11ea-82cc-6a9c803ad975.png)
+To import the following wallet descriptor copy the json, go to "select wallet" -> "+" -> "From Clipboard"
+
+```json
+{
+  "name": "first-android",
+  "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/0/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/0/*))#q0agyfvx",
+  "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/1/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/1/*))#r0dapdc4",
+  "fingerprints": [
+    "8f335370",
+    "6b9128bc"
+  ],
+  "required_sig": 2,
+  "daemon_opts": {
+    "url": "http://127.0.0.1:18332",
+    "cookie_file": "/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie"
+  },
+  "created_at_height": 1718227
+}
+```
