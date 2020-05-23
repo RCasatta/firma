@@ -95,20 +95,20 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 }
             }
             PSBTS -> {
-                title = "PSBTs"
+                title = "Transactions"
                 updatePsbts()
                 item_new.setOnClickListener {
                     comeHere(this, IMPORT_PSBT)
                 }
             }
             IMPORT_PSBT -> {
-                title = "Import PSBT"
+                title = "Import transaction (PSBT)"
                 itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
                 itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "base64", null, emptyList()))
                 item_new.hide()
             }
             IMPORT_WALLET -> {
-                title = "Import WALLET"
+                title = "Import wallet"
                 itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
                 itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "json", null, emptyList()))
                 item_new.hide()
@@ -212,7 +212,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             IMPORT_PSBT -> {
                 when(item.name) {
                     getString(R.string.scan) -> {
-                        launchScan("Scan a PSBT")
+                        launchScan("Scan a transaction (PSBT)")
                     }
                     getString(R.string.from_clipboard) -> {
                         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

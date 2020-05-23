@@ -2,6 +2,7 @@ package it.casatta
 
 import android.app.Activity
 import android.content.Intent
+import android.opengl.Visibility
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -44,7 +45,7 @@ class PSBTActivity : AppCompatActivity() {
         val psbtFileName = "$psbtFileDir/psbt.json"
         val psbtPretty = Rust().print(filesDir.toString(), psbtFileName)
 
-        val psbtTitle = "PSBT: ${psbtJson.psbt.name}"
+        val psbtTitle = "Transaction: ${psbtJson.psbt.name}"
         title = psbtTitle
         view_qr.setOnClickListener { QrActivity.comeHere(this, psbtTitle, psbtJson.qr_files ) }
         select.setOnClickListener {
@@ -60,7 +61,16 @@ class PSBTActivity : AppCompatActivity() {
 
         for (i in psbtPretty.inputs.indices) {
             val input = psbtPretty.inputs[i]
-            inputsAdapter.list.add(TxInOutItem("input #$i", input.outpoint, input.value, "${input.wallet_with_path} ${input.signatures.joinToString()}"))
+            var description: String? = null
+            if (input.wallet_with_path != null && input.signatures.isNotEmpty() ) {
+                description = "${input.wallet_with_path} ${input.signatures.joinToString(", ")}"
+            } else if (input.wallet_with_path != null) {
+                description = input.wallet_with_path
+            } else if (input.signatures.isNotEmpty()) {
+                description = input.signatures.joinToString(", ")
+            }
+
+            inputsAdapter.list.add(TxInOutItem("input #$i", input.outpoint, input.value, description))
         }
 
         for (i in psbtPretty.outputs.indices) {
@@ -117,7 +127,11 @@ class TxInOutItemHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
         index.text = item.index
         title.text = item.title
         value.text = item.value
-        description.text = item.description ?: ""
+        if (item.description == null) {
+            description.visibility = View.GONE
+        } else {
+            description.text = item.description
+        }
     }
 }
 

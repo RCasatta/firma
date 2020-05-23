@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
 
         sign_button.isEnabled = true
         sign_button.setOnClickListener {
-            if (key_text.text == getString(R.string.select_key) || wallet_text.text == getString(R.string.select_wallet)  || psbt_text.text == getString(R.string.select_psbt)) {
+            if (key_text.text == getString(R.string.select_key) || wallet_text.text == getString(R.string.select_wallet)  || psbt_text.text == getString(R.string.select_transaction)) {
                 Toast.makeText(this, "Select key, wallet and psbt", Toast.LENGTH_LONG).show()
             } else {
                 val keyFile = "$filesDir/${Network.TYPE}/keys/${key_text.text}/PRIVATE.json"

@@ -62,7 +62,7 @@
         android:id="@+id/psbt_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/select_psbt"
+        android:text="@string/select_transaction"
         android:textSize="20sp"
         app:layout_constraintBaseline_toBaselineOf="@id/psbt_button"
         app:layout_constraintBottom_toTopOf="@id/sign_button"
