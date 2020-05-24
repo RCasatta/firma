@@ -1,6 +1,6 @@
 # configure this according to you system and your target
 export NDK=$HOME/android-ndk-r21
-export TARGET=aarch64-linux-android
+export TARGET=x86_64-linux-android
 export API=21
 export HOST=darwin-x86_64
 export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
@@ -14,4 +14,6 @@ export AR=$TOOLCHAIN/bin/$TARGET-ar
 export AS=$TOOLCHAIN/bin/$TARGET-as
 
 cargo build --release --target $TARGET
-cp ../target/aarch64-linux-android/release/libfirma.so ../android/app/src/main/jniLibs/arm64-v8a/
+mkdir -p ../android/app/src/main/jniLibs/x86_64/
+cp ../target/$TARGET/release/libfirma.so ../android/app/src/main/jniLibs/x86_64/
+
