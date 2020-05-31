@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./build-android/common.sh
+. ./build-android/common.sh
 
 export TARGET=x86_64-linux-android
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./build-android/common.sh
+. ./build-android/common.sh
 
 export TOOL_TARGET=arm-linux-androideabi
 export RUST_TARGET=armv7-linux-androideabi
