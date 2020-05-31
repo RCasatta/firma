@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Firma</string>
+    <string name="import_xprv">Import xprv</string>
 </resources>

@@ -1,14 +1,5 @@
 <resources>
     <string name="app_name">Firma (testnet)</string>
-    <string name="select_key">Select key</string>
-    <string name="select_wallet">Select wallet</string>
-    <string name="select_transaction">Select transaction</string>
-    <string name="from_clipboard">From clipboard</string>
-    <string name="scan">Scan</string>
-
-    <string name="random">Random</string>
-    <string name="dice">Dice</string>
-    <string name="import_xprv">Import xprv</string>
-    <string name="import_mnemonic">Import mnemonic</string>
+    <string name="import_xprv">Import tprv</string>
 
 </resources>
