@@ -3,9 +3,50 @@ language: rust
 matrix:
   include:
     - rust: 1.38.0
+      script:
+        - cargo build --verbose --all
+        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - cargo test --verbose --all
     - rust: stable
+      script:
+        - cargo build --verbose --all
+        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - cargo test --verbose --all
     - rust: nightly
-      env: DO_COV=true CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Zno-landing-pads"
+      env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
+      script:
+        - cargo build --verbose --all
+        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - cargo test --verbose --all
+      after_success:
+        - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+        - ./grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
+        - bash <(curl -s https://codecov.io/bash) -f lcov.info;
+        - echo "Uploaded code coverage";
+    - rust: stable
+      env: TARGET=i686-linux-android
+      script:
+        - rustup target install $TARGET
+        - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip -q android-ndk-r21c-linux-x86_64.zip
+        - cd lib && ./build-android/x86.sh
+    - rust: stable
+      env: TARGET=x86_64-linux-android
+      script:
+        - rustup target install $TARGET
+        - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip -q android-ndk-r21c-linux-x86_64.zip
+        - cd lib && ./build-android/x86_64.sh
+    - rust: stable
+      env: TARGET=armv7-linux-androideabi
+      script:
+        - rustup target install $TARGET
+        - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip -q android-ndk-r21c-linux-x86_64.zip
+        - cd lib && ./build-android/armv7a.sh
+    - rust: stable
+      env: TARGET=aarch64-linux-android
+      script:
+        - rustup target install $TARGET
+        - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip -q android-ndk-r21c-linux-x86_64.zip
+        - cd lib && ./build-android/arm64-v8a.sh
   allow_failures:
     - rust: nightly
 
@@ -17,18 +58,6 @@ addons:
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
+    - NDK=$TRAVIS_BUILD_DIR/android-ndk-r21c
+    - HOST=linux-x86_64
 
-before_install:
-  - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
-
-script:
-  - cargo build --verbose --all
-  - cargo test --verbose --all
-
-after_success: |
-  if [ "$DO_COV" = true ]; then
-    curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
-    ./grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
-    bash <(curl -s https://codecov.io/bash) -f lcov.info;
-    echo "Uploaded code coverage";
-  fi
