@@ -1,10 +1,8 @@
-# configure this according to you system and your target
-export NDK=$HOME/android-ndk-r21
+#!/bin/bash
+
+./build-android/common.sh
+
 export TARGET=aarch64-linux-android
-export API=21
-export HOST=darwin-x86_64
-export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
-##### end configure
 
 export CC=$TOOLCHAIN/bin/$TARGET$API-clang
 export LD=$TOOLCHAIN/bin/$TARGET-ld

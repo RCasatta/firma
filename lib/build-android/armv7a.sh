@@ -1,12 +1,9 @@
-# configure this according to you system and your target
-export NDK=$HOME/android-ndk-r21
-export TARGET=armv7a-linux-androideabi
-export RUST_TARGET=armv7-linux-androideabi
+#!/bin/bash
+
+./build-android/common.sh
+
 export TOOL_TARGET=arm-linux-androideabi
-export API=21
-export HOST=darwin-x86_64
-export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
-##### end configure
+export RUST_TARGET=armv7-linux-androideabi
 
 export CC=$TOOLCHAIN/bin/$TARGET$API-clang
 export LD=$TOOLCHAIN/bin/$TOOL_TARGET-ld
