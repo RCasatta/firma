@@ -17,13 +17,19 @@ addons:
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
+    - NDK=$TRAVIS_BUILD_DIR/android-ndk-r21c
+    - HOST=linux-x86_64
 
 before_install:
   - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+  - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip
+  - unzip android-ndk-r21c-linux-x86_64.zip
 
 script:
   - cargo build --verbose --all
   - cargo test --verbose --all
+  - rustup target install armv7-linux-androideabi aarch64-linux-android i686-linux-android x86_64-linux-android
+  - cd lib && ./build-android.sh
 
 after_success: |
   if [ "$DO_COV" = true ]; then
