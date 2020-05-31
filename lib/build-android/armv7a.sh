@@ -2,7 +2,8 @@
 
 . ./build-android/common.sh
 
-export RUSTFLAGS="-Clinker=armv7a-linux-androideabi16-clang -Car=arm-linux-androideabi-ar"
+export CC=armv7a-linux-androideabi21-clang
+export RUSTFLAGS="-Clinker=$CC -Car=arm-linux-androideabi-ar"
 export TARGET=armv7-linux-androideabi
 cargo build --release --target $TARGET
 mkdir -p ../android/app/src/main/jniLibs/armv7a/
