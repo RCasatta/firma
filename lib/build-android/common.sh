@@ -5,3 +5,4 @@
 
 export API=21
 export TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST
+export PATH=$PATH:$TOOLCHAIN/bin
