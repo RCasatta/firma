@@ -58,6 +58,7 @@ addons:
   apt:
     packages:
       - libgoogle-perftools-dev  # required for grcov
+      - android-liblog-dev  # required for android ndk builds
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
