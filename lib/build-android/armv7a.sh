@@ -4,6 +4,7 @@
 
 export TOOL_TARGET=arm-linux-androideabi
 export RUST_TARGET=armv7-linux-androideabi
+export TARGET=armv7a-linux-androideabi
 
 export CC=$TOOLCHAIN/bin/$TARGET$API-clang
 export LD=$TOOLCHAIN/bin/$TOOL_TARGET-ld
