@@ -13,7 +13,7 @@ matrix:
         - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
     - rust: nightly
-      env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
+      env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off" CAN_FAIL=true
       script:
         - cargo build --verbose --all
         - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
@@ -30,25 +30,24 @@ matrix:
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
         - cd lib && ./build-android/x86.sh
     - rust: stable
-      env: TARGET=x86_64-linux-android
+      env: TARGET=x86_64-linux-android CAN_FAIL=true
       script:
         - rustup target install $TARGET
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
-        - cd lib && ./build-android/x86.sh
+        - cd lib && ./build-android/x86_64.sh
     - rust: stable
-      env: TARGET=armv7-linux-androideabi
+      env: TARGET=armv7-linux-androideabi CAN_FAIL=true
       script:
         - rustup target install $TARGET
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
-        - cd lib && ./build-android/x86.sh
+        - cd lib && ./build-android/armv7a.sh
     - rust: stable
-      env: TARGET=aarch64-linux-android
+      env: TARGET=aarch64-linux-android CAN_FAIL=true
       script:
         - rustup target install $TARGET
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
-        - cd lib && ./build-android/x86.sh
+        - cd lib && ./build-android/arm64-v8a.sh
   allow_failures:
-    - rust: nightly
     - env: CAN_FAIL=true
 
 addons:
