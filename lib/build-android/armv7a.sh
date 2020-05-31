@@ -12,6 +12,7 @@ export RANLIB=$TOOLCHAIN/bin/$TOOL_TARGET-ranlib
 export STRIP=$TOOLCHAIN/bin/$TOOL_TARGET-strip
 export AR=$TOOLCHAIN/bin/$TOOL_TARGET-ar
 export AS=$TOOLCHAIN/bin/$TOOL_TARGET-as
+export RUSTFLAGS="-C linker=$LD"
 
 cargo build --release --target $RUST_TARGET
 mkdir -p ../android/app/src/main/jniLibs/armv7a/
