@@ -360,7 +360,7 @@ dependencies = [
 
 [[package]]
 name = "firma"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "android_logger",
  "base64 0.12.0",
@@ -387,7 +387,7 @@ dependencies = [
 
 [[package]]
 name = "firma-bin"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "bitcoin",
  "bitcoincore-rpc",
