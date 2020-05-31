@@ -24,10 +24,11 @@ matrix:
         - bash <(curl -s https://codecov.io/bash) -f lcov.info;
         - echo "Uploaded code coverage";
     - rust: stable
-      env: ANDROID_TARGET=x86
+      env: TARGET=i686-linux-android
       script:
+        - rustup target install $TARGET
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
-        - cd lib && ./build-android/$ANDROID_TARGET.sh
+        - cd lib && ./build-android/x86.sh
   allow_failures:
     - rust: nightly
 
