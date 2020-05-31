@@ -10,7 +10,7 @@ export RANLIB=$TOOLCHAIN/bin/$TARGET-ranlib
 export STRIP=$TOOLCHAIN/bin/$TARGET-strip
 export AR=$TOOLCHAIN/bin/$TARGET-ar
 export AS=$TOOLCHAIN/bin/$TARGET-as
-export RUSTFLAGS="-C linker=$LD"
+export RUSTFLAGS="-Clinker=i686-linux-android16-clang -Car=i686-linux-android-ar"
 
 cargo build --release --target $TARGET
 mkdir -p ../android/app/src/main/jniLibs/x86/
