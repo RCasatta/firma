@@ -13,8 +13,7 @@ addons:
   apt:
     packages:
       - libgoogle-perftools-dev  # required for grcov
-      - liblog4cplus-dev
-      - liblog4cpp5-dev
+      - build-essential
 
 env:
   global:
