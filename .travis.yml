@@ -13,7 +13,6 @@ matrix:
         - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
     - rust: nightly
-      name: can_fail
       env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
       script:
         - cargo build --verbose --all
@@ -25,35 +24,35 @@ matrix:
         - bash <(curl -s https://codecov.io/bash) -f lcov.info;
         - echo "Uploaded code coverage";
     - rust: stable
-      name: can_fail
-      env: TARGET=i686-linux-android
+      name: i686-linux-android
+      env: CAN_FAIL=true
       script:
-        - rustup target install $TARGET
+        - rustup target install i686-linux-android
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
         - cd lib && ./build-android/x86.sh
     - rust: stable
-      name: can_fail
-      env: TARGET=x86_64-linux-android
+      name: x86_64-linux-android
+      env: CAN_FAIL=true
       script:
-        - rustup target install $TARGET
+        - rustup target install x86_64-linux-android
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
         - cd lib && ./build-android/x86_64.sh
     - rust: stable
-      name: can_fail
-      env: TARGET=armv7-linux-androideabi
+      name: armv7-linux-androideabi
+      env: CAN_FAIL=true
       script:
-        - rustup target install $TARGET
+        - rustup target install armv7-linux-androideabi
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
         - cd lib && ./build-android/armv7a.sh
     - rust: stable
-      name: can_fail
-      env: TARGET=aarch64-linux-android
+      name: aarch64-linux-android
+      env: CAN_FAIL=true
       script:
-        - rustup target install $TARGET
+        - rustup target install aarch64-linux-android
         - curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip android-ndk-r21c-linux-x86_64.zip
         - cd lib && ./build-android/arm64-v8a.sh
   allow_failures:
-    - name: can_fail
+    - env: CAN_FAIL=true
 
 addons:
   apt:
