@@ -350,6 +350,9 @@ impl PSBTSigner {
             if fing != &my_fing {
                 continue;
             }
+            if input.partial_sigs.contains_key(pubkey) {
+                return Err("request to sign a PSBT already containing a signature from this key".into());
+            }
             if !self.allow_any_derivations {
                 let path_slice = child.as_ref();
                 if path_slice.len() != 2 {
@@ -578,6 +581,12 @@ mod tests {
         assert!(
             test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv).is_err(),
             "tx non matching prevout"
+        );
+
+        let mut mut_psbt_signed = psbt_signed.clone();
+        assert!(
+            test_sign(&mut mut_psbt_signed, &psbt_signed, &key.xprv).is_err(),
+            "trying to sign a psbt which is already signed with this key"
         );
 
         psbt_to_sign.inputs[1].non_witness_utxo = Some(tx2);
