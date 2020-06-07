@@ -38,7 +38,22 @@ impl Wallet {
             psbts.push(json.psbt);
         }
         psbts.extend(opt.psbts.clone());
-        let combined = self.client.combine_psbt(&psbts)?;
+
+        // Bitcoin core doesn't accept PSBT inputs with both witness_utxo and non_witness_utxo that we added
+        // to prevent the fee bug, so we strip the non_witness_utxo if a witness_utxo is also present
+        let mut psbts_stripped = vec![];
+        for psbt_string in psbts.iter() {
+            let mut psbt = psbt_from_base64(psbt_string)?.1;
+            for input in psbt.inputs.iter_mut() {
+                if input.non_witness_utxo.is_some() && input.witness_utxo.is_some() {
+                    debug!("removing non witness for input {:?}", input);
+                    input.non_witness_utxo = None;
+                }
+            }
+            psbts_stripped.push(psbt_to_base64(&psbt).1);
+        }
+
+        let combined = self.client.combine_psbt(&psbts_stripped)?;
         debug!("combined {:?}", combined);
 
         let finalized = self.client.finalize_psbt(&combined, Some(true))?;

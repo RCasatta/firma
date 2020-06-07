@@ -41,6 +41,7 @@ fn integration_test() {
         .arg("-daemon")
         .arg("-regtest")
         .arg("-listen=0")
+        .arg("-fallbackfee=0.0001")
         .spawn()
         .unwrap();
 

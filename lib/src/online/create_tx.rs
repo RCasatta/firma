@@ -123,6 +123,18 @@ impl Wallet {
         };
 
         let mut psbt = psbt_from_rpc(&funded_psbt, &opt.psbt_name)?;
+
+        // set non_witness_utxo also for segwit input, due to the fee bug
+        for (i, input) in psbt.inputs.iter_mut().enumerate() {
+            if input.non_witness_utxo.is_none() {
+                let previous_txid = &psbt.global.unsigned_tx.input[i].previous_output.txid;
+                let tx_result = self.client.get_transaction(previous_txid, Some(true))?;
+                let tx = tx_result.transaction()?;
+                let tx = strip_witness(&tx); // remove witness to save space since doesnt't contribute to txid
+                input.non_witness_utxo = Some(tx);
+            }
+        }
+
         let mut psbts_dir = self.context.psbts_dir()?;
         let (psbt_file, qr_files) = save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
 

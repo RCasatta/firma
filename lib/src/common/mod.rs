@@ -3,7 +3,7 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::key;
-use bitcoin::Script;
+use bitcoin::{Script, Transaction};
 use log::{LevelFilter, Metadata, Record};
 use std::fs::OpenOptions;
 use std::io::BufWriter;
@@ -133,5 +133,38 @@ pub fn map_json_error(result: Result<serde_json::Value>) -> Result<serde_json::V
             _ => Ok(value),
         },
         Err(e) => Err(Error::Generic(e.to_string())),
+    }
+}
+
+pub fn strip_witness(tx: &Transaction) -> Transaction {
+    let cloned_tx = Transaction {
+        version: tx.version,
+        lock_time: tx.lock_time,
+        input: tx
+            .input
+            .iter()
+            .map(|txin| bitcoin::TxIn {
+                witness: vec![],
+                ..txin.clone()
+            })
+            .collect(),
+        output: tx.output.clone(),
+    };
+    cloned_tx
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::strip_witness;
+    use bitcoin::consensus::deserialize;
+    use bitcoin::Transaction;
+
+    #[test]
+    fn test_strip() {
+        let segwit_tx = "020000000001019c644affd9c62cef3a13c4d2facc4284bcce3f1769d4aeda062413ece120ffc80100000000ffffffff029b660900000000001600147a5d9c9672cb9c788c2b7f217a8b35af6e3f7e8bdee60300000000001976a914228e6b93d66a870fabb41dd064dedbd14804431388ac024730440220453ca5656c155e63bea0af0e83d59ea7097c3cc5bfef5abade3c7d49435fcc3a0220404c3d469fbcee2ace5bf5963440eb78ca63c40c2fe80547026a48009ed0009e01210336d86e06d33b04ed236d280590f1a6d0c6eb7f703b7fe78cc1d71122d0c4f9be00000000";
+        let segwit_tx: Transaction = deserialize(&hex::decode(segwit_tx).unwrap()).unwrap();
+        let stripped = strip_witness(&segwit_tx);
+        assert_eq!(segwit_tx.txid(), stripped.txid());
+        assert!(stripped.get_weight() < segwit_tx.get_weight());
     }
 }
