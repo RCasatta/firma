@@ -42,6 +42,7 @@ pub fn pretty_print(
     let vouts: Vec<OutPoint> = tx.input.iter().map(|el| el.previous_output).collect();
     for (i, input) in psbt.inputs.iter().enumerate() {
         let previous_output = match (&input.non_witness_utxo, &input.witness_utxo) {
+            (_, Some(val)) => val,
             (Some(prev_tx), None) => {
                 let outpoint = *vouts.get(i).ok_or_else(fn_err("can't find outpoint"))?;
                 assert_eq!(prev_tx.txid(), outpoint.txid);
@@ -50,8 +51,7 @@ pub fn pretty_print(
                     .get(outpoint.vout as usize)
                     .ok_or_else(fn_err("can't find txout"))?
             }
-            (None, Some(val)) => val,
-            _ => return Err("witness_utxo and non_witness_utxo are both None or both Some".into()),
+            _ => return Err("witness_utxo and non_witness_utxo are both None".into()),
         };
         previous_outputs.push(previous_output.clone());
     }
