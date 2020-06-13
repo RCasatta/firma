@@ -51,11 +51,6 @@ matrix:
   allow_failures:
     - rust: nightly
 
-addons:
-  apt:
-    packages:
-      - libgoogle-perftools-dev  # required for grcov
-
 env:
   global:
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
