@@ -26,13 +26,12 @@
             android:layout_margin="4dp"
             />
 
-        <TextView
-            android:id="@+id/description"
+        <ImageButton
+            android:id="@+id/info_address"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:layout_margin="4dp"
-            android:text="⚠ Double check this address with the one generated with the online tool. An attacker could potentially change the address generated with the online tool with an address he owns."
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_baseline_info_32"
             />
 
     </LinearLayout>
