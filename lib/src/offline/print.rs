@@ -1,5 +1,5 @@
 use crate::list::ListOptions;
-use crate::offline::descriptor::derive_address;
+use crate::offline::descriptor::{derive_address, DeriveAddressOpts};
 use crate::*;
 use bitcoin::consensus::serialize;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
@@ -211,7 +211,11 @@ fn wallet_with_path(
                         _ => return None,
                     };
                     if let ChildNumber::Normal { index } = path_vec.last()? {
-                        if let Ok(derived) = derive_address(descriptor, *index, address.network) {
+                        let opts = DeriveAddressOpts {
+                            descriptor: descriptor.to_string(),
+                            index: *index,
+                        };
+                        if let Ok(derived) = derive_address(address.network, &opts) {
                             if &derived.address == address {
                                 return Some((wallet.name.clone(), path.clone()));
                             }

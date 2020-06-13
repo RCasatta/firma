@@ -111,6 +111,11 @@ class Rust {
         val balances: String
     )
 
+    data class GetAddressOutput (
+        val address: String,
+        val path: String
+    )
+
     private external fun call(json: String): String
 
     private fun callJson(json: String): JsonNode {
@@ -217,6 +222,16 @@ class Rust {
         val req = JsonRpc("save_psbt", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         callJson(reqString)
+    }
+
+    fun deriveAddress(walletDescriptor: String, addressIndex: Int): GetAddressOutput {
+        val node = JsonNodeFactory.instance.objectNode()
+        node.put("descriptor", walletDescriptor)
+        node.put("index", addressIndex)
+        val req = JsonRpc("derive_address", "", Network.TYPE, node)
+        val reqString = mapper.writeValueAsString(req)
+        val json = callJson(reqString)
+        return mapper.convertValue(json, GetAddressOutput::class.java)
     }
 
 }

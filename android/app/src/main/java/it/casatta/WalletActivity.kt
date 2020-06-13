@@ -17,6 +17,7 @@ import java.io.File
 class WalletActivity : AppCompatActivity() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
     private val itemsAdapter = DescItemAdapter()
+    private var walletDescriptor = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,6 +26,7 @@ class WalletActivity : AppCompatActivity() {
         val walletString = intent.getStringExtra(C.WALLET)
         Log.d("WALLET", "${Network.TYPE} $walletString")
         val walletJson = mapper.readValue(walletString, Rust.CreateWalletOutput::class.java)
+        walletDescriptor = walletJson.wallet.descriptor_main
         val walletTitle = "wallet: ${walletJson.wallet.name}"
         title = walletTitle
 
@@ -35,6 +37,8 @@ class WalletActivity : AppCompatActivity() {
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         }
+
+        get_address.setOnClickListener { ListActivity.comeHere(this, ListActivity.ADDRESS_INDEX ) }
 
         val walletDir = "$filesDir/${Network.TYPE}/wallets/${walletJson.wallet.name}/"
         delete.setOnClickListener {
@@ -50,6 +54,23 @@ class WalletActivity : AppCompatActivity() {
         itemsAdapter.list.add(DescItem("Required sig", walletJson.wallet.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.wallet.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson.wallet) ))
+    }
+
+    override fun onActivityResult(
+        requestCode: Int,
+        resultCode: Int,
+        data: Intent?
+    ) {
+        if (resultCode == Activity.RESULT_OK) {
+            val index = data?.getStringExtra(C.RESULT)
+            Log.i("WALLET", "index $index")
+            val newIntent = Intent(this, AddressActivity::class.java)
+            newIntent.putExtra(C.INDEX, "$index")
+            newIntent.putExtra(C.DESCRIPTOR, walletDescriptor)
+            startActivity(newIntent)
+        } else {
+            super.onActivityResult(requestCode, resultCode, data)
+        }
     }
 
 

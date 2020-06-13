@@ -21,6 +21,7 @@
         <activity android:name=".PSBTActivity" />
         <activity android:name=".QrActivity" />
         <activity android:name=".ListActivity"/>
+        <activity android:name=".AddressActivity"/>
         <activity
             android:name=".MainActivity">
             <intent-filter>

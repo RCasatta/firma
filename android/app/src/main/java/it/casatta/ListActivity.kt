@@ -48,6 +48,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         const val IMPORT_WALLET = 9
         const val DICE_FACES = 10
         const val DICE_LAUNCH = 11
+        const val ADDRESS_INDEX = 12
 
         fun comeHere(from: Activity, what: Int) {
             val newIntent = Intent(from, ListActivity::class.java)
@@ -127,6 +128,13 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 val faces = intent.getIntExtra(C.FACES, 0)
                 for (el in (1..faces)) {
                     itemsAdapter.list.add(Item(el.toString(), null, null, emptyList()))
+                }
+                item_new.hide()
+            }
+            ADDRESS_INDEX -> {
+                title = "Select index"
+                for (i in 0..1000) {
+                    itemsAdapter.list.add(Item("$i", null, null, emptyList()))
                 }
                 item_new.hide()
             }
@@ -245,6 +253,9 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 setResultAndFinish(item)
             }
             DICE_LAUNCH -> {
+                setResultAndFinish(item)
+            }
+            ADDRESS_INDEX -> {
                 setResultAndFinish(item)
             }
             else -> {

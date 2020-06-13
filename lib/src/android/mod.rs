@@ -1,4 +1,5 @@
 use crate::common::list::ListOptions;
+use crate::offline::descriptor::DeriveAddressOpts;
 use crate::offline::dice::DiceOptions;
 use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
@@ -86,6 +87,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         Some("save_psbt") => {
             let opts: SavePSBTOptions = serde_json::from_value(args.clone())?;
             let result = crate::offline::sign::save_psbt_opt(datadir, network, &opts)?;
+            serde_json::to_value(result)?
+        }
+        Some("derive_address") => {
+            let opts: DeriveAddressOpts = serde_json::from_value(args.clone())?;
+            let result = crate::offline::descriptor::derive_address(network, &opts)?;
             serde_json::to_value(result)?
         }
         _ => {

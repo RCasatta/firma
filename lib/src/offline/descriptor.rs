@@ -3,16 +3,23 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPubKey};
 use bitcoin::Network;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 type BitcoinDescriptor = miniscript::Descriptor<bitcoin::PublicKey>;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeriveAddressOpts {
+    pub descriptor: String,
+    pub index: u32,
+}
+
 /// derive address from descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
 /// NOTE this is an hack waiting miniscript support xpubs in descriptor
-pub fn derive_address(descriptor: &str, index: u32, network: Network) -> Result<GetAddressOutput> {
-    let xpubs = extract_xpubs(descriptor)?;
-    let int_or_ext = extract_int_or_ext(descriptor)?;
-    let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, index))?;
+pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAddressOutput> {
+    let xpubs = extract_xpubs(&opt.descriptor)?;
+    let int_or_ext = extract_int_or_ext(&opt.descriptor)?;
+    let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, opt.index))?;
     let secp = Secp256k1::verification_only();
     let pubs: Vec<String> = xpubs
         .iter()
@@ -23,7 +30,7 @@ pub fn derive_address(descriptor: &str, index: u32, network: Network) -> Result<
     if pubs.len() != xpubs.len() {
         return Err("cannot convert all xpubs to pubs".into());
     }
-    let n = extract_n(&descriptor)?;
+    let n = extract_n(&opt.descriptor)?;
     let descriptor_with_pubkey = format!("wsh(multi({},{}))", n, pubs.join(","));
     let my_descriptor = BitcoinDescriptor::from_str(&descriptor_with_pubkey[..])?;
     let address = my_descriptor
@@ -98,13 +105,22 @@ mod tests {
     fn derive_address_test() {
         // firma-online --wallet-name firma-wallet2 get-address --index 0
         // tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk
-
-        let derived_address = derive_address(DESCRIPTOR, 0, Network::Testnet).unwrap();
+        let mut opts = DeriveAddressOpts {
+            descriptor: DESCRIPTOR.to_string(),
+            index: 0,
+        };
+        let derived_address = derive_address(Network::Testnet, &opts).unwrap();
         assert_eq!(
             "tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk",
             derived_address.address.to_string()
         );
         assert_eq!("m/0/0", derived_address.path.to_string());
-        assert!(derive_address(DESCRIPTOR, 2147483648, Network::Testnet).is_err());
+        opts.index = 2147483648;
+        assert_eq!(
+            derive_address(Network::Testnet, &opts)
+                .unwrap_err()
+                .to_string(),
+            "InvalidChildNumber(2147483648)"
+        );
     }
 }

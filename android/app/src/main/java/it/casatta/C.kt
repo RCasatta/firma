@@ -14,6 +14,8 @@ class C {
         const val QRS = "qrs"
         const val PSBT = "psbt"
         const val WALLET = "wallet"
+        const val INDEX = "index"
+        const val DESCRIPTOR = "descriptor"
         const val KEY = "key"
         const val TITLE_PREFIX = "title_prefix"
         const val FACES = "faces"

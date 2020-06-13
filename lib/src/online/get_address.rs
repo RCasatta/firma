@@ -1,3 +1,4 @@
+use crate::offline::descriptor::DeriveAddressOpts;
 use crate::*;
 use bitcoincore_rpc::RpcApi;
 use log::info;
@@ -39,8 +40,9 @@ impl Wallet {
         }
         info!("{}", address);
 
+        let opts = DeriveAddressOpts { descriptor, index };
         let derive_address =
-            crate::offline::descriptor::derive_address(&descriptor, index, self.context.network)?;
+            crate::offline::descriptor::derive_address(self.context.network, &opts)?;
         assert_eq!(
             derive_address.address, address,
             "address generated from the node differs from the one generated from miniscript"
