@@ -6,18 +6,25 @@ matrix:
     - rust: 1.38.0
       script:
         - cargo build --verbose --all
-        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
     - rust: stable
       script:
         - cargo build --verbose --all
-        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
+        - cargo test --verbose --all
+    - rust: stable
+      env: BITCOIN_VER=0.20.0 BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-$BITCOIN_VER/bin
+      script:
+        - cargo build --verbose --all
+        - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
     - rust: nightly
       env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
       script:
         - cargo build --verbose --all
-        - curl https://bitcoincore.org/bin/bitcoin-core-0.19.1/bitcoin-0.19.1-x86_64-linux-gnu.tar.gz | tar -xvz
+        - find . -name "*.gcda" -print0 | xargs -0 rm
+        - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
       after_success:
         - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
@@ -51,14 +58,10 @@ matrix:
   allow_failures:
     - rust: nightly
 
-addons:
-  apt:
-    packages:
-      - libgoogle-perftools-dev  # required for grcov
-
 env:
   global:
-    - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-0.19.1/bin
+    - BITCOIN_VER=0.19.1
+    - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-$BITCOIN_VER/bin
     - NDK=$TRAVIS_BUILD_DIR/android-ndk-r21c
     - HOST=linux-x86_64
 

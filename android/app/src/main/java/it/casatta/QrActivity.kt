@@ -48,7 +48,7 @@ class QrActivity : AppCompatActivity() {
         Log.d("QR", qrs.toString())
 
         var count = 0
-        for (qr in qrs) {
+        for (qr in qrs!!.iterator()) {
             if (qr.endsWith(".png")) {
                 imagesAdapter.list.add(ImageItem(qr))
                 count += 1
