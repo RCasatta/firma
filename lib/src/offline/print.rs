@@ -44,12 +44,12 @@ pub fn pretty_print(
         let previous_output = match (&input.non_witness_utxo, &input.witness_utxo) {
             (_, Some(val)) => val,
             (Some(prev_tx), None) => {
-                let outpoint = *vouts.get(i).ok_or_else(fn_err("can't find outpoint"))?;
+                let outpoint = *vouts.get(i).ok_or_else(|| Error::MissingOutpoint)?;
                 assert_eq!(prev_tx.txid(), outpoint.txid);
                 prev_tx
                     .output
                     .get(outpoint.vout as usize)
-                    .ok_or_else(fn_err("can't find txout"))?
+                    .ok_or_else(|| Error::MissingTxout)?
             }
             _ => return Err("witness_utxo and non_witness_utxo are both None".into()),
         };
@@ -60,7 +60,7 @@ pub fn pretty_print(
 
     for (i, input) in tx.input.iter().enumerate() {
         let addr = Address::from_script(&previous_outputs[i].script_pubkey, network)
-            .ok_or_else(fn_err("non default script"))?;
+            .ok_or_else(|| Error::NonDefaultScript)?;
         let keypaths = &psbt.inputs[i].hd_keypaths;
         let signatures: HashSet<Fingerprint> = psbt.inputs[i]
             .partial_sigs
@@ -84,7 +84,7 @@ pub fn pretty_print(
 
     for (i, output) in tx.output.iter().enumerate() {
         let addr = Address::from_script(&output.script_pubkey, network)
-            .ok_or_else(fn_err("non default script"))?;
+            .ok_or_else(|| Error::NonDefaultScript)?;
         let keypaths = &psbt.outputs[i].hd_keypaths;
         let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
         if let Some((wallet, _)) = &wallet_if_any {

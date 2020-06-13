@@ -66,8 +66,10 @@ impl DiceOptions {
             .into());
         }
 
-        if self.launches.iter().any(|n| *n == 0 || *n > faces) {
-            return Err(format!("Numbers must be from 1 to {} included", faces).into());
+        for n in self.launches.iter() {
+            if *n > faces || *n == 0 {
+                return Err(Error::DiceValueErr(*n, faces));
+            }
         }
 
         Ok(())
@@ -208,10 +210,9 @@ mod tests {
         opt.launches = vec![21u32; 29];
         opt.key_name = "c".to_string();
         let result = roll(&temp_dir_str, Network::Testnet, &opt);
-        assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Numbers must be from 1 to 20 included"
+            "Got 21 but must be from 1 to 20 included"
         );
 
         let launches = vec![2u32; 29];

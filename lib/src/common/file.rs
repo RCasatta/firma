@@ -70,10 +70,7 @@ impl PathBuilder {
     }
 
     pub fn file(&self, filename: &str) -> Result<PathBuf> {
-        let content = self
-            .name
-            .as_ref()
-            .ok_or_else(|| Error::Generic("missing name".into()))?;
+        let content = self.name.as_ref().ok_or_else(|| Error::MissingName)?;
         let kind = self.kind.to_string();
         let network_string = format!("{}", self.network);
         let paths: Vec<&str> = vec![&self.datadir, &network_string, &kind, &content];
@@ -94,10 +91,7 @@ impl PathBuilder {
 }
 
 fn path_for(dirs: Vec<&str>) -> Result<PathBuf> {
-    let mut path = PathBuf::from(
-        dirs.get(0)
-            .ok_or_else(|| Error::Generic("Need at least 1".into()))?,
-    );
+    let mut path = PathBuf::from(dirs.get(0).ok_or_else(|| Error::NeedAtLeastOne)?);
     path = expand_tilde(path)?;
     if !path.exists() {
         fs::create_dir(&path)?;
@@ -115,8 +109,7 @@ fn path_for(dirs: Vec<&str>) -> Result<PathBuf> {
 pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
-        let mut home_dir =
-            dirs::home_dir().ok_or_else(|| Error::Generic("cannot retrieve home dir".into()))?;
+        let mut home_dir = dirs::home_dir().ok_or_else(|| Error::CannotRetrieveHomeDir)?;
         if p == Path::new("~") {
             Ok(home_dir)
         } else if home_dir == Path::new("/").to_path_buf() {

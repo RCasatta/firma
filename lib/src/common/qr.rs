@@ -1,4 +1,4 @@
-use crate::{CreateQrOptions, Result};
+use crate::*;
 use image::Luma;
 use log::info;
 use qrcode::bits::{Bits, ExtendedMode};
@@ -9,6 +9,9 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+
+#[derive(Debug)]
+pub enum QrError {}
 
 pub fn print_qr(qr_code: &QrCode, inverted: bool) -> Result<String> {
     let mut result = String::new();
@@ -113,7 +116,6 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
     Ok(wallet_qr_files)
 }
 
-// at the moment used only in test
 pub fn merge_qrs(mut bytes: Vec<Vec<u8>>) -> Result<Vec<u8>> {
     use std::collections::HashSet;
     use std::convert::TryInto;
@@ -124,9 +126,7 @@ pub fn merge_qrs(mut bytes: Vec<Vec<u8>>) -> Result<Vec<u8>> {
     bytes.dedup();
 
     if bytes.len() < 2 {
-        return Err(crate::Error::InvalidStructuredQr(
-            "need at least 2 different pieces to merge".into(),
-        ));
+        return Err(Error::QrAtLeast2Pieces);
     }
 
     for vec in bytes {
@@ -137,15 +137,13 @@ pub fn merge_qrs(mut bytes: Vec<Vec<u8>>) -> Result<Vec<u8>> {
     let total = (vec_structured.len() - 1) as u8;
     let totals_same = vec_structured.iter().map(|q| q.total).all(|t| t == total);
     if !totals_same {
-        return Err(crate::Error::InvalidStructuredQr(format!("total pieces in input {} does not match the encoded total, or different encoded totals", vec_structured.len() )));
+        return Err(crate::Error::QrTotalMismatch(vec_structured.len()));
     }
 
     let sequences: HashSet<u8> = vec_structured.iter().map(|q| q.seq).collect();
     let all_sequence = sequences.len() == vec_structured.len();
     if !all_sequence {
-        return Err(crate::Error::InvalidStructuredQr(
-            "not all the part are present".into(),
-        ));
+        return Err(crate::Error::QrMissingParts);
     }
 
     vec_structured.sort_by(|a, b| a.seq.cmp(&b.seq)); // allows to merge out of order by reordering here
@@ -163,9 +161,7 @@ pub fn merge_qrs(mut bytes: Vec<Vec<u8>>) -> Result<Vec<u8>> {
     {
         Ok(result)
     } else {
-        Err(crate::Error::InvalidStructuredQr(
-            "invalid parities while merging".into(),
-        ))
+        Err(crate::Error::QrParity)
     }
 }
 
@@ -181,28 +177,21 @@ impl TryFrom<Vec<u8>> for StructuredQr {
 
     fn try_from(value: Vec<u8>) -> Result<Self> {
         if value.len() < 5 {
-            return Err(crate::Error::InvalidStructuredQr(
-                "shorter than 5".to_string(),
-            ));
+            return Err(Error::QrTooShort);
         }
         let qr_mode = value[0] >> 4;
         if qr_mode != 3 {
-            return Err(crate::Error::InvalidStructuredQr("mode not 3".to_string()));
+            return Err(Error::QrStructuredWrongMode);
         }
         let seq = value[0] & 0x0f;
         let total = value[1] >> 4;
         if seq > total {
-            return Err(crate::Error::InvalidStructuredQr(format!(
-                "seq {} greater than total {}",
-                seq, total
-            )));
+            return Err(Error::QrSeqGreaterThanTotal(seq, total));
         }
         let parity = ((value[1] & 0x0f) << 4) + (value[2] >> 4);
         let enc_mode = value[2] & 0x0f;
         if enc_mode != 4 {
-            return Err(crate::Error::InvalidStructuredQr(
-                "enc mode != 4".to_string(),
-            ));
+            return Err(Error::QrStructuredWrongEnc);
         }
 
         let (length, from) = if value.len() < u8::max_value() as usize + 4 {
@@ -213,11 +202,7 @@ impl TryFrom<Vec<u8>> for StructuredQr {
         };
         let end = from + length as usize;
         if value.len() < end {
-            return Err(crate::Error::InvalidStructuredQr(format!(
-                "calculated end {} greater than effective length {}",
-                end,
-                value.len()
-            )));
+            return Err(crate::Error::QrLengthMismatch(end, value.len()));
         }
         let content = (&value[from..end]).to_vec();
         //TODO check padding
@@ -241,16 +226,13 @@ pub struct SplittedQr {
 impl SplittedQr {
     pub fn new(bytes: Vec<u8>, version: i16) -> Result<Self> {
         let parity = bytes.iter().fold(0u8, |acc, &x| acc ^ x);
-        let max_bytes = *MAX_BYTES.get(version as usize).ok_or_else(|| {
-            crate::Error::InvalidStructuredQr(format!("Unsupported version {}", version))
-        })?;
+        let max_bytes = *MAX_BYTES
+            .get(version as usize)
+            .ok_or_else(|| Error::QrUnsupportedVersion(version))?;
         let extra = if bytes.len() % max_bytes == 0 { 0 } else { 1 };
         let total_qr = bytes.len() / max_bytes + extra;
         if total_qr > 16 {
-            return Err(crate::Error::InvalidStructuredQr(format!(
-                "Could split into max 16 qr, requested {}",
-                total_qr
-            )));
+            return Err(Error::QrSplitMax16(total_qr));
         }
 
         Ok(SplittedQr {
@@ -311,6 +293,7 @@ const MAX_BYTES: [usize; 33] = [
 #[cfg(test)]
 mod tests {
     use crate::common::qr::{merge_qrs, SplittedQr, StructuredQr, LEVEL};
+    use crate::Error;
     use qrcode::bits::{Bits, ExtendedMode};
     use qrcode::Version;
     use rand::Rng;
@@ -375,34 +358,33 @@ mod tests {
 
         let vec = vec![first.clone(), first.clone()];
         let result = merge_qrs(vec);
-        assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Invalid structured QR: need at least 2 different pieces to merge"
+            Error::QrAtLeast2Pieces.to_string()
         );
 
         let vec = vec![first.clone(), full_content.clone()];
         let result = merge_qrs(vec);
-        assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Invalid structured QR: mode not 3"
+            Error::QrStructuredWrongMode.to_string()
         );
 
         let mut first_mut = first.clone();
         first_mut[15] = 14u8;
         let vec = vec![first.clone(), first_mut.clone()];
         let result = merge_qrs(vec);
-        assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "Invalid structured QR: not all the part are present"
+            Error::QrMissingParts.to_string()
         );
 
         let vec = vec![first.clone(), first_mut.clone(), second.clone()];
         let result = merge_qrs(vec);
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Invalid structured QR: total pieces in input 3 does not match the encoded total, or different encoded totals");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            Error::QrTotalMismatch(3).to_string(),
+        );
     }
 
     #[test]

@@ -80,22 +80,12 @@ impl Context {
     pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexes)> {
         let wallet_path = self.filename_for_wallet("descriptor.json")?;
         debug!("load_wallet_and_index wallet_path: {:?}", wallet_path);
-        let wallet = read_wallet(&wallet_path).map_err(|e| {
-            Error::Generic(format!(
-                "{} file not found or corrupted: {:?}",
-                wallet_path.display(),
-                e
-            ))
-        })?;
+        let wallet = read_wallet(&wallet_path)
+            .map_err(|e| Error::FileNotFoundOrCorrupt(wallet_path.clone(), e.to_string()))?;
 
         let indexes_path = self.filename_for_wallet("indexes.json")?;
-        let indexes = read_indexes(&indexes_path).map_err(|e| {
-            Error::Generic(format!(
-                "{} file not found or corrupted: {:?}",
-                wallet_path.display(),
-                e
-            ))
-        })?;
+        let indexes = read_indexes(&indexes_path)
+            .map_err(|e| Error::FileNotFoundOrCorrupt(wallet_path.clone(), e.to_string()))?;
 
         Ok((wallet, indexes))
     }

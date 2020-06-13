@@ -23,11 +23,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
     let datadir = value
         .get("datadir")
         .and_then(|s| s.as_str())
-        .ok_or_else(|| Error::Generic("missing datadir".into()))?;
+        .ok_or_else(|| Error::MissingDatadir)?;
     let network = value
         .get("network")
         .and_then(|s| s.as_str())
-        .ok_or_else(|| Error::Generic("missing network".into()))?;
+        .ok_or_else(|| Error::MissingNetwork)?;
     let network = Network::from_str(network)?;
     let method = value.get("method").and_then(|s| s.as_str());
     let args = value.get("args").unwrap_or(&Value::Null);
@@ -122,16 +122,14 @@ pub unsafe extern "C" fn Java_it_casatta_Rust_call(
     _: JClass,
     java_pattern: JString,
 ) -> jstring {
-    // Our Java companion code might pass-in "world" as a string, hence the name.
-    let world = c_call(
+    let call_result = c_call(
         env.get_string(java_pattern)
             .expect("invalid pattern string")
             .as_ptr(),
     );
-    // Retake pointer so that we can use it below and allow memory to be freed when it goes out of scope.
-    let world_ptr = CString::from_raw(world);
+    let call_ptr = CString::from_raw(call_result);
     let output = env
-        .new_string(world_ptr.to_str().unwrap())
+        .new_string(call_ptr.to_str().unwrap())
         .expect("Couldn't create java string!");
 
     output.into_inner()

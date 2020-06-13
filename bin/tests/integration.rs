@@ -74,7 +74,10 @@ fn integration_test() {
     let r1 = firma_2of2.offline_random("r1").unwrap();
     let r2 = firma_2of2.offline_dice("r2", vec![2u32; 59], 20).unwrap();
     let r_err = firma_2of2.offline_dice("r3", vec![0u32; 59], 20);
-    assert!(r_err.is_err());
+    assert_eq!(
+        r_err.unwrap_err().to_string(),
+        Error::DiceValueErr(0, 20).to_string()
+    );
     let r3 = firma_2of2
         .offline_restore("r4", "xprv", &r1.key.xprv.to_string())
         .unwrap();
@@ -141,7 +144,10 @@ fn integration_test() {
         .unwrap();
     let psbt_file_str = create_tx.psbt_file.to_str().unwrap();
     let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
-    assert!(sign_a_wrong.is_err());
+    assert_eq!(
+        sign_a_wrong.unwrap_err().to_string(),
+        Error::WrongKeyFileName.to_string()
+    );
 
     let print_a = firma_2of2.offline_print(psbt_file_str).unwrap();
     let sign_a = firma_2of2

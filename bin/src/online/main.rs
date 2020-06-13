@@ -65,9 +65,7 @@ fn start() -> Result<Value> {
         CreateWallet(ref opt) => opt.daemon_opts.clone(),
         _ => {
             let (wallet, _) = cmd.context.load_wallet_and_index()?;
-            wallet
-                .daemon_opts
-                .ok_or_else(|| Error::Generic("daemon_opts missing".into()))?
+            wallet.daemon_opts.ok_or_else(|| Error::MissingDaemonOpts)?
         }
     };
 

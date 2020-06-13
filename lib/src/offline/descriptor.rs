@@ -28,7 +28,7 @@ pub fn derive_address(descriptor: &str, index: u32, network: Network) -> Result<
     let my_descriptor = BitcoinDescriptor::from_str(&descriptor_with_pubkey[..])?;
     let address = my_descriptor
         .address(network)
-        .ok_or_else(|| Error::Generic("can't create address from desc".into()))?;
+        .ok_or_else(|| Error::AddressFromDescriptorFails)?;
 
     Ok(GetAddressOutput { address, path })
 }
@@ -40,7 +40,7 @@ fn extract_xpubs(descriptor: &str) -> Result<Vec<String>> {
     for cap in re.captures_iter(&descriptor) {
         xpubs.push(
             cap.get(0)
-                .ok_or_else(|| Error::Generic("None capture group".into()))?
+                .ok_or_else(|| Error::CaptureGroupNotFound("xpubs".into()))?
                 .as_str()
                 .to_string(),
         );
@@ -50,7 +50,7 @@ fn extract_xpubs(descriptor: &str) -> Result<Vec<String>> {
 
 /// extract the n threshold from a descriptor in the form "wsh(multi({n},{x}/0/*,{y}/0/*,...))#5wstxmwd"
 fn extract_n(descriptor: &str) -> Result<u8> {
-    let err: Error = "threshold not found".into();
+    let err = Error::CaptureGroupNotFound("threshold".into());
     let re = Regex::new("wsh\\(multi\\(([1-9]),")?;
     for cap in re.captures_iter(&descriptor) {
         return Ok(cap.get(1).ok_or(err)?.as_str().parse()?);
@@ -60,7 +60,7 @@ fn extract_n(descriptor: &str) -> Result<u8> {
 
 /// extract the c index (internal or external) from a descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
 fn extract_int_or_ext(descriptor: &str) -> Result<u8> {
-    let err: Error = "internal or external index not found".into();
+    let err = Error::CaptureGroupNotFound("index".into());
     let re = Regex::new("[t|x]pub[1-9A-HJ-NP-Za-km-z]*/([0-9])/\\*")?;
     for cap in re.captures_iter(&descriptor) {
         return Ok(cap.get(1).ok_or(err)?.as_str().parse()?);

@@ -212,14 +212,12 @@ impl PSBTSigner {
 
             match input.non_witness_utxo.as_ref() {
                 None => {
-                    return Err(
-                        "non_witness_utxo must be Some, even for segwit due to the fee bug".into(),
-                    )
+                    return Err(Error::MissingPrevoutTx);
                 }
                 Some(non_witness_utxo) => {
                     let prevout = self.psbt.global.unsigned_tx.input[i].previous_output;
                     if non_witness_utxo.txid() != prevout.txid {
-                        return Err("prevout doesn't match non_witness_utxo".into());
+                        return Err(Error::MismatchPrevoutHash);
                     }
                     if is_segwit {
                         let witness_utxo = input
@@ -311,7 +309,7 @@ impl PSBTSigner {
                         if keys.contains_key(&key) {
                             input.hd_keypaths.insert(
                                 key.clone(),
-                                keys.get(&key).ok_or_else(fn_err("key not found"))?.clone(),
+                                keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
                             );
                             added = true;
                         }
@@ -326,7 +324,7 @@ impl PSBTSigner {
                         if keys.contains_key(&key) {
                             output.hd_keypaths.insert(
                                 key.clone(),
-                                keys.get(&key).ok_or_else(fn_err("key not found"))?.clone(),
+                                keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
                             );
                             added = true;
                         }
@@ -351,7 +349,9 @@ impl PSBTSigner {
                 continue;
             }
             if input.partial_sigs.contains_key(pubkey) {
-                return Err("request to sign a PSBT already containing a signature from this key".into());
+                return Err(
+                    "request to sign a PSBT already containing a signature from this key".into(),
+                );
             }
             if !self.allow_any_derivations {
                 let path_slice = child.as_ref();
@@ -376,12 +376,12 @@ impl PSBTSigner {
             let (hash, sighash);
             if is_segwit {
                 let wutxo = input.clone().witness_utxo;
-                let value = wutxo.ok_or_else(fn_err("witness_utxo is empty"))?.value;
+                let value = wutxo.ok_or_else(|| Error::MissingWitnessUtxo)?.value;
                 let cmp = SighashComponents::new(tx);
                 hash = cmp.sighash_all(&tx.input[input_index], script, value);
                 sighash = input.sighash_type.unwrap_or(SigHashType::All);
             } else {
-                sighash = input.sighash_type.ok_or_else(fn_err("sighash empty"))?;
+                sighash = input.sighash_type.ok_or_else(|| Error::MissingSighash)?;
                 hash = tx.signature_hash(input_index, &script, sighash.as_u32());
             };
             let msg = &Message::from_slice(&hash.into_inner()[..])?;
@@ -428,12 +428,12 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
 pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
     let is_key = path
         .file_name()
-        .ok_or_else(|| Error::Generic("no file_name".into()))?
+        .ok_or_else(|| Error::WrongKeyFileName)?
         .to_str()
-        .ok_or_else(|| Error::Generic("OsStr".into()))?
+        .ok_or_else(|| Error::WrongKeyFileName)?
         == "PRIVATE.json";
     if !is_key {
-        return Err(Error::Generic("private name MUST be PRIVATE.json".into()));
+        return Err(Error::WrongKeyFileName);
     }
     let xprv_string = std::fs::read(path)?;
     Ok(serde_json::from_slice(&xprv_string)?)
@@ -452,7 +452,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::offline::sign::*;
-    use crate::{psbt_from_base64, psbt_to_base64, PsbtJson, PSBT};
+    use crate::{psbt_from_base64, psbt_to_base64, Error, PsbtJson, PSBT};
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Transaction;
     use flate2::write::ZlibEncoder;
@@ -573,14 +573,18 @@ mod tests {
             .sum();
         assert_eq!(outputs_len, 106);
 
-        assert!(
-            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv).is_err(),
-            "segwit input missing previous tx"
+        assert_eq!(
+            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv)
+                .unwrap_err()
+                .to_string(),
+            Error::MissingPrevoutTx.to_string(),
         );
         psbt_to_sign.inputs[1].non_witness_utxo = psbt_to_sign.inputs[0].non_witness_utxo.clone();
-        assert!(
-            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv).is_err(),
-            "tx non matching prevout"
+        assert_eq!(
+            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv)
+                .unwrap_err()
+                .to_string(),
+            Error::MismatchPrevoutHash.to_string(),
         );
 
         let mut mut_psbt_signed = psbt_signed.clone();
