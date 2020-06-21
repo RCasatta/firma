@@ -52,7 +52,7 @@ It is based on:
 
 ## Requirements
 
-You need [Bitcoin core 0.19.1](https://bitcoincore.org/)
+You need [Bitcoin core 0.19.1](https://bitcoincore.org/) (0.20.0 works too)
 
 To build executables you need [rust](https://www.rust-lang.org/) (version >= 1.38.0).
 
