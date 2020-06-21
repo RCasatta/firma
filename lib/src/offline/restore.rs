@@ -1,5 +1,5 @@
 use crate::mnemonic::Mnemonic;
-use crate::Result;
+use crate::{check_compatibility, Result};
 use crate::{save_keys, MasterKeyOutput, PrivateMasterKey};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
@@ -54,7 +54,9 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
     debug!("restore {:?}", &opt);
     let master_key = match opt.nature {
         Nature::Xprv => {
-            PrivateMasterKey::from_xprv(ExtendedPrivKey::from_str(&opt.value)?, &opt.key_name)
+            let key = ExtendedPrivKey::from_str(&opt.value)?;
+            check_compatibility(key.network, network)?;
+            PrivateMasterKey::from_xprv(key, &opt.key_name)
         }
         Nature::Mnemonic => {
             let mnemonic = Mnemonic::from_str(&opt.value)?;

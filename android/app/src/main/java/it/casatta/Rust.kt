@@ -170,11 +170,9 @@ class Rust {
         return callJson(reqString).asText()
     }
 
-    fun createQrs(file: String) {
-        val node = JsonNodeFactory.instance.objectNode()
-        node.put("path", file)
-        node.put("qr_version", 14)
-        val req = JsonRpc("create_qrs", "", Network.TYPE, node)
+    fun importWallet(datadir: String, wallet: WalletJson) {
+        val node: JsonNode = mapper.valueToTree(wallet);
+        val req = JsonRpc("import_wallet", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         callJson(reqString)
     }

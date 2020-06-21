@@ -1,3 +1,4 @@
+use crate::offline::descriptor::extract_xpubs;
 use crate::online::{read_xpubs_files, Wallet};
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
@@ -153,4 +154,28 @@ impl Wallet {
 
         Ok(create_wallet)
     }
+}
+
+pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Result<()> {
+    extract_xpubs(&wallet.descriptor_main)?
+        .iter()
+        .map(|xpub| check_compatibility(network, xpub.network))
+        .collect::<Result<()>>()?;
+    extract_xpubs(&wallet.descriptor_change)?
+        .iter()
+        .map(|xpub| check_compatibility(network, xpub.network))
+        .collect::<Result<()>>()?;
+    let context = Context {
+        firma_datadir: datadir.to_string(),
+        network,
+        wallet_name: wallet.name.clone(),
+    };
+    context.save_wallet(&wallet)?;
+    let mut wallet_for_qr = wallet.clone();
+    wallet_for_qr.daemon_opts = None; // no need of this info in the qr code
+    let qr_bytes = serde_json::to_vec(&wallet_for_qr)?;
+
+    let wallet_qr_path = context.path_for_wallet_qr()?;
+    common::qr::save_qrs(qr_bytes, wallet_qr_path, 14)?;
+    Ok(())
 }

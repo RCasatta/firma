@@ -3,7 +3,7 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
 use bitcoin::consensus::{deserialize, serialize};
 use bitcoin::util::key;
-use bitcoin::{Script, Transaction};
+use bitcoin::{Network, Script, Transaction};
 use log::{LevelFilter, Metadata, Record};
 use std::fs::OpenOptions;
 use std::io::BufWriter;
@@ -153,11 +153,24 @@ pub fn strip_witness(tx: &Transaction) -> Transaction {
     cloned_tx
 }
 
+/// returns Ok if networks are both bitcoin or are both not bitcoin
+/// this is useful because for example an extended key starting with `tprv` is used in both
+/// Regtest and Testnet
+pub fn check_compatibility(n1: Network, n2: Network) -> Result<()> {
+    if (n1 == Network::Bitcoin && n2 == Network::Bitcoin)
+        || (n1 != Network::Bitcoin && n2 != Network::Bitcoin)
+    {
+        Ok(())
+    } else {
+        Err(Error::IncompatibleNetworks)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::strip_witness;
+    use crate::{check_compatibility, strip_witness};
     use bitcoin::consensus::deserialize;
-    use bitcoin::Transaction;
+    use bitcoin::{Network, Transaction};
 
     #[test]
     fn test_strip() {
@@ -166,5 +179,19 @@ mod tests {
         let stripped = strip_witness(&segwit_tx);
         assert_eq!(segwit_tx.txid(), stripped.txid());
         assert!(stripped.get_weight() < segwit_tx.get_weight());
+    }
+
+    #[test]
+    fn test_compatible_networks() {
+        assert!(check_compatibility(Network::Bitcoin, Network::Bitcoin).is_ok());
+        assert!(check_compatibility(Network::Regtest, Network::Regtest).is_ok());
+        assert!(check_compatibility(Network::Regtest, Network::Testnet).is_ok());
+        assert!(check_compatibility(Network::Testnet, Network::Regtest).is_ok());
+        assert!(check_compatibility(Network::Testnet, Network::Testnet).is_ok());
+
+        assert!(check_compatibility(Network::Bitcoin, Network::Testnet).is_err());
+        assert!(check_compatibility(Network::Bitcoin, Network::Regtest).is_err());
+        assert!(check_compatibility(Network::Regtest, Network::Bitcoin).is_err());
+        assert!(check_compatibility(Network::Testnet, Network::Bitcoin).is_err());
     }
 }

@@ -50,13 +50,6 @@ pub fn print_qr(qr_code: &QrCode, inverted: bool) -> Result<String> {
     Ok(result)
 }
 
-pub fn create_qrs(opt: &CreateQrOptions) -> Result<Vec<PathBuf>> {
-    let bytes = fs::read(&opt.path)?;
-    let mut path = opt.path.clone();
-    path.set_file_name("qr");
-    save_qrs(bytes, path, opt.qr_version)
-}
-
 /// path contains up to the filename (use dummy value) that will be replaced by qr file name
 pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<PathBuf>> {
     match version {

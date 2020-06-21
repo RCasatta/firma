@@ -165,12 +165,8 @@ impl PSBTSigner {
         psbts_dir: PathBuf,
         allow_any_derivations: bool,
     ) -> Result<Self> {
-        let exception = network == Network::Regtest && xprv.network == Network::Testnet;
-        if !(network == xprv.network || exception) {
-            return Err(
-                "Master key network is different from the network passed through cli".into(),
-            );
-        }
+        check_compatibility(network, xprv.network)?;
+
         let secp = Secp256k1::signing_only();
 
         Ok(PSBTSigner {

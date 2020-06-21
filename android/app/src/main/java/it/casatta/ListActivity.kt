@@ -186,7 +186,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             itemsAdapter.list.clear()
             listOutput = Rust().list(filesDir.toString(), kind)
         } catch (e: RustException) {
-            Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -285,7 +285,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     Rust().restore(filesDir.toString(), name, nature, text)
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
-                    Toast.makeText(this, e.toString(), Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
                     setResult(Activity.RESULT_CANCELED, Intent())
                 }
                 finish()
@@ -334,19 +334,9 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         Log.d("MAIN", "saveWallet $content")
         try {
             val json = mapper.readValue(content, Rust.WalletJson::class.java)
-            val name = json.name
-            val networkDir = File(filesDir, Network.TYPE)
-            val wallets = File(networkDir, "wallets")
-            val wallet = File(wallets, name)
-            if (!wallet.exists()) {
-                wallet.mkdirs()
-                val desc = File(wallet, "descriptor.json")
-                Log.d("MAIN", "saveWallet path $desc")
-                desc.writeText(content)
-                Rust().createQrs(desc.toString())
-            } else {
-                Toast.makeText(this, "This wallet already exist", Toast.LENGTH_LONG).show()
-            }
+            Rust().importWallet(filesDir.toString(), json)
+        } catch (e: RustException) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             Toast.makeText(this, "This is not a wallet", Toast.LENGTH_LONG).show()
         }

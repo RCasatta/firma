@@ -192,12 +192,6 @@ pub struct Size {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct CreateQrOptions {
-    pub path: PathBuf,
-    pub qr_version: i16,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SavePSBTOptions {
     pub psbt: StringEncoding,
     pub qr_version: i16,
@@ -311,21 +305,6 @@ impl PrivateMasterKey {
             name: name.to_string(),
             fingerprint: xpub.fingerprint(),
         }
-    }
-}
-
-pub trait ToHrp {
-    fn to_hrp(&self) -> String;
-}
-
-impl ToHrp for Network {
-    fn to_hrp(&self) -> String {
-        match self {
-            Network::Bitcoin => "bs",
-            Network::Testnet => "ts",
-            Network::Regtest => "rs",
-        }
-        .to_string()
     }
 }
 

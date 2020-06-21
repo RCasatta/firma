@@ -23,7 +23,6 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAd
     let secp = Secp256k1::verification_only();
     let pubs: Vec<String> = xpubs
         .iter()
-        .filter_map(|x| ExtendedPubKey::from_str(x).ok())
         .filter_map(|x| x.derive_pub(&secp, &path).ok())
         .map(|x| x.public_key.to_string())
         .collect();
@@ -41,16 +40,16 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAd
 }
 
 /// extract the xpubs from a descriptor in the form "wsh(multi({n},{x}/0/*,{y}/0/*,...))#5wstxmwd"
-fn extract_xpubs(descriptor: &str) -> Result<Vec<String>> {
+pub fn extract_xpubs(descriptor: &str) -> Result<Vec<ExtendedPubKey>> {
     let mut xpubs = vec![];
     let re = Regex::new("[t|x]pub[1-9A-HJ-NP-Za-km-z]*")?;
     for cap in re.captures_iter(&descriptor) {
-        xpubs.push(
+        let xpub = ExtendedPubKey::from_str(
             cap.get(0)
                 .ok_or_else(|| Error::CaptureGroupNotFound("xpubs".into()))?
-                .as_str()
-                .to_string(),
-        );
+                .as_str(),
+        )?;
+        xpubs.push(xpub);
     }
     Ok(xpubs)
 }
@@ -78,14 +77,16 @@ fn extract_int_or_ext(descriptor: &str) -> Result<u8> {
 #[cfg(test)]
 mod tests {
     use crate::offline::descriptor::*;
+    use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Network;
+    use std::str::FromStr;
 
     const DESCRIPTOR: &str = "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/0/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/0/*))#5wstxmwd";
 
     #[test]
     fn extract_xpubs_test() {
-        let a ="tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU";
-        let b = "tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN";
+        let a = ExtendedPubKey::from_str("tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU").unwrap();
+        let b = ExtendedPubKey::from_str("tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN").unwrap();
         let expected = [a, b].to_vec();
         let xpubs = extract_xpubs(&DESCRIPTOR).unwrap();
         assert_eq!(expected, xpubs);

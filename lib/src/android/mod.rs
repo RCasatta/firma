@@ -64,11 +64,6 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
                 Err(e) => e.to_json(),
             }
         }
-        Some("create_qrs") => {
-            let opts: CreateQrOptions = serde_json::from_value(args.clone())?;
-            crate::common::qr::create_qrs(&opts)?;
-            Value::Null
-        }
         Some("sign") => {
             let opts: SignOptions = serde_json::from_value(args.clone())?;
             let result = crate::offline::sign::start(&opts, network)?;
@@ -92,6 +87,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         Some("derive_address") => {
             let opts: DeriveAddressOpts = serde_json::from_value(args.clone())?;
             let result = crate::offline::descriptor::derive_address(network, &opts)?;
+            serde_json::to_value(result)?
+        }
+        Some("import_wallet") => {
+            let wallet: WalletJson = serde_json::from_value(args.clone())?;
+            let result = crate::online::create_wallet::import_wallet(datadir, network, &wallet)?;
             serde_json::to_value(result)?
         }
         _ => {

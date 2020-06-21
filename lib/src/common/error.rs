@@ -34,6 +34,7 @@ pub enum Error {
     CaptureGroupNotFound(String),
     NonDefaultScript,
     ScriptEmpty,
+    IncompatibleNetworks,
 
     // Internal Qr
     QrAtLeast2Pieces,
@@ -135,6 +136,7 @@ impl fmt::Display for Error {
             Error::MissingAddress => write!(f, "Missing Address"),
             Error::MissingRescanUpTo => write!(f, "Missing RescanUpTo"),
             Error::MissingHex => write!(f, "Missing hex"),
+            Error::IncompatibleNetworks => write!(f, "Incompatible networks"),
 
             Error::QrAtLeast2Pieces => write!(f, "Need at least 2 different pieces to merge structured QR"),
             Error::QrTotalMismatch(i) => write!(f, "Total pieces in input {} does not match the encoded total, or different encoded totals", i ),
