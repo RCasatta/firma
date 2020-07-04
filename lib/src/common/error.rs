@@ -10,7 +10,6 @@ pub enum Error {
 
     // Internal
     FileExist(PathBuf),
-    Mnemonic(&'static str),
     DiceValueErr(u32, u32),
     WrongKeyFileName,
     MissingPrevoutTx,
@@ -35,6 +34,7 @@ pub enum Error {
     NonDefaultScript,
     ScriptEmpty,
     IncompatibleNetworks,
+    Mnemonic(crate::common::mnemonic::Error),
 
     // Internal Qr
     QrAtLeast2Pieces,
@@ -106,6 +106,7 @@ impl_error!(image::error::ImageError, Image);
 impl_error!(regex::Error, Regex);
 impl_error!(std::num::ParseIntError, ParseInt);
 impl_error!(miniscript::Error, Miniscript);
+impl_error!(crate::common::mnemonic::Error, Mnemonic);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

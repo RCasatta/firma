@@ -12,80 +12,114 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 //!
 //! # BIP39 mnemonic
 //!
-//! TREZOR compatible mnemonic in english
+//! Mnemonic code for generating deterministic keys
+//! mnemonic in english
 //!
-use crate::common::error::Error;
+use bitcoin::hashes::core::fmt::{Display, Formatter};
+use bitcoin::hashes::{sha256, sha512, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::util::bip158::{BitStreamReader, BitStreamWriter};
-use crypto::{
-    digest::Digest,
-    hmac::Hmac,
-    pbkdf2::pbkdf2,
-    sha2::{Sha256, Sha512},
-};
 use rand::{thread_rng, RngCore};
+use serde::{Deserialize, Serialize};
 use std::io::Cursor;
+use std::str::FromStr;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Mnemonic(Vec<usize>);
+/// Represent the BIP39 mnemonic as a vector of values representing 11 bits each
+/// It is conveniently stored in usize to be used as index of the WORDS const vec
+#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+pub struct Mnemonic(String);
 
-impl ToString for Mnemonic {
-    fn to_string(&self) -> String {
-        self.0
-            .iter()
-            .map(|i| WORDS[*i])
-            .collect::<Vec<_>>()
-            .as_slice()
-            .join(" ")
-    }
+/// BIP39 possible errors
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum Error {
+    /// Mnemonic must have a word count divisible with 6
+    MnemonicNotDivisibleBy6,
+
+    /// Mnemonic contains an unknown word
+    UnknownWord,
+
+    /// Checksum failed
+    ChecksumFailed,
+
+    /// Data for mnemonic should have a length divisible by 4
+    DataNotDivisibleBy4,
+
+    /// Can only extend mnemonic of 12 words to 24 words
+    CannotExtend,
 }
 
-impl Mnemonic {
-    /// create a seed from mnemonic
-    /// with optional passphrase for plausible deniability see BIP39
-    pub fn to_seed(&self, pd_passphrase: Option<&str>) -> Seed {
-        let mut mac = Hmac::new(Sha512::new(), self.to_string().as_bytes());
-        let mut output = [0u8; 64];
-        let passphrase = "mnemonic".to_owned() + pd_passphrase.unwrap_or("");
-        pbkdf2(&mut mac, passphrase.as_bytes(), 2048, &mut output);
-        Seed(output.to_vec())
-    }
+impl FromStr for Mnemonic {
+    type Err = Error;
 
-    pub fn iter(&self) -> impl Iterator<Item = &str> {
-        self.0.iter().map(|s| WORDS[*s])
-    }
-
-    pub fn from_str(s: &str) -> Result<Mnemonic, Error> {
+    /// Parse a string into a mnemonic, if valid according to the rules
+    fn from_str(s: &str) -> Result<Mnemonic, Error> {
         let words: Vec<_> = s.split(' ').collect();
         if words.len() < 6 || words.len() % 6 != 0 {
-            return Err(Error::Mnemonic(
-                "Mnemonic must have a word count divisible with 6",
-            ));
+            return Err(Error::MnemonicNotDivisibleBy6);
         }
         let mut data = Vec::new();
         let mut writer = BitStreamWriter::new(&mut data);
-        let mut mnemonic = Vec::new();
         for word in &words {
             if let Ok(idx) = WORDS.binary_search(word) {
-                mnemonic.push(idx);
                 writer.write(idx as u64, 11).unwrap();
             } else {
-                return Err(Error::Mnemonic("Mnemonic contains an unknown word"));
+                return Err(Error::UnknownWord);
             }
         }
         writer.flush().unwrap();
         let l = data.len();
         let (payload, checksum) = data.split_at(l - if l > 33 { 2 } else { 1 });
         if Self::checksum(payload).as_slice() != checksum {
-            return Err(Error::Mnemonic("Checksum failed"));
+            return Err(Error::ChecksumFailed);
         }
 
-        Ok(Mnemonic(mnemonic))
+        Ok(Mnemonic(s.to_string()))
+    }
+}
+
+impl Display for Mnemonic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Mnemonic {
+    /// create a seed from this mnemonic
+    /// with optional passphrase for plausible deniability
+    /// it is the pbkdf2 algorithm specific for BIP39
+    /// with a single block and using c = 2048 and Hmac with Sha512
+    pub fn to_seed(&self, pd_passphrase: Option<&str>) -> Seed {
+        let orig_engine: HmacEngine<sha512::Hash> = HmacEngine::new(self.to_string().as_bytes());
+        let passphrase = "mnemonic".to_owned() + pd_passphrase.unwrap_or("");
+        let salt = passphrase.as_bytes();
+
+        let mut engine = orig_engine.clone();
+        engine.input(salt);
+        engine.input(&[0u8, 0, 0, 1]); // idx = 1
+        let mut block = Hmac::from_engine(engine).into_inner();
+
+        let mut engine = orig_engine.clone();
+        engine.input(&block);
+        let mut temp = Hmac::from_engine(engine).into_inner();
+        for (output, &input) in block.iter_mut().zip(temp.iter()) {
+            *output ^= input;
+        }
+
+        for _ in 2..2048 {
+            let mut engine = orig_engine.clone();
+            engine.input(&temp);
+            temp = Hmac::from_engine(engine).into_inner();
+            for (output, &input) in block.iter_mut().zip(temp.iter()) {
+                *output ^= input;
+            }
+        }
+
+        Seed(block.to_vec())
     }
 
+    /// Create a random mnemonic with the entropy bytes length given as parameter
     pub fn new_random(entropy: MasterKeyEntropy) -> Result<Mnemonic, Error> {
         let len = match entropy {
             MasterKeyEntropy::Sufficient => 16,
@@ -100,9 +134,7 @@ impl Mnemonic {
     /// create a mnemonic for some data
     pub fn new(data: &[u8]) -> Result<Mnemonic, Error> {
         if data.len() % 4 != 0 {
-            return Err(Error::Mnemonic(
-                "Data for mnemonic should have a length divisible by 4",
-            ));
+            return Err(Error::DataNotDivisibleBy4);
         }
         let mut with_checksum = data.to_vec();
         with_checksum.extend_from_slice(Self::checksum(data).as_slice());
@@ -111,45 +143,17 @@ impl Mnemonic {
         let mlen = data.len() * 3 / 4;
         let mut mnemonic = Vec::new();
         for _ in 0..mlen {
-            mnemonic.push(reader.read(11).unwrap() as usize);
+            mnemonic.push(WORDS[reader.read(11).unwrap() as usize].to_string());
         }
-        Ok(Mnemonic(mnemonic))
+        Ok(Mnemonic(mnemonic.join(" ")))
     }
 
-    pub fn extend(&self) -> Result<Mnemonic, Error> {
-        if self.0.len() != 12 {
-            return Err(Error::Mnemonic(
-                "Can only extend mnemonic of 12 words to 24 words",
-            ));
-        }
-        let mut data = Vec::new();
-        let mut writer = BitStreamWriter::new(&mut data);
-        for idx in &self.0 {
-            writer.write(*idx as u64, 11).unwrap();
-        }
-        for _ in 0..11 {
-            writer.write(thread_rng().next_u64(), 11).unwrap();
-        }
-        writer.write(thread_rng().next_u64(), 3).unwrap();
-        writer.flush().unwrap();
-        data.extend_from_slice(Self::checksum(&data).as_slice());
-        let mut cursor = Cursor::new(&data[..]);
-        let mut reader = BitStreamReader::new(&mut cursor);
-        let mut mnemonic = Vec::new();
-        for _ in 0..24 {
-            mnemonic.push(reader.read(11).unwrap() as usize);
-        }
-        Ok(Mnemonic(mnemonic))
-    }
-
+    /// Compute the mnemonic checksum
     fn checksum(data: &[u8]) -> Vec<u8> {
-        let mut hash = [0u8; 32];
         let mut checksum = Vec::new();
         let mut writer = BitStreamWriter::new(&mut checksum);
 
-        let mut sha2 = Sha256::new();
-        sha2.input(data);
-        sha2.result(&mut hash);
+        let hash = sha256::Hash::hash(data).into_inner();
         let mut check_cursor = Cursor::new(&hash);
         let mut check_reader = BitStreamReader::new(&mut check_cursor);
         for _ in 0..data.len() / 4 {
@@ -166,9 +170,10 @@ mod test {
     use std::io::Read;
     use std::path::PathBuf;
 
+    use bitcoin::hashes::hex::FromHex;
     use bitcoin::network::constants::Network;
-    use hex::decode;
-    use serde_json::Value;
+    extern crate serde_json;
+    use self::serde_json::Value;
 
     use super::*;
     use bitcoin::util::bip32::ExtendedPrivKey;
@@ -188,7 +193,7 @@ mod test {
 
         for t in 0..tests.len() {
             let values = tests[t].as_array().unwrap();
-            let data = decode(values[0].as_str().unwrap()).unwrap();
+            let data = Vec::from_hex(values[0].as_str().unwrap()).unwrap();
             let m = values[1].as_str().unwrap();
             let mnemonic = Mnemonic::from_str(m).unwrap();
             let seed = mnemonic.to_seed(Some("TREZOR"));
@@ -196,7 +201,7 @@ mod test {
                 mnemonic.to_string(),
                 Mnemonic::new(data.as_slice()).unwrap().to_string()
             );
-            assert_eq!(seed.0, decode(values[2].as_str().unwrap()).unwrap());
+            assert_eq!(seed.0, Vec::from_hex(values[2].as_str().unwrap()).unwrap());
 
             if values.len() == 4 {
                 let pk = values[3].as_str().unwrap();
@@ -219,18 +224,6 @@ mod test {
             "getter advice cage absurd amount doctor acoustic avoid letter advice cage above"
         )
         .is_err());
-    }
-
-    #[test]
-    fn test_extend() {
-        let short = Mnemonic::new_random(MasterKeyEntropy::Sufficient).unwrap();
-        let extended = short.extend().unwrap();
-        let check = Mnemonic::from_str(extended.to_string().as_str()).unwrap();
-        assert!(short
-            .iter()
-            .zip(check.iter())
-            .take(12)
-            .all(|(a, b)| *a == *b));
     }
 }
 
@@ -451,8 +444,11 @@ const WORDS: [&str; 2048] = [
 /// chose your security level
 #[derive(Copy, Clone)]
 pub enum MasterKeyEntropy {
+    /// 16 Bytes of entropy
     Sufficient = 16,
+    /// 32 Bytes of entropy
     Double = 32,
+    /// 64 Bytes of entropy
     Paranoid = 64,
 }
 

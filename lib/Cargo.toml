@@ -6,10 +6,10 @@ edition = "2018"
 #rust = "1.38"
 
 [dependencies]
-hex = "0.4.2"
+hex = "0.3.2"
 bitcoin = "0.23.0"
 bitcoincore-rpc = "0.10.0"
-base64 = "0.12.0"
+base64 = "0.9.3"
 num-bigint = "0.2.6"
 #qrcode = "0.12.0" # https://github.com/kennytm/qrcode-rust/pull/44
 qrcode = { git = "https://github.com/RCasatta/qrcode-rust/", rev="9dddab008b587de333ea33c9c8be3712207d4ca0" }
@@ -22,7 +22,6 @@ rand = "0.7.3"
 image = "0.23.2"
 miniscript = { git = "https://github.com/apoelstra/rust-miniscript/", rev = "5427ceb852c393743a23b7fc22390bb12b6f8e45"}
 regex = "1"
-rust-crypto = "0.2"
 
 [dev-dependencies]
 tempdir = "0.3"
