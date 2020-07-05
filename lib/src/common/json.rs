@@ -15,7 +15,7 @@ use std::path::PathBuf;
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKey {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mnemonic: Option<String>,
+    pub mnemonic: Option<Mnemonic>,
     pub xpub: ExtendedPubKey,
     pub xprv: ExtendedPrivKey,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -285,7 +285,7 @@ impl PrivateMasterKey {
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
         Ok(PrivateMasterKey {
-            mnemonic: Some(mnemonic.to_string()),
+            mnemonic: Some(mnemonic.clone()),
             xprv,
             xpub,
             dice: None,
