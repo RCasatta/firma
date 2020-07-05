@@ -1,5 +1,5 @@
+use crate::common::bmp::QrData;
 use crate::*;
-use image::Luma;
 use log::info;
 use qrcode::bits::{Bits, ExtendedMode};
 use qrcode::types::Color::{Dark, Light};
@@ -16,24 +16,21 @@ pub enum QrError {}
 pub fn print_qr(qr_code: &QrCode, inverted: bool) -> Result<String> {
     let mut result = String::new();
     let width = qr_code.width();
-    let qr_code = qr_code.clone().into_colors();
+    let mut qr_code = qr_code.clone().into_colors();
     let height = qr_code.len() / width;
-    let mut vec = Vec::new();
-    vec.extend(vec![Light; width * 4]);
-    vec.extend(qr_code);
-    vec.extend(vec![Light; width * 4]);
+    qr_code.extend(vec![Light; width]);
 
     let inverted = if inverted { 0 } else { 4 };
     let blocks = ["█", "▀", "▄", " ", " ", "▄", "▀", "█"];
-
-    for i in (0..height + 8).step_by(2) {
+    result.push_str("\n\n\n\n");
+    for i in (0..height).step_by(2) {
         result.push_str(&format!(
             "{}{}{}",
             blocks[inverted], blocks[inverted], blocks[inverted]
         ));
         for j in 0..width {
             let start = i * width + j;
-            let val = match (vec[start], vec.get(start + width).unwrap_or(&Light)) {
+            let val = match (qr_code[start], qr_code.get(start + width).unwrap_or(&Light)) {
                 (Light, Light) => 0,
                 (Light, Dark) => 1,
                 (Dark, Light) => 2,
@@ -41,12 +38,9 @@ pub fn print_qr(qr_code: &QrCode, inverted: bool) -> Result<String> {
             };
             result.push_str(&blocks[val + inverted].to_string());
         }
-        result.push_str(&format!(
-            "{}{}{}\n",
-            blocks[inverted], blocks[inverted], blocks[inverted]
-        ));
+        result.push_str("\n");
     }
-    result.push_str("\n\n\n");
+    result.push_str("\n\n\n\n");
     Ok(result)
 }
 
@@ -87,13 +81,15 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
     qr_file.push("dummy");
     for (i, qr) in qrs.iter().enumerate() {
         if single {
-            qr_file.set_file_name("qr.png");
+            qr_file.set_file_name("qr.bmp");
         } else {
-            qr_file.set_file_name(&format!("qr-{}.png", i));
+            qr_file.set_file_name(&format!("qr-{}.bmp", i));
         }
-        let image = qr.render::<Luma<u8>>().build();
+        let qr_data: QrData = qr.clone().into();
+        let image = qr_data.bmp()?;
         info!("Saving qr in {:?}", &qr_file);
-        image.save(&qr_file)?;
+        let mut file = File::create(&qr_file)?;
+        file.write_all(&image)?;
         wallet_qr_files.push(qr_file.clone());
 
         for b in &[true, false] {
@@ -285,10 +281,10 @@ const MAX_BYTES: [usize; 33] = [
 
 #[cfg(test)]
 mod tests {
-    use crate::common::qr::{merge_qrs, SplittedQr, StructuredQr, LEVEL};
+    use crate::common::qr::{merge_qrs, print_qr, SplittedQr, StructuredQr, LEVEL};
     use crate::Error;
     use qrcode::bits::{Bits, ExtendedMode};
-    use qrcode::Version;
+    use qrcode::{QrCode, Version};
     use rand::Rng;
     use std::convert::TryInto;
 
@@ -416,5 +412,12 @@ mod tests {
                 assert_eq!(result, data);
             }
         }
+    }
+
+    #[test]
+    fn test_print_qr() {
+        let qr = QrCode::new(b"01234567").unwrap();
+        let printed = print_qr(&qr, false).unwrap();
+        assert_eq!(hex::encode(printed.as_bytes()),"0a0a0a0a202020e29688e29680e29680e29680e29680e29680e296882020e29688e29684e29688e2968820e29688e29680e29680e29680e29680e29680e296880a202020e2968820e29688e29688e2968820e2968820e29688e2968420202020e2968820e29688e29688e2968820e296880a202020e2968820e29680e29680e2968020e2968820e2968820e29680e29680e2968820e2968820e29680e29680e2968020e296880a202020e29680e29680e29680e29680e29680e29680e2968020e2968820e29680e29684e2968820e29680e29680e29680e29680e29680e29680e296800a202020e2968020e29680e29688e29680e29688e29680e29684e29684e29680e2968420e2968820e29680e29688e29680e29688e2968820200a2020202020e2968020e2968420e29680e2968020e2968820e2968020e2968020e29684e29688e29688e29688e29680e296800a202020202020e29680e29680e29680e29680e29680e2968820e29684e29688e29684e29688e2968420e29680e29684e2968420200a202020e29688e29680e29680e29680e29680e29680e2968820e29684e29680e29688e29684e29688e29684e29688e296802020e2968420e296840a202020e2968820e29688e29688e2968820e2968820e29688e296842020e296882020e2968820e29680e2968020200a202020e2968820e29680e29680e2968020e2968820e2968020e29680e2968020e2968020e29684e2968820e29688e29684200a202020e29680e29680e29680e29680e29680e29680e2968020e29680e29680e29680e2968020e296802020e2968020e2968020200a0a0a0a0a");
     }
 }
