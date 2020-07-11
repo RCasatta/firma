@@ -9,6 +9,7 @@ use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Write;
 
+pub mod bmp;
 pub mod cmd;
 pub mod error;
 pub mod file;

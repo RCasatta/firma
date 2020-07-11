@@ -68,7 +68,6 @@ pub enum Error {
     Env(std::env::VarError),
     Utf8(std::str::Utf8Error),
     Nul(std::ffi::NulError),
-    Image(image::error::ImageError),
     Regex(regex::Error),
     ParseInt(std::num::ParseIntError),
     Miniscript(miniscript::Error),
@@ -102,7 +101,6 @@ impl_error!(hex::FromHexError, Hex);
 impl_error!(std::env::VarError, Env);
 impl_error!(std::str::Utf8Error, Utf8);
 impl_error!(std::ffi::NulError, Nul);
-impl_error!(image::error::ImageError, Image);
 impl_error!(regex::Error, Regex);
 impl_error!(std::num::ParseIntError, ParseInt);
 impl_error!(miniscript::Error, Miniscript);
@@ -169,7 +167,6 @@ impl fmt::Display for Error {
             Error::Env(e) => write!(f, "{:?}", e),
             Error::Utf8(e) => write!(f, "{:?}", e),
             Error::Nul(e) => write!(f, "{:?}", e),
-            Error::Image(e) => write!(f, "{:?}", e),
             Error::Regex(e) => write!(f, "{:?}", e),
             Error::ParseInt(e) => write!(f, "{:?}", e),
             Error::Miniscript(e) => write!(f, "{:?}", e),
