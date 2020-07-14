@@ -270,7 +270,9 @@ firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/test
 ## Combine, finalize and send TX
 
 ```
-firma-online --wallet-name firma-wallet send-tx --psbt-file ~/.firma/testnet/psbts/test/psbt.json  --broadcast```
+firma-online --wallet-name firma-wallet send-tx --psbt-file ~/.firma/testnet/psbts/test/psbt.json  --broadcast
+```
+
 ```
 {
   "broadcasted": true,
