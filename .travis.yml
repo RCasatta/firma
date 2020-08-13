@@ -13,12 +13,6 @@ matrix:
         - cargo build --verbose --all
         - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
-    - rust: stable
-      env: BITCOIN_VER=0.20.0 BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-$BITCOIN_VER/bin
-      script:
-        - cargo build --verbose --all
-        - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
-        - cargo test --verbose --all
     - rust: nightly
       env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
       script:
@@ -60,7 +54,7 @@ matrix:
 
 env:
   global:
-    - BITCOIN_VER=0.19.1
+    - BITCOIN_VER=0.20.1
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-$BITCOIN_VER/bin
     - NDK=$TRAVIS_BUILD_DIR/android-ndk-r21c
     - HOST=linux-x86_64

@@ -52,7 +52,7 @@ It is based on:
 
 ## Requirements
 
-You need [Bitcoin core 0.19.1](https://bitcoincore.org/) (0.20.0 works too)
+You need [Bitcoin core 0.20.1](https://bitcoincore.org/)
 
 To build executables you need [rust](https://www.rust-lang.org/) (version >= 1.38.0).
 
@@ -71,7 +71,7 @@ Integration tests require an env var pointing to bitcoin core executable (`bitco
 For example:
 
 ```
-BITCOIN_EXE_DIR=./bitcoin-0.19.1/bin cargo test
+BITCOIN_EXE_DIR=./bitcoin-0.20.1/bin cargo test
 ```
 
 ## Example
