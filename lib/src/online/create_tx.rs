@@ -124,13 +124,6 @@ impl Wallet {
 
         let mut psbt = psbt_from_rpc(&funded_psbt, &opt.psbt_name)?;
 
-        // set non_witness_utxo also for segwit input, due to the fee bug
-        for (i, input) in psbt.inputs.iter().enumerate() {
-            if input.non_witness_utxo.is_none() {
-                assert!(false)
-            }
-        }
-
         let mut psbts_dir = self.context.psbts_dir()?;
         let (psbt_file, qr_files) = save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
 
