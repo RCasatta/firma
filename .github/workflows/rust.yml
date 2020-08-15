@@ -1,0 +1,52 @@
+name: Rust
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+  BITCOIN_VER: 0.20.1
+  ANDROID_NDK_VER: android-ndk-r21d
+  HOST: linux-x86_64
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust: [stable, nightly, 1.38.0]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - run: echo "::set-env name=BITCOIN_EXE_DIR::${{ github.workspace }}/bitcoin-${{ env.BITCOIN_VER }}/bin"
+      - run: curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz bitcoin-$BITCOIN_VER/bin/bitcoind
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args:  --verbose --all
+
+  android:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [i686-linux-android, x86_64-linux-android, armv7-linux-androideabi, aarch64-linux-android]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+      - run: echo "::set-env name=NDK::${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}"
+      - run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
+      - run: cd lib && ./build-android/${{ matrix.target }}.sh
+
