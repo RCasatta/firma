@@ -14,17 +14,10 @@ matrix:
         - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
     - rust: nightly
-      env: CARGO_INCREMENTAL=0 RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off"
       script:
         - cargo build --verbose --all
-        - find . -name "*.gcda" -print0 | xargs -0 rm
         - curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz
         - cargo test --verbose --all
-      after_success:
-        - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
-        - ./grcov ./target/debug/ -s . -t lcov --llvm --branch -o lcov.info
-        - bash <(curl -s https://codecov.io/bash) -f lcov.info;
-        - echo "Uploaded code coverage";
     - rust: stable
       env: TARGET=i686-linux-android
       script:
