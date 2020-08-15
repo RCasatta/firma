@@ -5,7 +5,7 @@ before_script:
   - |
     if [[ -z "$TARGET" ]]; then
       rustup target install $TARGET
-      curl -o android-ndk-r21c-linux-x86_64.zip https://dl.google.com/android/repository/android-ndk-r21c-linux-x86_64.zip && unzip -q android-ndk-r21c-linux-x86_64.zip
+      curl -o $NDK_VER-$HOST.zip https://dl.google.com/android/repository/$NDK_VER-$HOST.zip && unzip -q $NDK_VER-$HOST.zip $NDK_VER/toolchains/llvm/prebuilt/*
     else
       curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz bitcoin-$BITCOIN_VER/bin/bitcoind
     fi
@@ -38,6 +38,7 @@ env:
   global:
     - BITCOIN_VER=0.20.1
     - BITCOIN_EXE_DIR=$TRAVIS_BUILD_DIR/bitcoin-$BITCOIN_VER/bin
-    - NDK=$TRAVIS_BUILD_DIR/android-ndk-r21c
+    - NDK_VER=android-ndk-r21d
+    - NDK=$TRAVIS_BUILD_DIR/$NDK_VER
     - HOST=linux-x86_64
 
