@@ -1,7 +1,4 @@
-# Firma [![Build Status]][travis]
-
-[Build Status]: https://travis-ci.com/RCasatta/firma.svg?branch=master
-[travis]: https://travis-ci.com/github/RCasatta/firma
+# Firma
 
 **WARNING - Early-stage software, do not use with real bitcoins.**
 
