@@ -49,4 +49,9 @@ jobs:
       - run: echo "::set-env name=NDK::${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}"
       - run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
       - run: cd lib && ./build-android/${{ matrix.target }}.sh
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: lib_${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/libfirma.so
 
