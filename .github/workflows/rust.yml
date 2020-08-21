@@ -1,4 +1,4 @@
-name: Rust
+name: Firma
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
           command: test
           args:  --verbose --all
 
-  android:
+  android-lib:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -49,9 +49,43 @@ jobs:
       - run: echo "::set-env name=NDK::${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}"
       - run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
       - run: cd lib && ./build-android/${{ matrix.target }}.sh
-      - name: Upload artifacts
+      - name: Upload libs
         uses: actions/upload-artifact@v2
         with:
           name: lib_${{ matrix.target }}
           path: target/${{ matrix.target }}/release/libfirma.so
 
+  android-apk:
+    runs-on: ubuntu-latest
+    needs: android-lib
+    strategy:
+      matrix:
+        network: [Testnet, Mainnet]
+    steps:
+      - uses: actions/checkout@v2
+      - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
+      - uses: actions/download-artifact@v2
+        with:
+          name: lib_i686-linux-android
+      - run: mv libfirma.so android/app/src/main/jniLibs/x86/
+      - uses: actions/download-artifact@v2
+        with:
+          name: lib_x86_64-linux-android
+      - run: mv libfirma.so android/app/src/main/jniLibs/x86_64/
+      - uses: actions/download-artifact@v2
+        with:
+          name: lib_armv7-linux-androideabi
+      - run: mv libfirma.so android/app/src/main/jniLibs/armeabi-v7a/
+      - uses: actions/download-artifact@v2
+        with:
+          name: lib_aarch64-linux-android
+      - run: mv libfirma.so android/app/src/main/jniLibs/arm64-v8a/
+      - name: Build apk
+        run: |
+          cd android
+          ./gradlew assembleNetwork${{ matrix.network }}
+      - name: Upload apk
+        uses: actions/upload-artifact@v2
+        with:
+          name: apk_${{ matrix.network }}
+          path: android/app/build/outputs/apk/network${{ matrix.network }}/debug/app-network${{ matrix.network }}-debug.apk
