@@ -15,7 +15,7 @@ env:
 jobs:
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         rust: [stable, nightly, 1.38.0]
@@ -34,7 +34,7 @@ jobs:
           args:  --verbose --all
 
   android-lib:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     strategy:
       matrix:
         target: [i686-linux-android, x86_64-linux-android, armv7-linux-androideabi, aarch64-linux-android]
@@ -56,7 +56,7 @@ jobs:
           path: target/${{ matrix.target }}/release/libfirma.so
 
   android-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     needs: android-lib
     strategy:
       matrix:
@@ -89,3 +89,24 @@ jobs:
         with:
           name: apk_${{ matrix.network }}
           path: android/app/build/outputs/apk/network${{ matrix.network }}/debug/app-network${{ matrix.network }}-debug.apk
+
+  android-test:
+    runs-on: macos-10.15  # has hardware acceleration, emulator much faster
+    needs: android-lib
+    strategy:
+      matrix:
+        api: [21, 29]
+    steps:
+      - uses: actions/checkout@v2
+      - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
+      - uses: actions/download-artifact@v2
+        with:
+          name: lib_i686-linux-android
+      - run: mv libfirma.so android/app/src/main/jniLibs/x86/
+      - name: Run Instrumentation Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: default
+          arch: x86
+          script: cd android && ./gradlew connectedCheck --stacktrace  # should install and test previously built apk
