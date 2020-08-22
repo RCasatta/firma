@@ -23,34 +23,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlin.random.Random
 
-
-/**
- * Instrumented test, which will execute on an Android device.
- *
- * See [testing documentation](http://d.android.com/tools/testing).
- */
 @RunWith(AndroidJUnit4::class)
-class ExampleInstrumentedTest {
-    @Test
-    fun useAppContext() {
-        // Context of the app under test.
+class InstrumentedTest {
+
+    private fun getNetwork(): String {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         assertTrue(appContext.packageName.startsWith("it.casatta"))
+        val network = appContext.packageName.substring(11)
+        val validNetworks = arrayOf("mainnet", "testnet", "regtest")
+        assertTrue(validNetworks.contains(network))
+        return network
     }
 
     @get:Rule
     var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(
         MainActivity::class.java,
-        true,  // initialTouchMode
+        true,
         false
-    ) // launchActivity. False to customize the intent
+    )
 
     @Test
     fun createNewRandomKey() {
         activityRule.launchActivity(Intent())
-        val randomKeyName = randomKeyName()
+        val randomKeyName = "key${ System.currentTimeMillis()}"
 
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
@@ -63,27 +59,22 @@ class ExampleInstrumentedTest {
     @Test
     fun importXprv() {
         activityRule.launchActivity(Intent())
-        val randomKeyName = randomKeyName()
+        val randomKeyName = "key${ System.currentTimeMillis()}"
+        val xprvs = mapOf("mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ", "testnet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF", "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF")
+        val xpubs = mapOf("mainnet" to "xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk", "testnet" to "tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj", "regtest" to "tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj")
+        val importsText = mapOf("mainnet" to "Import xprv", "testnet" to "Import tprv", "regtest" to "Import tprv")
+        val network = getNetwork()
 
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
-        onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(withItemSubject("Import tprv"), click()))
+        onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(withItemSubject(importsText[network]!!), click()))
         onView(withClassName(containsString("EditText"))).inRoot(isDialog()).perform(typeText(randomKeyName))
         onView(withText("OK")).perform(click())
-        onView(withClassName(containsString("EditText"))).inRoot(isDialog()).perform(typeText("tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"))
+        onView(withClassName(containsString("EditText"))).inRoot(isDialog()).perform(typeText(xprvs[network]))
         onView(withText("OK")).perform(click())
         onView(withText(randomKeyName)).check(matches(isDisplayed()))
         onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(withItemSubject(randomKeyName), click()))
-        onView(withText("tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj")).check(matches(isDisplayed()))
-
-    }
-
-    private val charPool : List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-    private fun randomKeyName(): String {
-        return (1..12)
-            .map { i -> Random.nextInt(0, charPool.size) }
-            .map(charPool::get)
-            .joinToString("")
+        onView(withText(xpubs[network])).check(matches(isDisplayed()))
     }
 
     private fun withItemSubject(subject: String): Matcher<RecyclerView.ViewHolder?>? {

@@ -94,8 +94,9 @@ jobs:
     runs-on: macos-10.15  # has hardware acceleration, emulator much faster
     needs: android-lib
     strategy:
+      fail-fast: false
       matrix:
-        api: [21, 29]
+        api: [21, 28]
     steps:
       - uses: actions/checkout@v2
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
@@ -109,4 +110,10 @@ jobs:
           api-level: ${{ matrix.api }}
           target: default
           arch: x86
-          script: cd android && ./gradlew connectedCheck --stacktrace  # should install and test previously built apk
+          script: cd android && ./gradlew connectedCheck --stacktrace # should install and test previously built apk
+      - name: Upload test reports
+        uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: tests_report_${{ matrix.api }}
+          path: ${{ github.workspace }}/android/app/build/reports/androidTests/connected/flavors/
