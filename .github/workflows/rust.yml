@@ -92,21 +92,21 @@ jobs:
 
   android-test:
     runs-on: macos-10.15  # has hardware acceleration, emulator much faster
-    needs: android-lib
+    needs: android-apk
     strategy:
       matrix:
         api: [21, 29]
     steps:
-      - uses: actions/checkout@v2
-      - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
       - uses: actions/download-artifact@v2
         with:
-          name: lib_i686-linux-android
-      - run: mv libfirma.so android/app/src/main/jniLibs/x86/
+          name: apk_Regtest
       - name: Run Instrumentation Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
           target: default
           arch: x86
-          script: cd android && ./gradlew connectedCheck --stacktrace  # should install and test previously built apk
+          script: |
+            adb install app-networkRegtest-debug.apk
+            cd android
+            ./gradlew connectedNetworkRegtestDebugAndroidTest --stacktrace

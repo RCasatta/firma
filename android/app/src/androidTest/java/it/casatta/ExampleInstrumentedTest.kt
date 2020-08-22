@@ -47,7 +47,11 @@ class ExampleInstrumentedTest {
 
         onView(withId(R.id.item_new)).perform(click())
 
-        onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click()));
+        onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click()))
+
+        onView(withId(R.id.))
+
+        with
         //onView(withId(R.id.items_list)).perform(RecyclerViewActions.actionOnItemAtPosition<RecyclerView.ViewHolder>(0, click()));
 
     }
