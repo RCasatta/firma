@@ -196,7 +196,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
     override fun onItemClick(item: Item) {
         val what = intent.getIntExtra(C.WHAT, 0)
-        Log.d("LOG","onItemClick $item.name ${Network.TYPE} $what")
+        Log.d("LIST","onItemClick $item.name ${Network.TYPE} $what")
 
         when(what) {
             NEW_KEY -> {
@@ -306,22 +306,24 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             .setView(keyEditText)
             .setPositiveButton("Ok") { _, _ ->
                 val keyName = keyEditText.text.toString()
-                val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/PRIVATE.json")
-                if (keyFile.exists()) {
-                    Toast.makeText(this, "This key already exist", Toast.LENGTH_LONG).show()
-                } else {
-                    when (what)  {
-                        getString(R.string.random) -> {
-                            Rust().random(filesDir.toString(), keyName)
-                            setResult(Activity.RESULT_OK, Intent())
-                            finish()
+                if (keyName.isNotEmpty()) {
+                    val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/PRIVATE.json")
+                    if (keyFile.exists()) {
+                        Toast.makeText(this, "This key already exist", Toast.LENGTH_LONG).show()
+                    } else {
+                        when (what) {
+                            getString(R.string.random) -> {
+                                Rust().random(filesDir.toString(), keyName)
+                                setResult(Activity.RESULT_OK, Intent())
+                                finish()
+                            }
+                            getString(R.string.dice) -> {
+                                this.keyName = keyName
+                                comeHere(this, DICE_FACES)
+                            }
+                            getString(R.string.import_xprv) -> valueDialog(keyName, "Xprv")
+                            getString(R.string.import_mnemonic) -> valueDialog(keyName, "Mnemonic")
                         }
-                        getString(R.string.dice) -> {
-                            this.keyName = keyName
-                            comeHere(this, DICE_FACES)
-                        }
-                        getString(R.string.import_xprv) -> valueDialog(keyName, "Xprv" )
-                        getString(R.string.import_mnemonic) -> valueDialog(keyName, "Mnemonic")
                     }
                 }
             }
@@ -331,7 +333,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun saveWallet(content: String) {
-        Log.d("MAIN", "saveWallet $content")
+        Log.d("LIST", "saveWallet $content")
         try {
             val json = mapper.readValue(content, Rust.WalletJson::class.java)
             Rust().importWallet(filesDir.toString(), json)
@@ -343,7 +345,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun savePsbt(psbt: String, encoding: String) {
-        Log.d("MAIN", "savePsbt ${psbt.length} chars length, encoding: $encoding")
+        Log.d("LIST", "savePsbt ${psbt.length} chars length, encoding: $encoding")
         try {
             Rust().savePSBT(filesDir.toString(), psbt, encoding)
         } catch (e: Exception) {
