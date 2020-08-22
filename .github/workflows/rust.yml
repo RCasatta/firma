@@ -106,7 +106,4 @@ jobs:
           api-level: ${{ matrix.api }}
           target: default
           arch: x86
-          script: |
-            adb install app-networkRegtest-debug.apk
-            cd android
-            ./gradlew connectedNetworkRegtestDebugAndroidTest --stacktrace
+          script: adb install app-networkRegtest-debug.apk && cd android && ./gradlew connectedNetworkRegtestDebugAndroidTest --stacktrace
