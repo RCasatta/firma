@@ -96,7 +96,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [21, 28]
+        api: [28]
     steps:
       - uses: actions/checkout@v2
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
