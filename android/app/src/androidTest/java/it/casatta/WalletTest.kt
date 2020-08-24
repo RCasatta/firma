@@ -20,7 +20,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 
 @RunWith(AndroidJUnit4::class)
-class WalletTest {
+class WalletTest: Common() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     @get:Rule
@@ -52,7 +52,7 @@ class WalletTest {
             "testnet" to descriptorChangeTestnet,
             "regtest" to descriptorChangeTestnet
         )
-        val network = Common.getNetwork()
+        val network = getNetwork()
 
         val name = "wallet-${System.currentTimeMillis()}"
         val wallet = Rust.WalletJson(
@@ -72,7 +72,7 @@ class WalletTest {
         clipboard.setPrimaryClip(ClipData.newPlainText("label", walletString))
         onView(withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
-                Common.withItemSubject("From clipboard"),
+                withItemSubject("From clipboard"),
                 click()
             )
         )
