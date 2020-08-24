@@ -186,7 +186,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             itemsAdapter.list.clear()
             listOutput = Rust().list(filesDir.toString(), kind)
         } catch (e: RustException) {
-            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            C.showMessageDialog(this, e.message?:"Null")
         }
     }
 
@@ -271,6 +271,16 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         finish()
     }
 
+    private fun setResultMessage(id: Int) {
+        setResultMessage(getString(id))
+    }
+
+    private fun setResultMessage(message: String) {
+        val intent = Intent()
+        intent.putExtra(C.SHOW_MESSAGE, message)
+        setResult(Activity.RESULT_CANCELED, intent)
+    }
+
     private fun valueDialog(name: String, nature: String) {
         val valueEditText = EditText(this)
         valueEditText.maxLines = 1
@@ -285,8 +295,8 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     Rust().restore(filesDir.toString(), name, nature, text)
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
-                    Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
-                    setResult(Activity.RESULT_CANCELED, Intent())
+                    Log.e("LIST", e.message?:"Null")
+                    setResultMessage(getString(R.string.invalid_xprv_or_mnemonic, nature))
                 }
                 finish()
             }
@@ -309,7 +319,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 if (keyName.isNotEmpty()) {
                     val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/PRIVATE.json")
                     if (keyFile.exists()) {
-                        Toast.makeText(this, "This key already exist", Toast.LENGTH_LONG).show()
+                        C.showMessageDialog(this, R.string.key_exists)
                     } else {
                         when (what) {
                             getString(R.string.random) -> {
@@ -337,10 +347,9 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         try {
             val json = mapper.readValue(content, Rust.WalletJson::class.java)
             Rust().importWallet(filesDir.toString(), json)
-        } catch (e: RustException) {
-            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
-            Toast.makeText(this, "This is not a wallet", Toast.LENGTH_LONG).show()
+            Log.e("LIST", e.message?:"Null")
+            setResultMessage(R.string.not_a_wallet)
         }
     }
 
@@ -349,7 +358,8 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         try {
             Rust().savePSBT(filesDir.toString(), psbt, encoding)
         } catch (e: Exception) {
-            Toast.makeText(this, "This is not a psbt", Toast.LENGTH_LONG).show()
+            Log.e("LIST", e.message?:"Null")
+            setResultMessage(R.string.not_a_psbt)
         }
     }
 
@@ -371,7 +381,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         if (result != null) {
             if (result.contents == null) {
                 rawHexes.clear()
-                Toast.makeText(this, "Cancelled", Toast.LENGTH_LONG).show()
+                C.showMessageDialog(this, R.string.cancelled)
             } else {
                 val hexString = result.rawBytes.toHexString()
                 this.rawHexes.add(hexString)
@@ -431,6 +441,8 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         } else {
+            Log.i("LIST", "result cancelled")
+            data?.let { C.showMessageIfInIntent(this, it) }
             resetFields()
             super.onActivityResult(requestCode, resultCode, data)
         }

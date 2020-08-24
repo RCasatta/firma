@@ -3,7 +3,6 @@ package it.casatta
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
@@ -37,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         sign_button.isEnabled = true
         sign_button.setOnClickListener {
             if (key_text.text == getString(R.string.select_key) || wallet_text.text == getString(R.string.select_wallet)  || psbt_text.text == getString(R.string.select_transaction)) {
-                Toast.makeText(this, "Select key, wallet and psbt", Toast.LENGTH_LONG).show()
+                C.showMessageDialog(this, R.string.select_all)
             } else {
                 val keyFile = "$filesDir/${Network.TYPE}/keys/${key_text.text}/PRIVATE.json"
                 val walletFile = "$filesDir/${Network.TYPE}/wallets/${wallet_text.text}/descriptor.json"
@@ -50,6 +49,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+        C.showMessageIfInIntent(this, intent)
     }
 
     override fun onActivityResult(
