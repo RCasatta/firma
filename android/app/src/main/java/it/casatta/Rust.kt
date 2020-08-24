@@ -55,19 +55,19 @@ class Rust {
         val daemon_opts: DaemonOpts?
     )
 
-    data class DaemonOpts (
+    data class DaemonOpts(
         val url: String,
         val cookie_file: String
     )
 
-    data class PsbtJson (
+    data class PsbtJson(
         val name: String,
         val psbt: String,
         val fee: Double,
         val changepos: Int
     )
 
-    data class PsbtJsonOutput (
+    data class PsbtJsonOutput(
         val signatures: String,
         val psbt: PsbtJson,
         val file: String,
@@ -75,33 +75,33 @@ class Rust {
         val unsigned_txid: String
     )
 
-    data class TxIn (
+    data class TxIn(
         val outpoint: String,
         val signatures: List<String>,
         val value: String,
         val wallet_with_path: String?
     )
 
-    data class TxOut (
+    data class TxOut(
         val address: String,
         val value: String,
         val wallet_with_path: String?
 
     )
 
-    data class Size (
+    data class Size(
         val unsigned: Int,
         val estimated: Int,
         val psbt: Int
     )
 
-    data class Fee (
+    data class Fee(
         val absolute_fmt: String,
         val absolute: Long,
-        val rate : Double
+        val rate: Double
     )
 
-    data class PsbtPrettyPrint (
+    data class PsbtPrettyPrint(
         val inputs: List<TxIn>,
         val outputs: List<TxOut>,
         val size: Size,
@@ -111,7 +111,7 @@ class Rust {
         val balances: String
     )
 
-    data class GetAddressOutput (
+    data class GetAddressOutput(
         val address: String,
         val path: String
     )
@@ -122,7 +122,7 @@ class Rust {
         val strResult = call(json)
         val jsonResult = mapper.readTree(strResult)
         if (jsonResult.has("error")) {
-            throw RustException(jsonResult["error"].toString())
+            throw RustException(jsonResult["error"].asText())
         }
         return jsonResult
     }
@@ -171,7 +171,7 @@ class Rust {
     }
 
     fun importWallet(datadir: String, wallet: WalletJson) {
-        val node: JsonNode = mapper.valueToTree(wallet);
+        val node: JsonNode = mapper.valueToTree(wallet)
         val req = JsonRpc("import_wallet", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         callJson(reqString)
@@ -234,5 +234,5 @@ class Rust {
 
 }
 
-class RustException(message:String): Exception(message)
+class RustException(message: String) : Exception(message)
 

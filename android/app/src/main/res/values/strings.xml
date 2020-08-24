@@ -8,4 +8,14 @@
     <string name="random">Random</string>
     <string name="dice">Dice</string>
     <string name="import_mnemonic">Import mnemonic</string>
+
+    <string name="key_exists">This key name already exist</string>
+    <string name="deleted">Deleted</string>
+    <string name="not_a_wallet">This is not a json wallet or a wallet with the same name already exist</string>
+    <string name="not_a_psbt">This is not a psbt transaction</string>
+
+    <string name="cancelled">Cancelled</string>
+    <string name="select_all">Select a key, a wallet and a transaction</string>
+    <string name="invalid_xprv_or_mnemonic">Invalid %s</string>
+
 </resources>
