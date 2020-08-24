@@ -23,7 +23,7 @@ import org.hamcrest.Matchers
 
 
 @RunWith(AndroidJUnit4::class)
-class TransactionTest {
+class TransactionTest: Common() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     @get:Rule
@@ -47,7 +47,7 @@ class TransactionTest {
         clipboard.setPrimaryClip(ClipData.newPlainText("label", transactionBase64))
         onView(withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
-                Common.withItemSubject("From clipboard"),
+                withItemSubject("From clipboard"),
                 click()
             )
         )
@@ -56,7 +56,7 @@ class TransactionTest {
 
         onView(withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
-                Common.withItemSubject(psbtName),
+                withItemSubject(psbtName),
                 click()
             )
         )
