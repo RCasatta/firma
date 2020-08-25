@@ -24,7 +24,6 @@ import org.hamcrest.Matchers
 
 @RunWith(AndroidJUnit4::class)
 class TransactionTest: Common() {
-    private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     @get:Rule
     var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(

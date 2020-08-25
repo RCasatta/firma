@@ -4,23 +4,21 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.contrib.RecyclerViewActions
+import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ActivityTestRule
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.*
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.KotlinModule
 
 
 @RunWith(AndroidJUnit4::class)
-class WalletTest: Common() {
+class WalletTest : Common() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     @get:Rule
@@ -31,7 +29,7 @@ class WalletTest: Common() {
     )
 
     @Test
-    fun createNewWallet() {
+    fun wallet() {
         val activity = activityRule.launchActivity(Intent())
         var clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val descriptorMainMainnet =
@@ -67,20 +65,36 @@ class WalletTest: Common() {
         val walletString = mapper.writeValueAsString(wallet)
 
         onView(withId(R.id.wallet_button)).perform(click())
-
         onView(withId(R.id.item_new)).perform(click())
         clipboard.setPrimaryClip(ClipData.newPlainText("label", walletString))
-        onView(withId(R.id.items_list)).perform(
-            RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
-                withItemSubject("From clipboard"),
-                click()
-            )
-        )
+        clickElementInList(activity.getString(R.string.from_clipboard))
         onView(withText(name)).check(matches(isDisplayed()))
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.from_clipboard))
+        checkAndDismissDialog(R.string.not_a_wallet)
+        clickElementInList(name)
+        onView(withId(R.id.delete)).perform(click())
+        setTextInDialog(activity, name)
+        onView(withText("DELETE")).perform(click())
+        checkAndDismissDialog(R.string.deleted)
+        onView(withId(R.id.wallet_button)).perform(click())
+        checkElementNotInList(name)
 
-        //TODO should test invalid json and correct json wrong network, however I can't match against toast.
-        // Migrating the app from toasts to dialogs would probably make a more testable UI
+        val invalidNetwork = invalidNetwork(network)
+        val invalidWallet = Rust.WalletJson(
+            name,
+            mainDescriptors[invalidNetwork]!!,
+            changeDescriptors[invalidNetwork]!!,
+            listOf("8f335370", "6b9128bc"),
+            2,
+            1718227,
+            null
+        )
+        val invalidWalletString = mapper.writeValueAsString(invalidWallet)
+        clipboard.setPrimaryClip(ClipData.newPlainText("label", invalidWalletString))
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.from_clipboard))
+        checkAndDismissDialog(R.string.not_a_wallet)
     }
-
 
 }
