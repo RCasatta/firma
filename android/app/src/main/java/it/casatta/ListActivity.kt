@@ -1,17 +1,13 @@
 package it.casatta
 
 import android.app.Activity
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
+import android.content.*
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.view.*
 import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -105,13 +101,13 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             IMPORT_PSBT -> {
                 title = "Import transaction (PSBT)"
                 itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
-                itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "base64", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "base64", null, emptyList()))
                 item_new.hide()
             }
             IMPORT_WALLET -> {
                 title = "Import wallet"
                 itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
-                itemsAdapter.list.add(Item(getString(R.string.from_clipboard), "json", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "json", null, emptyList()))
                 item_new.hide()
             }
             DICE_FACES -> {
@@ -222,14 +218,22 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     getString(R.string.scan) -> {
                         launchScan("Scan a transaction (PSBT)")
                     }
-                    getString(R.string.from_clipboard) -> {
-                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip: ClipData? = clipboard.primaryClip
-                        if ( clip != null ) {
-                            val text = clip.getItemAt(0)?.text.toString()
-                            savePsbt(text, "base64")
-                            finish()
-                        }
+                    getString(R.string.insert_manually) -> {
+                        val valueEditText = EditText(this)
+                        valueEditText.maxLines = 1
+                        valueEditText.inputType = InputType.TYPE_CLASS_TEXT
+
+                        val dialog: AlertDialog = AlertDialog.Builder(this)
+                            .setTitle("Insert PSBT base64")
+                            .setView(valueEditText)
+                            .setPositiveButton("Ok") { _, _ ->
+                                val text = valueEditText.text.toString()
+                                savePsbt(text, "base64")
+                                finish()
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .create()
+                        dialog.show()
                     }
                 }
             }
@@ -238,14 +242,22 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     getString(R.string.scan) -> {
                         launchScan("Scan a Wallet")
                     }
-                    getString(R.string.from_clipboard) -> {
-                        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip: ClipData? = clipboard.primaryClip
-                        if ( clip != null ) {
-                            val text = clip.getItemAt(0)?.text.toString()
-                            saveWallet(text)
-                            finish()
-                        }
+                    getString(R.string.insert_manually) -> {
+                        val valueEditText = EditText(this)
+                        valueEditText.maxLines = 1
+                        valueEditText.inputType = InputType.TYPE_CLASS_TEXT
+
+                        val dialog: AlertDialog = AlertDialog.Builder(this)
+                            .setTitle("Insert a JSON Wallet")
+                            .setView(valueEditText)
+                            .setPositiveButton("Ok") { _, _ ->
+                                val text = valueEditText.text.toString()
+                                saveWallet(text)
+                                finish()
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .create()
+                        dialog.show()
                     }
                 }
             }
@@ -349,7 +361,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             Rust().importWallet(filesDir.toString(), json)
         } catch (e: Exception) {
             Log.e("LIST", e.message?:"Null")
-            setResultMessage(R.string.not_a_wallet)
+            setResultMessage(R.string.wallet_not_imported)
         }
     }
 

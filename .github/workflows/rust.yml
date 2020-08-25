@@ -96,7 +96,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [21,22,23,24,25,26,27,28,29,30]
+        api: [21,25,28]
     steps:
       - uses: actions/checkout@v2
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
@@ -110,7 +110,7 @@ jobs:
           api-level: ${{ matrix.api }}
           target: default
           arch: x86
-          script: cd android && ./gradlew connectedCheck --stacktrace # should install and test previously built apk
+          script: cd android && ./gradlew connectedCheck --stacktrace
       - name: Upload test reports
         uses: actions/upload-artifact@v2
         if: ${{ always() }}
