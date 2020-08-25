@@ -1,8 +1,5 @@
 package it.casatta
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
@@ -31,7 +28,6 @@ class WalletTest : Common() {
     @Test
     fun wallet() {
         val activity = activityRule.launchActivity(Intent())
-        var clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val descriptorMainMainnet =
             "wsh(multi(2,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*))#q0agyfvx";
         val descriptorChangeMainnet =
@@ -66,12 +62,15 @@ class WalletTest : Common() {
 
         onView(withId(R.id.wallet_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
-        clipboard.setPrimaryClip(ClipData.newPlainText("label", walletString))
-        clickElementInList(activity.getString(R.string.from_clipboard))
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialog(activity, walletString)
+        clickDialogOK()
         onView(withText(name)).check(matches(isDisplayed()))
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.from_clipboard))
-        checkAndDismissDialog(R.string.not_a_wallet)
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialog(activity, walletString)
+        clickDialogOK()
+        checkAndDismissDialog(R.string.wallet_not_imported)
         clickElementInList(name)
         onView(withId(R.id.delete)).perform(click())
         setTextInDialog(activity, name)
@@ -91,10 +90,11 @@ class WalletTest : Common() {
             null
         )
         val invalidWalletString = mapper.writeValueAsString(invalidWallet)
-        clipboard.setPrimaryClip(ClipData.newPlainText("label", invalidWalletString))
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.from_clipboard))
-        checkAndDismissDialog(R.string.not_a_wallet)
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialog(activity, invalidWalletString)
+        clickDialogOK()
+        checkAndDismissDialog(R.string.wallet_not_imported)
     }
 
 }

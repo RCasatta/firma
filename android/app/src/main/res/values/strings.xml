@@ -2,7 +2,7 @@
     <string name="select_key">Select key</string>
     <string name="select_wallet">Select wallet</string>
     <string name="select_transaction">Select transaction</string>
-    <string name="from_clipboard">From clipboard</string>
+    <string name="insert_manually">Insert manually</string>
     <string name="scan">Scan</string>
 
     <string name="random">Random</string>
@@ -11,7 +11,7 @@
 
     <string name="key_exists">This key name already exist</string>
     <string name="deleted">Deleted</string>
-    <string name="not_a_wallet">This is not a json wallet or a wallet with the same name already exist</string>
+    <string name="wallet_not_imported">This is not a json wallet, it is not in the right network or a wallet with the same name already exist</string>
     <string name="not_a_psbt">This is not a psbt transaction</string>
 
     <string name="cancelled">Cancelled</string>
