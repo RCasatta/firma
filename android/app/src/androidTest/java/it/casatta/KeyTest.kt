@@ -24,34 +24,34 @@ class KeyTest : Common() {
 
     @Test
     fun randomKey() {
-        activityRule.launchActivity(Intent())
+        val activity = activityRule.launchActivity(Intent())
         val randomKeyName = "key${System.currentTimeMillis()}"
 
         onView(withId(R.id.key_button)).perform(click())
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
         onView(withText(randomKeyName)).check(matches(isDisplayed()))
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
         checkAndDismissDialog(R.string.key_exists)
 
         onView(isRoot()).perform(pressBack())
         clickElementInList(randomKeyName)
         onView(withId(R.id.delete)).perform(click())
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         onView(withText("DELETE")).perform(click())
         checkAndDismissDialog(R.string.deleted)
     }
 
     @Test
     fun xprv() {
-        activityRule.launchActivity(Intent())
+        val activity = activityRule.launchActivity(Intent())
         val randomKeyName = "key${System.currentTimeMillis()}"
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
@@ -73,15 +73,15 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
-        typeInDialog(xprvs[network]!!)
+        setTextInDialog(xprvs[network]!!)
         clickDialogOK()
         onView(withText(randomKeyName)).check(matches(isDisplayed()))
         clickElementInList(randomKeyName)
         onView(withText(xpubs[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         onView(withText("DELETE")).perform(click())
         checkAndDismissDialog(R.string.deleted)
 
@@ -89,9 +89,9 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
-        typeInDialog(xprvs[invalidNetwork]!!)
+        setTextInDialog(xprvs[invalidNetwork]!!)
         clickDialogOK()
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
     }
@@ -100,30 +100,39 @@ class KeyTest : Common() {
     fun mnemonic() {
         val activity = activityRule.launchActivity(Intent())
         val randomKeyName = "key${System.currentTimeMillis()}"
-        val expectedXpub =
+
+        val expectedXpubTestnet =
             "tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6"
+        val expectedXpubMainnet =
+            "xpub661MyMwAqRbcEgFrKPDRNEE3c3Pz3MpuS2wiWgKgdTugfR4dDgb2syfujy4u3kWBxt2o9ryJ4tmbXvepLbjqjMnSp8QmJ9Ve4EjuNBkPMy1"
+        val expectedXpub = mapOf(
+            "mainnet" to expectedXpubMainnet,
+            "testnet" to expectedXpubTestnet,
+            "regtest" to expectedXpubTestnet
+        )
         val mnemonic =
             "bunker shed useless about build taste comfort acquire food defense nation cement oblige race manual narrow merit lumber slight pattern plate budget armed undo"
+        val network = getNetwork()
 
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.import_mnemonic))
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
-        typeInDialog("invalid")
+        setTextInDialog("invalid")
         clickDialogOK()
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.import_mnemonic))
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         clickDialogOK()
-        typeInDialog(mnemonic)
+        setTextInDialog(mnemonic)
         clickDialogOK()
         onView(withText(randomKeyName)).check(matches(isDisplayed()))
         clickElementInList(randomKeyName)
-        onView(withText(expectedXpub)).check(matches(isDisplayed()))
+        onView(withText(expectedXpub[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        typeInDialog(randomKeyName)
+        setTextInDialog(randomKeyName)
         onView(withText("DELETE")).perform(click())
         checkAndDismissDialog(R.string.deleted)
     }

@@ -1,6 +1,7 @@
 package it.casatta
 
 import android.view.View
+import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso
@@ -59,7 +60,8 @@ open class Common {
 
     fun checkAndDismissDialog(id: Int) {
         Espresso.onView(ViewMatchers.withText(id))
-            .inRoot(RootMatchers.isDialog()).check(ViewAssertions.matches(ViewMatchers.isDisplayed()))
+            .inRoot(RootMatchers.isDialog())
+            .check(ViewAssertions.matches(ViewMatchers.isDisplayed()))
             .perform(ViewActions.pressBack())
     }
 
@@ -76,9 +78,16 @@ open class Common {
         Espresso.onView(ViewMatchers.withText("OK")).perform(ViewActions.click())
     }
 
-    fun typeInDialog(randomKeyName: String) {
+    /**
+     * Set the text in the active dialog EditText with the given `value`.
+     * since we are not doing anything during onTextChange, setText is faster than typing
+     */
+    fun setTextInDialog(value: String) {
         Espresso.onView(ViewMatchers.withClassName(Matchers.containsString("EditText")))
-            .inRoot(RootMatchers.isDialog())
-            .perform(ViewActions.typeText(randomKeyName))
+            .check { view, noView ->
+                (view as EditText).setText(value)
+            }
     }
+
+
 }
