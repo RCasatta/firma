@@ -1,5 +1,6 @@
 package it.casatta
 
+import android.app.Activity
 import android.view.View
 import android.widget.EditText
 import android.widget.TextView
@@ -74,6 +75,18 @@ open class Common {
         )
     }
 
+    fun checkElementNotInList(subject: String) {
+        Espresso.onView(ViewMatchers.withId(R.id.items_list)).check(
+            ViewAssertions.matches(
+                Matchers.not(
+                    ViewMatchers.hasDescendant(
+                        ViewMatchers.withText(subject)
+                    )
+                )
+            )
+        )
+    }
+
     fun clickDialogOK() {
         Espresso.onView(ViewMatchers.withText("OK")).perform(ViewActions.click())
     }
@@ -82,12 +95,13 @@ open class Common {
      * Set the text in the active dialog EditText with the given `value`.
      * since we are not doing anything during onTextChange, setText is faster than typing
      */
-    fun setTextInDialog(value: String) {
+    fun setTextInDialog(activity: Activity, value: String) {
         Espresso.onView(ViewMatchers.withClassName(Matchers.containsString("EditText")))
-            .check { view, noView ->
-                (view as EditText).setText(value)
+            .check { view, _ ->
+                activity.runOnUiThread {
+                    (view as EditText).setText(value)
+                }
             }
     }
-
 
 }
