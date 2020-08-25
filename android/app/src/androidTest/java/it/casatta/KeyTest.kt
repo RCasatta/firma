@@ -23,7 +23,7 @@ class KeyTest : Common() {
     )
 
     @Test
-    fun createDeleteRandomKey() {
+    fun randomKey() {
         activityRule.launchActivity(Intent())
         val randomKeyName = "key${System.currentTimeMillis()}"
 
@@ -50,7 +50,7 @@ class KeyTest : Common() {
     }
 
     @Test
-    fun importXprv() {
+    fun xprv() {
         activityRule.launchActivity(Intent())
         val randomKeyName = "key${System.currentTimeMillis()}"
         val xprvs = mapOf(
@@ -84,6 +84,52 @@ class KeyTest : Common() {
         typeInDialog(randomKeyName)
         onView(withText("DELETE")).perform(click())
         checkAndDismissDialog(R.string.deleted)
+
+        val invalidNetwork = invalidNetwork(network)
+        onView(withId(R.id.key_button)).perform(click())
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(importsText[network]!!)
+        typeInDialog(randomKeyName)
+        clickDialogOK()
+        typeInDialog(xprvs[invalidNetwork]!!)
+        clickDialogOK()
+        checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
     }
 
+    @Test
+    fun mnemonic() {
+        val activity = activityRule.launchActivity(Intent())
+        val randomKeyName = "key${System.currentTimeMillis()}"
+        val expectedXpub =
+            "tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6"
+        val mnemonic =
+            "bunker shed useless about build taste comfort acquire food defense nation cement oblige race manual narrow merit lumber slight pattern plate budget armed undo"
+
+        onView(withId(R.id.key_button)).perform(click())
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.import_mnemonic))
+        typeInDialog(randomKeyName)
+        clickDialogOK()
+        typeInDialog("invalid")
+        clickDialogOK()
+        checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.import_mnemonic))
+        typeInDialog(randomKeyName)
+        clickDialogOK()
+        typeInDialog(mnemonic)
+        clickDialogOK()
+        onView(withText(randomKeyName)).check(matches(isDisplayed()))
+        clickElementInList(randomKeyName)
+        onView(withText(expectedXpub)).check(matches(isDisplayed()))
+        onView(withId(R.id.delete)).perform(click())
+        typeInDialog(randomKeyName)
+        onView(withText("DELETE")).perform(click())
+        checkAndDismissDialog(R.string.deleted)
+    }
+
+    @Test
+    fun dice() {
+
+    }
 }

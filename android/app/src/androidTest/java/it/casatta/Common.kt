@@ -19,6 +19,17 @@ import org.junit.Assert
 
 open class Common {
 
+    fun invalidNetwork(network: String): String {
+        val validNetworks = arrayOf("mainnet", "testnet", "regtest")
+        Assert.assertTrue(validNetworks.contains(network))
+        when (network) {
+            "mainnet" -> return "testnet"
+            "testnet" -> return "mainnet"
+            "regtest" -> return "mainnet"
+        }
+        return ""
+    }
+
     fun getNetwork(): String {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         Assert.assertTrue(appContext.packageName.startsWith("it.casatta"))

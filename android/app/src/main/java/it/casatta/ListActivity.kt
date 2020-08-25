@@ -296,7 +296,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Log.e("LIST", e.message?:"Null")
-                    setResultMessage(getString(R.string.invalid_xprv_or_mnemonic, nature))
+                    setResultMessage(R.string.invalid_xprv_or_mnemonic)
                 }
                 finish()
             }
