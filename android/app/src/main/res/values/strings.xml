@@ -16,6 +16,6 @@
 
     <string name="cancelled">Cancelled</string>
     <string name="select_all">Select a key, a wallet and a transaction</string>
-    <string name="invalid_xprv_or_mnemonic">Invalid %s</string>
+    <string name="invalid_xprv_or_mnemonic">Invalid Xprv or Mnemonic</string>
 
 </resources>
