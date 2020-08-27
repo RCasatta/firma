@@ -144,6 +144,31 @@ class KeyTest : Common() {
 
     @Test
     fun dice() {
+        val activity = activityRule.launchActivity(Intent())
+        val randomKeyName = "key${System.currentTimeMillis()}"
+        val expectedXpubTestnet =
+            "tpubD6NzVbkrYhZ4YSC7guz8W7xZW1ftPPwsB9bAcEHrmdvmzyUSfhTDE8YV3M8WYegAmGorTpGvVGVKdXS5gWkCQ7GPZNUABkchvCyNpA51h5b"
+        val expectedXpubMainnet =
+            "xpub661MyMwAqRbcGe1GEj13JCdCAtaEQ1SodWzsFgEiRjAtFgojbUc85gseoK3j29ivyNGwrEm3xAfGwLwUHetxWfp6VmirWDxULFNy4CD94UP"
+        val expectedXpub = mapOf(
+            "mainnet" to expectedXpubMainnet,
+            "testnet" to expectedXpubTestnet,
+            "regtest" to expectedXpubTestnet
+        )
+        val network = getNetwork()
 
+        onView(withId(R.id.key_button)).perform(click())
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.dice))
+        setTextInDialog(activity, randomKeyName)
+        clickDialogOK()
+        clickElementInList("20")
+        for (i in 1..59) {
+            clickElementInList("2")
+        }
+        onView(withText(randomKeyName)).check(matches(isDisplayed()))
+        clickElementInList(randomKeyName)
+
+        onView(withText(expectedXpub[network]!!)).check(matches(isDisplayed()))
     }
 }
