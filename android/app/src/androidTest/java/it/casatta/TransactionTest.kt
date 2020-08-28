@@ -2,14 +2,11 @@ package it.casatta
 
 import android.content.Intent
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ActivityTestRule
-import org.hamcrest.Matchers
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,18 +34,14 @@ class TransactionTest : Common() {
         checkElementNotInList(psbtName)
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.insert_manually))
-        setTextInDialog(activity, transactionBase64)
-        clickDialogOK()
+        setTextInDialogAndConfirm(activity, transactionBase64)
         onView(withText(psbtName)).check(matches(isDisplayed()))
 
         clickElementInList(psbtName)
 
         onView(withId(R.id.delete)).perform(click())
 
-        onView(withClassName(Matchers.containsString("EditText"))).inRoot(RootMatchers.isDialog())
-            .perform(ViewActions.typeText(psbtName))
-        onView(withText("DELETE")).perform(click())
-
+        setTextInDialogAndConfirm(activity, psbtName, "DELETE")
     }
 
 
