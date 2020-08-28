@@ -58,20 +58,20 @@ pub fn extract_xpubs(descriptor: &str) -> Result<Vec<ExtendedPubKey>> {
 fn extract_n(descriptor: &str) -> Result<u8> {
     let err = Error::CaptureGroupNotFound("threshold".into());
     let re = Regex::new("wsh\\(multi\\(([1-9]),")?;
-    for cap in re.captures_iter(&descriptor) {
-        return Ok(cap.get(1).ok_or(err)?.as_str().parse()?);
+    match re.captures_iter(&descriptor).next() {
+        Some(cap) => Ok(cap.get(1).ok_or(err)?.as_str().parse()?),
+        None => Err(err),
     }
-    Err(err)
 }
 
 /// extract the c index (internal or external) from a descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
 fn extract_int_or_ext(descriptor: &str) -> Result<u8> {
     let err = Error::CaptureGroupNotFound("index".into());
     let re = Regex::new("[t|x]pub[1-9A-HJ-NP-Za-km-z]*/([0-9])/\\*")?;
-    for cap in re.captures_iter(&descriptor) {
-        return Ok(cap.get(1).ok_or(err)?.as_str().parse()?);
+    match re.captures_iter(&descriptor).next() {
+        Some(cap) => Ok(cap.get(1).ok_or(err)?.as_str().parse()?),
+        None => Err(err),
     }
-    Err(err)
 }
 
 #[cfg(test)]

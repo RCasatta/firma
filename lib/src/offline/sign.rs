@@ -304,7 +304,7 @@ impl PSBTSigner {
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             input.hd_keypaths.insert(
-                                key.clone(),
+                                key,
                                 keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
                             );
                             added = true;
@@ -319,7 +319,7 @@ impl PSBTSigner {
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             output.hd_keypaths.insert(
-                                key.clone(),
+                                key,
                                 keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
                             );
                             added = true;
@@ -353,12 +353,8 @@ impl PSBTSigner {
                 let path_slice = child.as_ref();
                 if path_slice.len() != 2 {
                     return Err(format!("{} only two derivation paths allowed", child).into());
-                } else {
-                    if !(path_slice[0] == 0.into() || path_slice[0] == 1.into()) {
-                        return Err(
-                            format!("{} first derivation must be Soft 0 or 1", child).into()
-                        );
-                    }
+                } else if !(path_slice[0] == 0.into() || path_slice[0] == 1.into()) {
+                    return Err(format!("{} first derivation must be Soft 0 or 1", child).into());
                 }
             }
             let privkey = self.xprv.derive_priv(&self.secp, &child)?;
@@ -385,7 +381,7 @@ impl PSBTSigner {
             let signature = self.secp.sign(msg, key);
             let mut signature = signature.serialize_der().to_vec();
             signature.push(sighash.as_u32() as u8); // TODO how to properly do this?
-            input.partial_sigs.insert(pubkey.clone(), signature);
+            input.partial_sigs.insert(*pubkey, signature);
         }
         Ok(())
     }
@@ -405,7 +401,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     debug!("{:?}", psbt_signer);
     //TODO refuse to sign if my address has first level different from 0/1 and more than one level?
     let sign_result = psbt_signer.sign()?;
-    let mut psbt_print = psbt_signer.pretty_print(&vec![wallet])?;
+    let mut psbt_print = psbt_signer.pretty_print(&[wallet])?;
 
     if sign_result.added_paths {
         psbt_print.info.push("Added paths".to_string());
