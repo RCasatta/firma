@@ -50,7 +50,7 @@ impl CreateTxOptions {
     fn recipients_as_outputs(&self) -> HashMap<String, Amount> {
         let mut outputs = HashMap::new();
         for recipient in self.recipients.iter() {
-            outputs.insert(recipient.address.to_string(), recipient.amount.clone());
+            outputs.insert(recipient.address.to_string(), recipient.amount);
         }
         outputs
     }

@@ -77,7 +77,7 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
         fs::create_dir(&qr_dir)?;
     }
 
-    let mut qr_file = PathBuf::from(qr_dir);
+    let mut qr_file = qr_dir;
     qr_file.push("dummy");
     for (i, qr) in qrs.iter().enumerate() {
         if single {

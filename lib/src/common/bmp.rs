@@ -107,9 +107,9 @@ impl QrData {
         for i in 0..height {
             for j in 0..width {
                 let color = qr.get(i, j).unwrap();
-                match color {
-                    &Light => writer.write(0, 1)?,
-                    &Dark => writer.write(1, 1)?,
+                match *color {
+                    Light => writer.write(0, 1)?,
+                    Dark => writer.write(1, 1)?,
                 };
             }
             writer.write(0, 8 - (width % 8) as u8)?;

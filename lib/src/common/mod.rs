@@ -138,7 +138,7 @@ pub fn map_json_error(result: Result<serde_json::Value>) -> Result<serde_json::V
 }
 
 pub fn strip_witness(tx: &Transaction) -> Transaction {
-    let cloned_tx = Transaction {
+    Transaction {
         version: tx.version,
         lock_time: tx.lock_time,
         input: tx
@@ -150,8 +150,7 @@ pub fn strip_witness(tx: &Transaction) -> Transaction {
             })
             .collect(),
         output: tx.output.clone(),
-    };
-    cloned_tx
+    }
 }
 
 /// returns Ok if networks are both bitcoin or are both not bitcoin

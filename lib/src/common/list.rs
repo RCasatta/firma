@@ -48,7 +48,7 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                     match read_psbt_json(&path) {
                         Ok(psbt_json) => {
                             let (_, psbt) = psbt_from_base64(&psbt_json.psbt)?;
-                            let pretty = pretty_print(&psbt, network, &vec![])?;
+                            let pretty = pretty_print(&psbt, network, &[])?;
                             let qr_files = read_qrs(&path)?;
                             let psbt_out = PsbtJsonOutput {
                                 psbt: psbt_json,
@@ -90,7 +90,7 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
     Ok(list)
 }
 
-fn signatures_needed(inputs: &Vec<TxIn>) -> String {
+fn signatures_needed(inputs: &[TxIn]) -> String {
     // TODO reasoning on the first input, should reason as a total?
     let number = inputs.first().map(|i| i.signatures.len()).unwrap_or(0);
     match number {
