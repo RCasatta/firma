@@ -25,36 +25,33 @@ class KeyTest : Common() {
     @Test
     fun randomKey() {
         val activity = activityRule.launchActivity(Intent())
-        val randomKeyName = "key${System.currentTimeMillis()}"
+        val keyName = "key${System.currentTimeMillis()}"
 
         onView(withId(R.id.key_button)).perform(click())
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
-        onView(withText(randomKeyName)).check(matches(isDisplayed()))
+        setTextInDialogAndConfirm(activity, keyName)
+        onView(withText(keyName)).check(matches(isDisplayed()))
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
+        setTextInDialogAndConfirm(activity, keyName)
         checkAndDismissDialog(R.string.key_exists)
 
         onView(isRoot()).perform(pressBack())
-        clickElementInList(randomKeyName)
+        clickElementInList(keyName)
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialog(activity, randomKeyName)
-        onView(withText("DELETE")).perform(click())
+        setTextInDialogAndConfirm(activity, keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
-        checkElementNotInList(randomKeyName)
+        checkElementNotInList(keyName)
     }
 
     @Test
     fun xprv() {
         val activity = activityRule.launchActivity(Intent())
-        val randomKeyName = "key${System.currentTimeMillis()}"
+        val keyName = "key${System.currentTimeMillis()}"
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
             "testnet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
@@ -75,34 +72,29 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
-        setTextInDialog(activity, xprvs[network]!!)
-        clickDialogOK()
-        onView(withText(randomKeyName)).check(matches(isDisplayed()))
-        clickElementInList(randomKeyName)
+        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(activity, xprvs[network]!!)
+        onView(withText(keyName)).check(matches(isDisplayed()))
+        clickElementInList(keyName)
         onView(withText(xpubs[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialog(activity, randomKeyName)
-        onView(withText("DELETE")).perform(click())
+        setTextInDialogAndConfirm(activity, keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
-        checkElementNotInList(randomKeyName)
+        checkElementNotInList(keyName)
 
         val invalidNetwork = invalidNetwork(network)
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
-        setTextInDialog(activity, xprvs[invalidNetwork]!!)
-        clickDialogOK()
+        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(activity, xprvs[invalidNetwork]!!)
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
     }
 
     @Test
     fun mnemonic() {
         val activity = activityRule.launchActivity(Intent())
-        val randomKeyName = "key${System.currentTimeMillis()}"
+        val keyName = "key${System.currentTimeMillis()}"
 
         val expectedXpubTestnet =
             "tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6"
@@ -120,32 +112,27 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.import_mnemonic))
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
-        setTextInDialog(activity, "invalid")
-        clickDialogOK()
+        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(activity, "invalid")
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.import_mnemonic))
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
-        setTextInDialog(activity, mnemonic)
-        clickDialogOK()
-        onView(withText(randomKeyName)).check(matches(isDisplayed()))
-        clickElementInList(randomKeyName)
+        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(activity, mnemonic)
+        onView(withText(keyName)).check(matches(isDisplayed()))
+        clickElementInList(keyName)
         onView(withText(expectedXpub[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialog(activity, randomKeyName)
-        onView(withText("DELETE")).perform(click())
+        setTextInDialogAndConfirm(activity, keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
-        checkElementNotInList(randomKeyName)
+        checkElementNotInList(keyName)
     }
 
     @Test
     fun dice() {
         val activity = activityRule.launchActivity(Intent())
-        val randomKeyName = "key${System.currentTimeMillis()}"
+        val keyName = "key${System.currentTimeMillis()}"
         val expectedXpubTestnet =
             "tpubD6NzVbkrYhZ4YSC7guz8W7xZW1ftPPwsB9bAcEHrmdvmzyUSfhTDE8YV3M8WYegAmGorTpGvVGVKdXS5gWkCQ7GPZNUABkchvCyNpA51h5b"
         val expectedXpubMainnet =
@@ -160,14 +147,13 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(activity.getString(R.string.dice))
-        setTextInDialog(activity, randomKeyName)
-        clickDialogOK()
+        setTextInDialogAndConfirm(activity, keyName)
         clickElementInList("20")
         for (i in 1..59) {
             clickElementInList("2")
         }
-        onView(withText(randomKeyName)).check(matches(isDisplayed()))
-        clickElementInList(randomKeyName)
+        onView(withText(keyName)).check(matches(isDisplayed()))
+        clickElementInList(keyName)
 
         onView(withText(expectedXpub[network]!!)).check(matches(isDisplayed()))
     }

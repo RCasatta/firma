@@ -5,13 +5,15 @@ import android.view.View
 import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import androidx.test.espresso.Espresso
+import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.assertion.ViewAssertions
 import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.BoundedMatcher
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
+import androidx.test.espresso.matcher.ViewMatchers.withClassName
+import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.internal.util.Checks
 import androidx.test.platform.app.InstrumentationRegistry
 import org.hamcrest.Description
@@ -60,14 +62,14 @@ open class Common {
     }
 
     fun checkAndDismissDialog(id: Int) {
-        Espresso.onView(ViewMatchers.withText(id))
+        onView(withText(id))
             .inRoot(RootMatchers.isDialog())
             .check(ViewAssertions.matches(ViewMatchers.isDisplayed()))
             .perform(ViewActions.pressBack())
     }
 
     fun clickElementInList(subject: String) {
-        Espresso.onView(ViewMatchers.withId(R.id.items_list)).perform(
+        onView(ViewMatchers.withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
                 withItemSubject(subject),
                 ViewActions.click()
@@ -76,32 +78,30 @@ open class Common {
     }
 
     fun checkElementNotInList(subject: String) {
-        Espresso.onView(ViewMatchers.withId(R.id.items_list)).check(
+        onView(ViewMatchers.withId(R.id.items_list)).check(
             ViewAssertions.matches(
                 Matchers.not(
                     ViewMatchers.hasDescendant(
-                        ViewMatchers.withText(subject)
+                        withText(subject)
                     )
                 )
             )
         )
     }
 
-    fun clickDialogOK() {
-        Espresso.onView(ViewMatchers.withText("OK")).perform(ViewActions.click())
+    fun setTextInDialogAndConfirm(activity: Activity, value: String) {
+        setTextInDialogAndConfirm(activity, value, "OK")
+
     }
 
-    /**
-     * Set the text in the active dialog EditText with the given `value`.
-     * since we are not doing anything during onTextChange, setText is faster than typing
-     */
-    fun setTextInDialog(activity: Activity, value: String) {
-        Espresso.onView(ViewMatchers.withClassName(Matchers.containsString("EditText")))
+    fun setTextInDialogAndConfirm(activity: Activity, value: String, buttonText: String) {
+        onView(withClassName(Matchers.containsString("EditText")))
             .check { view, _ ->
                 activity.runOnUiThread {
                     (view as EditText).setText(value)
                 }
             }
+        onView(withText(buttonText)).perform(ViewActions.click())
     }
 
 }
