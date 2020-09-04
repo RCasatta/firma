@@ -52,7 +52,6 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
-      - run: cat /home/runner/work/firma/firma/.github/actions-rs/grcov.yml
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
@@ -68,11 +67,11 @@ jobs:
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
       - id: coverage
         uses: actions-rs/grcov@v0.1
-      - name: Coveralls upload
-        uses: coverallsapp/github-action@master
+      - name: Upload coverage html
+        uses: actions/upload-artifact@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.coverage.outputs.report }}
+          name: coverage
+          path: ${{ steps.coverage.outputs.report }}
 
   android-lib:
     runs-on: ubuntu-20.04
