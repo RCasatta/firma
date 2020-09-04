@@ -48,6 +48,32 @@ jobs:
       - name: clippy
         run: cargo clippy -- -D warnings
 
+  coverage:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v1
+      - run: cat /home/runner/work/firma/firma/.github/actions-rs/grcov.yml
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - run: echo "::set-env name=BITCOIN_EXE_DIR::${{ github.workspace }}/bitcoin-${{ env.BITCOIN_VER }}/bin"
+      - run: curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz bitcoin-$BITCOIN_VER/bin/bitcoind
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
+      - name: Coveralls upload
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ steps.coverage.outputs.report }}
+
   android-lib:
     runs-on: ubuntu-20.04
     strategy:
