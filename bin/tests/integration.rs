@@ -1,16 +1,14 @@
-use bitcoin::Txid;
-use bitcoin::{Address, Amount};
-use bitcoincore_rpc::{Auth, Client, RpcApi};
+use bitcoin::{Address, Amount, Txid};
+use bitcoincore_rpc::{Client, RpcApi};
 use firma::*;
 use rand::distributions::Alphanumeric;
-use rand::thread_rng;
-use rand::{self, Rng};
+use rand::{self, thread_rng, Rng};
 use serde_json::{from_value, to_string_pretty, Value};
-use std::net::TcpStream;
+use std::env;
 use std::process::Command;
-use std::time::Duration;
-use std::{env, thread};
 use tempdir::TempDir;
+
+mod bitcoind;
 
 fn rnd_string() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(20).collect()
@@ -20,52 +18,13 @@ fn rnd_string() -> String {
 fn integration_test() {
     let mut rng = rand::thread_rng();
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
-    let bitcoin_exe_dir = env::var("BITCOIN_EXE_DIR").expect("BITCOIN_EXE_DIR env var must be set");
-    let bitcoin_work_dir = TempDir::new("bitcoin_test").unwrap();
-    let cookie_file = bitcoin_work_dir.path().join("regtest").join(".cookie");
-    let cookie_file_str = format!("{}", cookie_file.display());
-    let rpc_port = 18242u16;
-    let socket = format!("127.0.0.1:{}", rpc_port);
-    let node_url = format!("http://{}", socket);
-    let node_url_default = format!("http://{}/wallet/default", socket);
 
-    let test = TcpStream::connect(&socket);
-    assert!(
-        test.is_err(),
-        "check the port is not open with a previous instance of bitcoind"
-    );
-
-    let mut bitcoind = Command::new(&format!("{}/bitcoind", bitcoin_exe_dir))
-        .arg(format!("-datadir={}", &bitcoin_work_dir.path().display()))
-        .arg(format!("-rpcport={}", rpc_port))
-        .arg("-daemon")
-        .arg("-regtest")
-        .arg("-listen=0")
-        .arg("-fallbackfee=0.0001")
-        .spawn()
-        .unwrap();
-
-    // wait bitcoind is ready, use default wallet
-    let client_default = loop {
-        thread::sleep(Duration::from_millis(500));
-        assert!(bitcoind.stderr.is_none());
-        let client_result = Client::new(node_url.clone(), Auth::CookieFile(cookie_file.clone()));
-        if let Ok(client_base) = client_result {
-            if let Ok(_) = client_base.get_blockchain_info() {
-                client_base.create_wallet("default", None).unwrap();
-                break Client::new(
-                    node_url_default.clone(),
-                    Auth::CookieFile(cookie_file.clone()),
-                )
-                .unwrap();
-            }
-        }
-    };
+    let mut bitcoind = bitcoind::BitcoinD::new();
 
     // fund the bitcoind default wallet
-    let address = client_default.get_new_address(None, None).unwrap();
-    client_default.generate_to_address(101, &address).unwrap();
-    let balance = client_default.get_balance(None, None).unwrap();
+    let address = bitcoind.client.get_new_address(None, None).unwrap();
+    bitcoind.client.generate_to_address(101, &address).unwrap();
+    let balance = bitcoind.client.get_balance(None, None).unwrap();
     assert!(balance.as_btc() > 49.9);
 
     // create firma 2of2 wallet
@@ -96,8 +55,9 @@ fn integration_test() {
             .unwrap()
             .to_string(),
     ];
+    let cookie_file_str = format!("{}", bitcoind.cookie_file.display());
     let created_2of2_wallet = firma_2of2
-        .online_create_wallet(&node_url, &cookie_file_str, 2, &xpubs)
+        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs)
         .unwrap();
     assert_eq!(&created_2of2_wallet.wallet.name, &name_2of2);
 
@@ -111,22 +71,29 @@ fn integration_test() {
     let xpubs_2of3: Vec<String> = vec.iter().map(|e| e.public_file_str().unwrap()).collect();
     let xprvs_2of3: Vec<String> = vec.iter().map(|e| e.private_file_str().unwrap()).collect();
     let created_2of3_wallet = firma_2of3
-        .online_create_wallet(&node_url, &cookie_file_str, 2, &xpubs_2of3)
+        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
         .unwrap();
     assert_eq!(&created_2of3_wallet.wallet.name, &name_2of3);
+
+    let created_2of3_wallet_err = firma_2of3
+        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
+        .unwrap_err();
+    assert!(created_2of3_wallet_err
+        .to_string()
+        .contains("already exist")); // error from bitcoin rpc
 
     // create address for firma 2of2
     let address_2of2 = firma_2of2.online_get_address().unwrap().address;
     let fund_2of2 = 100_000_000;
-    client_send_to_address(&client_default, &address_2of2, fund_2of2).unwrap();
+    client_send_to_address(&bitcoind.client, &address_2of2, fund_2of2).unwrap();
 
     // create address for firma 2of3
     let address_2of3 = firma_2of3.online_get_address().unwrap().address;
     let fund_2of3 = 100_000_000;
-    client_send_to_address(&client_default, &address_2of3, fund_2of3).unwrap();
+    client_send_to_address(&bitcoind.client, &address_2of3, fund_2of3).unwrap();
 
     // generate 1 block so funds are confirmed
-    client_default.generate_to_address(1, &address).unwrap();
+    bitcoind.client.generate_to_address(1, &address).unwrap();
 
     // check balances 2of2
     let balance_2of2 = firma_2of2.online_balance().unwrap();
@@ -172,7 +139,7 @@ fn integration_test() {
         ])
         .unwrap();
     assert!(sent_tx.broadcasted);
-    client_default.generate_to_address(1, &address).unwrap();
+    bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of2 = firma_2of2.online_balance().unwrap();
     let expected = fund_2of2 - sign_a.fee.absolute; // since sending to myself deduct just the fee
     assert_eq!(expected, balance_2of2.confirmed.satoshi);
@@ -194,6 +161,8 @@ fn integration_test() {
         .info
         .iter()
         .any(|msg| msg.contains("#Sending_to_a_different_script_type")));
+
+    //TODO create a tx from firma 2of2 sending all
 
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 1
     let value_sent = rng.gen_range(1_000, 1_000_000);
@@ -220,7 +189,7 @@ fn integration_test() {
         ])
         .unwrap();
     assert!(sent_tx.broadcasted);
-    client_default.generate_to_address(1, &address).unwrap();
+    bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3 = firma_2of3.online_balance().unwrap();
     let expected = fund_2of3 - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3.confirmed.satoshi);
@@ -246,7 +215,7 @@ fn integration_test() {
         ])
         .unwrap();
     assert!(sent_tx.broadcasted);
-    client_default.generate_to_address(1, &address).unwrap();
+    bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_2 = firma_2of3.online_balance().unwrap();
     let expected = balance_2of3.confirmed.satoshi - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3_2.confirmed.satoshi);
@@ -271,7 +240,7 @@ fn integration_test() {
         .online_send_tx(vec![&sign_b.psbt_file.to_str().unwrap()])
         .unwrap();
     assert!(sent_tx.broadcasted);
-    client_default.generate_to_address(1, &address).unwrap();
+    bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_3 = firma_2of3.online_balance().unwrap();
     let expected = balance_2of3_2.confirmed.satoshi - value_sent - sign_a.fee.absolute;
     assert_eq!(expected, balance_2of3_3.confirmed.satoshi);
@@ -293,7 +262,7 @@ fn integration_test() {
     assert!(result.is_ok());
 
     // stop bitcoind
-    client_default.stop().unwrap();
+    bitcoind.client.stop().unwrap();
     let ecode = bitcoind.wait().unwrap();
     assert!(ecode.success());
 }
@@ -367,7 +336,7 @@ impl FirmaCommand {
             args.push(xpub);
         }
         let result = self.online("create-wallet", args);
-        let value = unwrap_as_json(result);
+        let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)
     }
@@ -444,7 +413,7 @@ impl FirmaCommand {
 
     pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
         let result = self.offline("random", vec!["--key-name", key_name]);
-        let value = unwrap_as_json(result);
+        let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)
     }
@@ -478,7 +447,7 @@ impl FirmaCommand {
             "restore",
             vec!["--key-name", key_name, "--nature", nature, value],
         );
-        let value = unwrap_as_json(result);
+        let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)
     }

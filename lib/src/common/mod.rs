@@ -123,10 +123,6 @@ pub fn extract_pub_keys(script: &Script) -> Result<Vec<key::PublicKey>> {
     Ok(result)
 }
 
-pub fn unwrap_as_json(result: Result<serde_json::Value>) -> serde_json::Value {
-    result.unwrap_or_else(|e| e.to_json())
-}
-
 pub fn map_json_error(result: Result<serde_json::Value>) -> Result<serde_json::Value> {
     match result {
         Ok(value) => match value.get("error") {

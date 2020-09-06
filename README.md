@@ -68,7 +68,7 @@ Integration tests require an env var pointing to bitcoin core executable (`bitco
 For example:
 
 ```
-BITCOIN_EXE_DIR=./bitcoin-0.20.1/bin cargo test
+BITCOIND_EXE=./bitcoin-0.20.1/bin/bitcoind cargo test
 ```
 
 ## Example
