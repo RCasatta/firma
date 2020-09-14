@@ -6,7 +6,7 @@ use bitcoin::blockdata::script::Builder;
 use bitcoin::consensus::deserialize;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
-use bitcoin::util::bip143::SighashComponents;
+use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{Network, Script, SigHashType, Txid};
@@ -339,6 +339,7 @@ impl PSBTSigner {
         let tx = &self.psbt.global.unsigned_tx;
         let is_segwit = input.witness_utxo.is_some();
         let my_fing = self.xprv.fingerprint(&self.secp);
+        let mut sig_hash_cache = SigHashCache::new(tx);
 
         for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
             if fing != &my_fing {
@@ -367,11 +368,10 @@ impl PSBTSigner {
             }
             let (hash, sighash);
             if is_segwit {
-                let wutxo = input.clone().witness_utxo;
+                let wutxo = input.witness_utxo.as_ref();
                 let value = wutxo.ok_or_else(|| Error::MissingWitnessUtxo)?.value;
-                let cmp = SighashComponents::new(tx);
-                hash = cmp.sighash_all(&tx.input[input_index], script, value);
                 sighash = input.sighash_type.unwrap_or(SigHashType::All);
+                hash = sig_hash_cache.signature_hash(input_index, script, value, sighash);
             } else {
                 sighash = input.sighash_type.ok_or_else(|| Error::MissingSighash)?;
                 hash = tx.signature_hash(input_index, &script, sighash.as_u32());
