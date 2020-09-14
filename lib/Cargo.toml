@@ -7,8 +7,8 @@ edition = "2018"
 
 [dependencies]
 hex = "0.3.2"
-bitcoin = "0.23.0"
-bitcoincore-rpc = "0.10.0"
+bitcoin = "0.24.0"
+bitcoincore-rpc = { git = "https://github.com/RCasatta/rust-bitcoincore-rpc", rev = "4f6531d1e7e07f69457dc5249bdde1271b21349d" }
 base64 = "0.9.3"
 num-bigint = "0.2.6"
 #qrcode = "0.12.0" # https://github.com/kennytm/qrcode-rust/pull/44
@@ -19,7 +19,7 @@ serde = { version = "1.0.105", features = [ "derive" ] }
 serde_json = "1.0.48"
 dirs = "2.0.2"
 rand = "0.7.3"
-miniscript = { git = "https://github.com/apoelstra/rust-miniscript/", rev = "5427ceb852c393743a23b7fc22390bb12b6f8e45" }
+miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "07182636faa9b2ce530a3696f6b8141efdeb670e" }
 regex = "1"
 bmp-monochrome = "0.2.0"
 

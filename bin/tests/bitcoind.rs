@@ -39,7 +39,9 @@ impl BitcoinD {
             let client_result = Client::new(url.clone(), Auth::CookieFile(cookie_file.clone()));
             if let Ok(client_base) = client_result {
                 if let Ok(_) = client_base.get_blockchain_info() {
-                    client_base.create_wallet("default", None).unwrap();
+                    client_base
+                        .create_wallet("default", None, None, None, None)
+                        .unwrap();
                     break Client::new(
                         node_url_default.clone(),
                         Auth::CookieFile(cookie_file.clone()),

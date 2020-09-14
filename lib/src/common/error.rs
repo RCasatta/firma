@@ -57,6 +57,7 @@ pub enum Error {
     BitcoinPSBT(bitcoin::util::psbt::Error),
     BitcoinAddress(bitcoin::util::address::Error),
     BitcoinBech32(bitcoin::bech32::Error),
+    BitcoinScriptError(bitcoin::blockdata::script::Error),
     Serde(serde_json::error::Error),
     IO(std::io::Error),
     Base58(bitcoin::util::base58::Error),
@@ -92,6 +93,7 @@ impl_error!(bitcoin::secp256k1::Error, BitcoinSecp256k1);
 impl_error!(bitcoin::util::psbt::Error, BitcoinPSBT);
 impl_error!(bitcoin::util::address::Error, BitcoinAddress);
 impl_error!(bitcoin::bech32::Error, BitcoinBech32);
+impl_error!(bitcoin::blockdata::script::Error, BitcoinScriptError);
 impl_error!(serde_json::error::Error, Serde);
 impl_error!(std::io::Error, IO);
 impl_error!(base64::DecodeError, Base64);
@@ -161,6 +163,7 @@ impl fmt::Display for Error {
             Error::BitcoinPSBT(e) => write!(f, "{:?}", e),
             Error::BitcoinAddress(e) => write!(f, "{:?}", e),
             Error::BitcoinBech32(e) => write!(f, "{:?}", e),
+            Error::BitcoinScriptError(e) => write!(f, "{:?}", e),
             Error::PathStrip(e) => write!(f, "{:?}", e),
             Error::Qr(e) => write!(f, "{:?}", e),
             Error::Hex(e) => write!(f, "{:?}", e),

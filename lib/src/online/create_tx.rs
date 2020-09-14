@@ -135,7 +135,7 @@ impl Wallet {
         let mut address_reused = HashSet::new();
         for recipient in opt.recipients.iter() {
             for tx in transactions.iter() {
-                if tx.detail.address == recipient.address
+                if tx.detail.address.as_ref() == Some(&recipient.address)
                     && tx.detail.category == GetTransactionResultDetailCategory::Send
                 {
                     address_reused.insert(recipient.address.clone());
