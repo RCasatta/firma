@@ -112,8 +112,8 @@ fn read_pushnum(value: u8) -> Option<u8> {
 
 pub fn extract_pub_keys(script: &Script) -> Result<Vec<key::PublicKey>> {
     let mut result = vec![];
-    for instruct in script.iter(false) {
-        if let PushBytes(a) = instruct {
+    for instruct in script.instructions() {
+        if let PushBytes(a) = instruct? {
             if a.len() == 33 {
                 result.push(key::PublicKey::from_slice(&a)?);
             }

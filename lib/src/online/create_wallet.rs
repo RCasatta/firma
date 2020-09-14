@@ -3,7 +3,9 @@ use crate::online::{read_xpubs_files, Wallet};
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
-use bitcoincore_rpc::bitcoincore_rpc_json::{ImportMultiOptions, ImportMultiRequest};
+use bitcoincore_rpc::bitcoincore_rpc_json::{
+    ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince,
+};
 use bitcoincore_rpc::RpcApi;
 use log::debug;
 use log::info;
@@ -97,11 +99,11 @@ impl Wallet {
         let descriptor_change = self.client.get_descriptor_info(&descriptors[1])?.descriptor;
 
         self.client
-            .create_wallet(&self.context.wallet_name, Some(true))?;
+            .create_wallet(&self.context.wallet_name, Some(true), None, None, None)?;
 
         let mut multi_request: ImportMultiRequest = Default::default();
         multi_request.range = Some((0, 1000)); //TODO should be a parameter
-        multi_request.timestamp = 0; //TODO init to current timestamp
+        multi_request.timestamp = ImportMultiRescanSince::Now;
         multi_request.keypool = Some(true);
         multi_request.watchonly = Some(true);
         let mut main = multi_request.clone();
