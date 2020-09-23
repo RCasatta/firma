@@ -12,45 +12,57 @@ Get testnet version from google play https://play.google.com/store/apps/details?
 
 ## Building
 
-To build the android app you need the rust lib built with the android [ndk](https://developer.android.com/ndk).
+Check the steps made in the [CI workflow](https://github.com/RCasatta/firma/blob/master/.github/workflows/rust.yml) in the `android-lib` and `android-apk` jobs
 
-For the emulator, modify the `build-android.sh` file to fit your system. Then launch the build. Starting from the root of the repo:
+## Example
+### Alice & Bob Keys
 
-```
-cd lib
-./build-android.sh
-```
+The following 2 keys are from Alice and Bob, they will use their keys for the 2of2 wallet in the next section
 
-The script copy the file in the directory `android/app/src/main/jniLibs/x86/`
-
-At this point you should be able to launch the android app in the emulator, for using the app in the android phone you will need to launch also `build-android-release.sh`.
-
-## Example Transaction
-
-To import the following transaction (PSBT) copy the text, go to "select transaction" -> "+" -> "From Clipboard"
-
-```
-cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAABAwQBAAAAAQRHUiEClYO/Oa4KYJdHrRma3dY0+mEIVZ1sXNObTCGD8auW4H8hAtq2H/SaFNtqfQKwzR+7ePxLGDErW05U2uTbovv+9TbXUq4iBgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfxDZDGpPAAAAgAAAAIAAAACAIgYC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtcQ2QxqTwAAAIAAAACAAQAAgAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohwEDBAEAAAABBCIAIIwjUxc3Q7WV37Sge3K6jkLjeX2nTof+fZ10l+OyAokDAQVHUiEDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwhAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zUq4iBgI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8OcxDZDGpPAAAAgAAAAIADAACAIgYDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtwQ2QxqTwAAAIAAAACAAgAAgAAiAgOppMN/WZbTqiXbrGtXCvBlA5RJKUJGCzVHU+2e7KWHcRDZDGpPAAAAgAAAAIAEAACAACICAn9jmXV9Lv9VoTatAsaEsYOLZVbl8bazQoKpS2tQBRCWENkMak8AAACAAAAAgAUAAIAA
+```json
+{
+  "mnemonic": "quiz knock second dose baby funny need peanut cycle own sponsor walk major rose alter axis visa clip target age chair visit trouble today",
+  "xpub": "tpubD6NzVbkrYhZ4YhgpmoJrX8fAmFFNCdhEj68qECiPz98iNZ9e3Tm9v3XD3fzHZfBoLqeSm9oLtighoeijQ9jGAFm9raQ4JqHZ1N4BHyaBz6Y",
+  "xprv": "tprv8ZgxMBicQKsPfEf2t9eG7j14CDjS3JWL9nY3wgg6ZsLKY4tsR4wZjYuLsXWdyBPrMPo73JgeKmbd8pTkZZgQNWTdvCtDuauf52XGKL9zTDw",
+  "name": "alice",
+  "fingerprint": "a2ebe04e"
+}
 ```
 
-## Example Wallet
+```json
+{
+  "mnemonic": "proof senior abstract clock mercy penalty pet library ramp heavy high primary meadow fish own mother gym civil awesome item walnut outdoor woman tennis",
+  "xpub": "tpubD6NzVbkrYhZ4YMyEVaR3CzfVuwtaMKUaTVH3NXULYFjkfMTYwka4stDBzHhHkxd4MEMVgyyEV1WBCrpwde72w8LzjAE6oRLARBAiCD8cGQV",
+  "xprv": "tprv8ZgxMBicQKsPetwSbvkSob1PLvNeBzHftBgG61S37ywMpsCnKMkUhPbKp7FyZDsU2QvMqbF797DRqmwedPQnR5qqmUBkFVb7iNeKcEZv3ck",
+  "name": "bob",
+  "fingerprint": "1f5e43d8"
+}
+```
+
+### Alice & Bob Wallet
 
 To import the following wallet descriptor copy the json, go to "select wallet" -> "+" -> "From Clipboard"
 
 ```json
 {
-  "name": "first-android",
-  "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/0/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/0/*))#q0agyfvx",
-  "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/1/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/1/*))#r0dapdc4",
+  "name": "alice-and-bob",
+  "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4YhgpmoJrX8fAmFFNCdhEj68qECiPz98iNZ9e3Tm9v3XD3fzHZfBoLqeSm9oLtighoeijQ9jGAFm9raQ4JqHZ1N4BHyaBz6Y/0/*,tpubD6NzVbkrYhZ4YMyEVaR3CzfVuwtaMKUaTVH3NXULYFjkfMTYwka4stDBzHhHkxd4MEMVgyyEV1WBCrpwde72w8LzjAE6oRLARBAiCD8cGQV/0/*))#wss3kl0z",
+  "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4YhgpmoJrX8fAmFFNCdhEj68qECiPz98iNZ9e3Tm9v3XD3fzHZfBoLqeSm9oLtighoeijQ9jGAFm9raQ4JqHZ1N4BHyaBz6Y/1/*,tpubD6NzVbkrYhZ4YMyEVaR3CzfVuwtaMKUaTVH3NXULYFjkfMTYwka4stDBzHhHkxd4MEMVgyyEV1WBCrpwde72w8LzjAE6oRLARBAiCD8cGQV/1/*))#dsqynmm3",
   "fingerprints": [
-    "8f335370",
-    "6b9128bc"
+    "1f5e43d8",
+    "a2ebe04e"
   ],
   "required_sig": 2,
-  "daemon_opts": {
-    "url": "http://127.0.0.1:18332",
-    "cookie_file": "/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie"
-  },
-  "created_at_height": 1718227
+  "created_at_height": 1835680
 }
+```
+
+### Alice & Bob transaction to Carol
+
+To import the following transaction (PSBT) copy the text, go to "select transaction" -> "+" -> "From Clipboard"
+
+NOTE: take care not to copy trailing spaces
+
+```
+cHNidP8BAFMCAAAAASFSbAAqstjwTxbGtWir21+meBp5LMcUQsBSgZ5bDtD7AQAAAAD+////AV6rCAAAAAAAF6kU4wEfjwloN3dvCV9wNOekdO53E92HAAAAAAX8bmFtZQh0by1jYXJvbAABAKECAAAAAcyd+J9zW1wSNV/mozPMv8mcXFzwQrK1EKq/FvRPJS40AQAAACMiACC+U25ZjJg9CiGsPhlAqQ0GWtFhOWxqopXdDTrh2oBdEP3///8Cp0lVAAAAAAAXqRRUIuqRoByuLh5D6zdViHWG7aGi84cVrAgAAAAAACIAIDz80EGjAUinXjMddGAtfQ3fKqcjgWj9wY5Y+8c7NA1zoAIcAAEBKxWsCAAAAAAAIgAgPPzQQaMBSKdeMx10YC19Dd8qpyOBaP3Bjlj7xzs0DXMBBUdSIQNP26ruccaqcu2cxRFYsPON2gj4ALrAFQ5ApBVtM+z9SiECIwjICs3MMHNnGbXPgSQKezAcOC5HzejKyjATzR8qXiRSriIGAiMIyArNzDBzZxm1z4EkCnswHDguR83oysowE80fKl4kDB9eQ9gAAAAAAAAAACIGA0/bqu5xxqpy7ZzFEViw843aCPgAusAVDkCkFW0z7P1KDKLr4E4AAAAAAAAAAAAA
 ```
