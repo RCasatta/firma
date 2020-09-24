@@ -184,6 +184,7 @@ class Rust {
         node.put("psbt_file", psbt)
         node.put("total_derivations", 100)
         node.put("qr_version", 14)
+        node.put("allow_any_derivations", false)
         val req = JsonRpc("sign", datadir, Network.TYPE, node)
         val reqString = mapper.writeValueAsString(req)
         val json = callJson(reqString)
