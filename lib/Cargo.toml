@@ -21,6 +21,7 @@ dirs = "2.0.2"
 rand = "0.7.3"
 miniscript = { git = "https://github.com/apoelstra/rust-miniscript/", rev = "5427ceb852c393743a23b7fc22390bb12b6f8e45" }
 regex = "1"
+bmp-monochrome = "0.2.0"
 
 [dev-dependencies]
 tempdir = "0.3"
