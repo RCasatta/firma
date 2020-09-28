@@ -1,5 +1,5 @@
-use crate::common::bmp::QrData;
 use crate::*;
+use bmp_monochrome::DataMatrix;
 use log::info;
 use qrcode::bits::{Bits, ExtendedMode};
 use qrcode::types::Color::{Dark, Light};
@@ -85,8 +85,8 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
         } else {
             qr_file.set_file_name(&format!("qr-{}.bmp", i));
         }
-        let qr_data: QrData = qr.clone().into();
-        let image = qr_data.bmp()?;
+        let qr_data = to_matrix(qr);
+        let image = qr_data.bmp().unwrap(); // TODO remove
         info!("Saving qr in {:?}", &qr_file);
         let mut file = File::create(&qr_file)?;
         file.write_all(&image)?;
@@ -269,6 +269,19 @@ impl SplittedQr {
 
         Ok(bits)
     }
+}
+
+pub fn to_matrix(qr: &QrCode) -> DataMatrix {
+    let width = qr.width();
+    let data = qr
+        .to_colors()
+        .iter()
+        .map(|e| match e {
+            Light => false,
+            Dark => true,
+        })
+        .collect();
+    DataMatrix::new(data, width).unwrap()
 }
 
 const LEVEL: qrcode::types::EcLevel = EcLevel::L;
