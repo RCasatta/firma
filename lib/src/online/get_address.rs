@@ -15,12 +15,12 @@ impl Wallet {
     pub fn get_address(&self, cmd_index: Option<u32>, is_change: bool) -> Result<GetAddressOutput> {
         let (wallet, mut indexes) = self.context.load_wallet_and_index()?;
 
-        let (index, descriptor) = if is_change {
-            (indexes.change, wallet.descriptor_change)
+        let (int_or_ext, index, descriptor) = if is_change {
+            (1, indexes.change, wallet.descriptor_change)
         } else {
             match cmd_index {
-                Some(index) => (index, wallet.descriptor_main),
-                None => (indexes.main, wallet.descriptor_main),
+                Some(index) => (0, index, wallet.descriptor_main),
+                None => (0, indexes.main, wallet.descriptor_main),
             }
         };
         let address_type = if is_change { "change" } else { "external" };
@@ -42,7 +42,7 @@ impl Wallet {
 
         let opts = DeriveAddressOpts { descriptor, index };
         let derive_address =
-            crate::offline::descriptor::derive_address(self.context.network, &opts)?;
+            crate::offline::descriptor::derive_address(self.context.network, &opts, int_or_ext)?;
         assert_eq!(
             derive_address.address, address,
             "address generated from the node differs from the one generated from miniscript"

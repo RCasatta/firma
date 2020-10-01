@@ -19,7 +19,7 @@ serde = { version = "1.0.105", features = [ "derive" ] }
 serde_json = "1.0.48"
 dirs = "2.0.2"
 rand = "0.7.3"
-miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "07182636faa9b2ce530a3696f6b8141efdeb670e" }
+miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "eae1634417c4cdae74485c4d437020e50ce51067" }
 regex = "1"
 bmp-monochrome = "0.2.0"
 

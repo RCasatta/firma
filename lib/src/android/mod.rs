@@ -86,7 +86,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         }
         Some("derive_address") => {
             let opts: DeriveAddressOpts = serde_json::from_value(args.clone())?;
-            let result = crate::offline::descriptor::derive_address(network, &opts)?;
+            let result = crate::offline::descriptor::derive_address(network, &opts, 0)?;
             serde_json::to_value(result)?
         }
         Some("import_wallet") => {
