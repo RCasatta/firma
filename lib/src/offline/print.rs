@@ -215,7 +215,7 @@ fn wallet_with_path(
                             descriptor: descriptor.to_string(),
                             index: *index,
                         };
-                        if let Ok(derived) = derive_address(address.network, &opts) {
+                        if let Ok(derived) = derive_address(address.network, &opts, *index) {
                             if &derived.address == address {
                                 return Some((wallet.name.clone(), path.clone()));
                             }
