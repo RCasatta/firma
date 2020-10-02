@@ -21,7 +21,7 @@ dirs = "2.0.2"
 rand = "0.7.3"
 miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "eae1634417c4cdae74485c4d437020e50ce51067" }
 regex = "1"
-bmp-monochrome = "0.2.0"
+bmp-monochrome = "0.4.0"
 
 [dev-dependencies]
 tempdir = "0.3"

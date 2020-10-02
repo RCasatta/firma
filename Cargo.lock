@@ -162,9 +162,9 @@ dependencies = [
 
 [[package]]
 name = "bmp-monochrome"
-version = "0.2.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5706851b50c9c44616cc2928810844979af0e5662a9a6672f696b5272a7186cb"
+checksum = "5d21d733db86887d09289fcbd725a28678a461f7a77fd299127ccbb601871868"
 
 [[package]]
 name = "bytemuck"

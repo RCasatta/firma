@@ -72,6 +72,7 @@ pub enum Error {
     Regex(regex::Error),
     ParseInt(std::num::ParseIntError),
     Miniscript(miniscript::Error),
+    Bmp(bmp_monochrome::BmpError),
 }
 
 macro_rules! impl_error {
@@ -107,6 +108,7 @@ impl_error!(regex::Error, Regex);
 impl_error!(std::num::ParseIntError, ParseInt);
 impl_error!(miniscript::Error, Miniscript);
 impl_error!(crate::common::mnemonic::Error, Mnemonic);
+impl_error!(bmp_monochrome::BmpError, Bmp);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -174,6 +176,7 @@ impl fmt::Display for Error {
             Error::ParseInt(e) => write!(f, "{:?}", e),
             Error::Miniscript(e) => write!(f, "{:?}", e),
             Error::Mnemonic(e) => write!(f, "{:?}", e),
+            Error::Bmp(e) => write!(f, "{:?}", e),
         }
     }
 }
