@@ -162,15 +162,9 @@ dependencies = [
 
 [[package]]
 name = "bmp-monochrome"
-version = "0.4.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d21d733db86887d09289fcbd725a28678a461f7a77fd299127ccbb601871868"
-
-[[package]]
-name = "bytemuck"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41aa2ec95ca3b5c54cf73c91acf06d24f4495d5f1b1c12506ae3483d646177ac"
+checksum = "1172edcbf6a314250cbe1792724c506c46b827ae3ef3082d780f727b106175de"
 
 [[package]]
 name = "byteorder"
@@ -195,12 +189,6 @@ name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
-
-[[package]]
-name = "checked_int_cast"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17cc5e6b5ab06331c33589842070416baa137e8b0eb912b008cfd4a78ada7919"
 
 [[package]]
 name = "clap"
@@ -310,7 +298,6 @@ dependencies = [
  "base64 0.9.3",
  "bitcoin",
  "bitcoincore-rpc",
- "bmp-monochrome",
  "dirs",
  "flate2",
  "hex",
@@ -318,7 +305,7 @@ dependencies = [
  "log 0.4.11",
  "miniscript",
  "num-bigint",
- "qrcode",
+ "qr_code",
  "rand 0.7.3",
  "regex",
  "serde",
@@ -436,19 +423,6 @@ dependencies = [
  "matches",
  "unicode-bidi",
  "unicode-normalization",
-]
-
-[[package]]
-name = "image"
-version = "0.23.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "974e194911d1f7efe3cd8a8f9db3b767e43536327e899e8bc9a12ef5711b74d2"
-dependencies = [
- "bytemuck",
- "byteorder",
- "num-iter",
- "num-rational",
- "num-traits",
 ]
 
 [[package]]
@@ -586,28 +560,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-iter"
-version = "0.1.41"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a6e6b7c748f995c4c29c5f5ae0248536e04a5739927c74ec0fa564805094b9f"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-rational"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5b4d7360f362cfb50dde8143501e6940b22f644be75a4cc90b2d81968908138"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
 name = "num-traits"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -672,12 +624,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "qrcode"
-version = "0.12.0"
-source = "git+https://github.com/RCasatta/qrcode-rust/?rev=9dddab008b587de333ea33c9c8be3712207d4ca0#9dddab008b587de333ea33c9c8be3712207d4ca0"
+name = "qr_code"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c69d9b6020738b3da422dcb1398fcaacd2db4ae81f917e0f28fdfbc716925c91"
 dependencies = [
- "checked_int_cast",
- "image",
+ "bmp-monochrome",
 ]
 
 [[package]]

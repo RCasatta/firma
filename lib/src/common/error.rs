@@ -64,7 +64,7 @@ pub enum Error {
     Bip32(bitcoin::util::bip32::Error),
     Base64(base64::DecodeError),
     PathStrip(std::path::StripPrefixError),
-    Qr(qrcode::types::QrError),
+    Qr(qr_code::types::QrError),
     Hex(hex::FromHexError),
     Env(std::env::VarError),
     Utf8(std::str::Utf8Error),
@@ -72,7 +72,7 @@ pub enum Error {
     Regex(regex::Error),
     ParseInt(std::num::ParseIntError),
     Miniscript(miniscript::Error),
-    Bmp(bmp_monochrome::BmpError),
+    Bmp(qr_code::bmp_monochrome::BmpError),
 }
 
 macro_rules! impl_error {
@@ -99,7 +99,7 @@ impl_error!(serde_json::error::Error, Serde);
 impl_error!(std::io::Error, IO);
 impl_error!(base64::DecodeError, Base64);
 impl_error!(std::path::StripPrefixError, PathStrip);
-impl_error!(qrcode::types::QrError, Qr);
+impl_error!(qr_code::types::QrError, Qr);
 impl_error!(hex::FromHexError, Hex);
 impl_error!(std::env::VarError, Env);
 impl_error!(std::str::Utf8Error, Utf8);
@@ -108,7 +108,7 @@ impl_error!(regex::Error, Regex);
 impl_error!(std::num::ParseIntError, ParseInt);
 impl_error!(miniscript::Error, Miniscript);
 impl_error!(crate::common::mnemonic::Error, Mnemonic);
-impl_error!(bmp_monochrome::BmpError, Bmp);
+impl_error!(qr_code::bmp_monochrome::BmpError, Bmp);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

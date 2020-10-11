@@ -1,9 +1,7 @@
 use crate::*;
-use bmp_monochrome::Bmp;
 use log::info;
-use qrcode::bits::{Bits, ExtendedMode};
-use qrcode::types::Color::{Dark, Light};
-use qrcode::{bits, EcLevel, QrCode, Version};
+use qr_code::bits::{Bits, ExtendedMode};
+use qr_code::{bits, EcLevel, QrCode, Version};
 use std::convert::TryFrom;
 use std::fs;
 use std::fs::File;
@@ -12,37 +10,6 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum QrError {}
-
-pub fn print_qr(qr_code: &QrCode, inverted: bool) -> Result<String> {
-    let mut result = String::new();
-    let width = qr_code.width();
-    let mut qr_code = qr_code.clone().into_colors();
-    let height = qr_code.len() / width;
-    qr_code.extend(vec![Light; width]);
-
-    let inverted = if inverted { 0 } else { 4 };
-    let blocks = ["█", "▀", "▄", " ", " ", "▄", "▀", "█"];
-    result.push_str("\n\n\n\n");
-    for i in (0..height).step_by(2) {
-        result.push_str(&format!(
-            "{}{}{}",
-            blocks[inverted], blocks[inverted], blocks[inverted]
-        ));
-        for j in 0..width {
-            let start = i * width + j;
-            let val = match (qr_code[start], qr_code.get(start + width).unwrap_or(&Light)) {
-                (Light, Light) => 0,
-                (Light, Dark) => 1,
-                (Dark, Light) => 2,
-                (Dark, Dark) => 3,
-            };
-            result.push_str(&blocks[val + inverted].to_string());
-        }
-        result.push_str("\n");
-    }
-    result.push_str("\n\n\n\n");
-    Ok(result)
-}
 
 /// path contains up to the filename (use dummy value) that will be replaced by qr file name
 pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<PathBuf>> {
@@ -85,14 +52,14 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
         } else {
             qr_file.set_file_name(&format!("qr-{}.bmp", i));
         }
-        let qr_data = to_matrix(qr);
+        let qr_data = qr.to_bmp();
         info!("Saving qr in {:?}", &qr_file);
         qr_data.write(File::create(&qr_file)?)?;
 
         wallet_qr_files.push(qr_file.clone());
 
         for b in &[true, false] {
-            let qr_txt = print_qr(&qr, *b)?;
+            let qr_txt = qr.to_string(*b);
             text_qr[*b as usize].push_str(&qr_txt);
         }
     }
@@ -270,20 +237,7 @@ impl SplittedQr {
     }
 }
 
-pub fn to_matrix(qr: &QrCode) -> Bmp {
-    let width = qr.width();
-    let data = qr
-        .to_colors()
-        .iter()
-        .map(|e| match e {
-            Light => false,
-            Dark => true,
-        })
-        .collect();
-    Bmp::new(data, width).unwrap()
-}
-
-const LEVEL: qrcode::types::EcLevel = EcLevel::L;
+const LEVEL: qr_code::types::EcLevel = EcLevel::L;
 
 /// Max bytes encodable in a structured append qr code, given Qr code version as array index
 const MAX_BYTES: [usize; 33] = [
@@ -293,10 +247,10 @@ const MAX_BYTES: [usize; 33] = [
 
 #[cfg(test)]
 mod tests {
-    use crate::common::qr::{merge_qrs, print_qr, SplittedQr, StructuredQr, LEVEL};
+    use crate::common::qr::{merge_qrs, SplittedQr, StructuredQr, LEVEL};
     use crate::Error;
-    use qrcode::bits::{Bits, ExtendedMode};
-    use qrcode::{QrCode, Version};
+    use qr_code::bits::{Bits, ExtendedMode};
+    use qr_code::{QrCode, Version};
     use rand::Rng;
     use std::convert::TryInto;
 
@@ -429,7 +383,7 @@ mod tests {
     #[test]
     fn test_print_qr() {
         let qr = QrCode::new(b"01234567").unwrap();
-        let printed = print_qr(&qr, false).unwrap();
-        assert_eq!(hex::encode(printed.as_bytes()),"0a0a0a0a202020e29688e29680e29680e29680e29680e29680e296882020e29688e29684e29688e2968820e29688e29680e29680e29680e29680e29680e296880a202020e2968820e29688e29688e2968820e2968820e29688e2968420202020e2968820e29688e29688e2968820e296880a202020e2968820e29680e29680e2968020e2968820e2968820e29680e29680e2968820e2968820e29680e29680e2968020e296880a202020e29680e29680e29680e29680e29680e29680e2968020e2968820e29680e29684e2968820e29680e29680e29680e29680e29680e29680e296800a202020e2968020e29680e29688e29680e29688e29680e29684e29684e29680e2968420e2968820e29680e29688e29680e29688e2968820200a2020202020e2968020e2968420e29680e2968020e2968820e2968020e2968020e29684e29688e29688e29688e29680e296800a202020202020e29680e29680e29680e29680e29680e2968820e29684e29688e29684e29688e2968420e29680e29684e2968420200a202020e29688e29680e29680e29680e29680e29680e2968820e29684e29680e29688e29684e29688e29684e29688e296802020e2968420e296840a202020e2968820e29688e29688e2968820e2968820e29688e296842020e296882020e2968820e29680e2968020200a202020e2968820e29680e29680e2968020e2968820e2968020e29680e2968020e2968020e29684e2968820e29688e29684200a202020e29680e29680e29680e29680e29680e29680e2968020e29680e29680e29680e2968020e296802020e2968020e2968020200a0a0a0a0a");
+        let printed = qr.to_string(false);
+        assert_eq!(hex::encode(printed.as_bytes()),"0a0a202020e29688e29680e29680e29680e29680e29680e296882020e29688e29684e29688e2968820e29688e29680e29680e29680e29680e29680e296880a202020e2968820e29688e29688e2968820e2968820e29688e2968420202020e2968820e29688e29688e2968820e296880a202020e2968820e29680e29680e2968020e2968820e2968820e29680e29680e2968820e2968820e29680e29680e2968020e296880a202020e29680e29680e29680e29680e29680e29680e2968020e2968820e29680e29684e2968820e29680e29680e29680e29680e29680e29680e296800a202020e2968020e29680e29688e29680e29688e29680e29684e29684e29680e2968420e2968820e29680e29688e29680e29688e2968820200a2020202020e2968020e2968420e29680e2968020e2968820e2968020e2968020e29684e29688e29688e29688e29680e296800a202020202020e29680e29680e29680e29680e29680e2968820e29684e29688e29684e29688e2968420e29680e29684e2968420200a202020e29688e29680e29680e29680e29680e29680e2968820e29684e29680e29688e29684e29688e29684e29688e296802020e2968420e296840a202020e2968820e29688e29688e2968820e2968820e29688e296842020e296882020e2968820e29680e2968020200a202020e2968820e29680e29680e2968020e2968820e2968020e29680e2968020e2968020e29684e2968820e29688e29684200a202020e29680e29680e29680e29680e29680e29680e2968020e29680e29680e29680e2968020e296802020e2968020e2968020200a0a");
     }
 }
