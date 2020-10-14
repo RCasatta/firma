@@ -1,13 +1,13 @@
 [package]
 name = "firma"
-version = "0.12.0"
+version = "0.13.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
 
 [dependencies]
 hex = "0.3.2"
-bitcoin = "0.24.0"
-bitcoincore-rpc = { git = "https://github.com/RCasatta/rust-bitcoincore-rpc", rev = "4f6531d1e7e07f69457dc5249bdde1271b21349d" }
+bitcoin = { version = "0.25.0", features = [ "use-serde" ] }
+bitcoincore-rpc = "0.12.0"
 base64 = "0.9.3"
 num-bigint = "0.2.6"
 qr_code = { version= "0.5.0", features = ["bmp"] }
@@ -17,13 +17,14 @@ serde = { version = "1.0.105", features = [ "derive" ] }
 serde_json = "1.0.48"
 dirs = "2.0.2"
 rand = "0.7.3"
-miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "eae1634417c4cdae74485c4d437020e50ce51067" }
+miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript/", rev = "a661e7002e751524829fc6a5e5e1cb9ecbd059e4" }
 regex = "1"
 
 [dev-dependencies]
 tempdir = "0.3"
 flate2 = "1.0"
 serde_cbor = "0.11.1"
+remove_dir_all = "=0.5.2" # pinning to 0.5.2 otherwise MSRV 1.38.0 not supported
 
 [target.'cfg(target_os="android")'.dependencies]
 jni = { version = "0.16", default-features = false }
