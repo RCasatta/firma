@@ -3,6 +3,12 @@ name = "firma"
 version = "0.13.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
+license = "MIT"
+homepage = "https://github.com/RCasatta/firma"
+repository = "https://github.com/RCasatta/firma"
+documentation = "https://docs.rs/firma/"
+description = "Firma is a library to create bitcoin multisig wallets with private keys stored on offline devices."
+keywords = ["sign", "bitcoin", "cold", "offline"]
 
 [dependencies]
 hex = "0.3.2"
