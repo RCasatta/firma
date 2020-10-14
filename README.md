@@ -4,7 +4,7 @@
 
 Firma is a tool to create bitcoin multisig wallets with private keys stored on offline devices.
 
-The offline device could be a [CLI](bin) terminal or a spare [android](android) phone.
+The offline device could be a [CLI](cli) terminal or a spare [android](android) phone.
 
 Information is transferred between devices through QR codes. Since PSBT could become large some kB, more than 1 QR code could be needed, those QRs are chained with QR [structured append](https://segno.readthedocs.io/en/stable/structured-append.html) 
 
@@ -73,7 +73,7 @@ BITCOIND_EXE=./bitcoin-0.20.1/bin/bitcoind cargo test
 
 ## Example
 
-Check the bin [readme](bin/README.md) for an example with CLI 
+Check the bin [readme](cli/README.md) for an example with CLI 
 
 ## Faq
 

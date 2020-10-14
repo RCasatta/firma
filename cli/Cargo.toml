@@ -1,6 +1,6 @@
 [package]
-name = "firma-bin"
-version = "0.12.0"
+name = "firma-cli"
+version = "0.13.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
 
