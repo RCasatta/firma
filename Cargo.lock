@@ -316,6 +316,30 @@ dependencies = [
 [[package]]
 name = "firma"
 version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4e759e13c09f62f45aa4ea496b750373e23c249aeedbc72e97f416f8c2a98a2"
+dependencies = [
+ "android_logger",
+ "base64 0.9.3",
+ "bitcoin",
+ "bitcoincore-rpc",
+ "dirs 2.0.2",
+ "hex 0.3.2",
+ "jni",
+ "log 0.4.11",
+ "miniscript",
+ "num-bigint 0.2.6",
+ "qr_code 0.5.0",
+ "rand 0.7.3",
+ "regex",
+ "serde",
+ "serde_json",
+ "structopt",
+]
+
+[[package]]
+name = "firma"
+version = "0.14.0"
 dependencies = [
  "android_logger",
  "base64 0.13.0",
@@ -339,36 +363,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "firma"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4e759e13c09f62f45aa4ea496b750373e23c249aeedbc72e97f416f8c2a98a2"
-dependencies = [
- "android_logger",
- "base64 0.9.3",
- "bitcoin",
- "bitcoincore-rpc",
- "dirs 2.0.2",
- "hex 0.3.2",
- "jni",
- "log 0.4.11",
- "miniscript",
- "num-bigint 0.2.6",
- "qr_code 0.5.0",
- "rand 0.7.3",
- "regex",
- "serde",
- "serde_json",
- "structopt",
-]
-
-[[package]]
 name = "firma-cli"
 version = "0.13.0"
 dependencies = [
  "bitcoin",
  "bitcoincore-rpc",
- "firma 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "firma 0.13.0",
  "log 0.4.11",
  "rand 0.7.3",
  "remove_dir_all",
