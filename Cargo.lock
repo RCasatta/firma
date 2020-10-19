@@ -170,12 +170,6 @@ dependencies = [
 
 [[package]]
 name = "bmp-monochrome"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1172edcbf6a314250cbe1792724c506c46b827ae3ef3082d780f727b106175de"
-
-[[package]]
-name = "bmp-monochrome"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a932481121ee786bad077d9407b62122a31605ab193ad961afdad9d6d9a803f6"
@@ -260,16 +254,6 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
-dependencies = [
- "cfg-if",
- "dirs-sys",
-]
-
-[[package]]
-name = "dirs"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "142995ed02755914747cc6ca76fc7e4583cd18578746716d0508ea6ed558b9ff"
@@ -315,44 +299,20 @@ dependencies = [
 
 [[package]]
 name = "firma"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4e759e13c09f62f45aa4ea496b750373e23c249aeedbc72e97f416f8c2a98a2"
-dependencies = [
- "android_logger",
- "base64 0.9.3",
- "bitcoin",
- "bitcoincore-rpc",
- "dirs 2.0.2",
- "hex 0.3.2",
- "jni",
- "log 0.4.11",
- "miniscript",
- "num-bigint 0.2.6",
- "qr_code 0.5.0",
- "rand 0.7.3",
- "regex",
- "serde",
- "serde_json",
- "structopt",
-]
-
-[[package]]
-name = "firma"
 version = "0.14.0"
 dependencies = [
  "android_logger",
  "base64 0.13.0",
  "bitcoin",
  "bitcoincore-rpc",
- "dirs 3.0.1",
+ "dirs",
  "flate2",
  "hex 0.4.2",
  "jni",
  "log 0.4.11",
  "miniscript",
- "num-bigint 0.3.0",
- "qr_code 0.17.0",
+ "num-bigint",
+ "qr_code",
  "rand 0.7.3",
  "remove_dir_all",
  "serde",
@@ -363,12 +323,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "firma"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87254deccd98c4516f53458f54de9793ad8e0a4e1953dd074ecebfdb4a4c540f"
+dependencies = [
+ "android_logger",
+ "base64 0.13.0",
+ "bitcoin",
+ "bitcoincore-rpc",
+ "dirs",
+ "hex 0.4.2",
+ "jni",
+ "log 0.4.11",
+ "miniscript",
+ "num-bigint",
+ "qr_code",
+ "rand 0.7.3",
+ "serde",
+ "serde_json",
+ "structopt",
+]
+
+[[package]]
 name = "firma-cli"
 version = "0.13.0"
 dependencies = [
  "bitcoin",
  "bitcoincore-rpc",
- "firma 0.13.0",
+ "firma 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.11",
  "rand 0.7.3",
  "remove_dir_all",
@@ -595,17 +578,6 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.2.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090c7f9998ee0ff65aa5b723e4009f7b217707f1fb5ea551329cc4d6231fb304"
-dependencies = [
- "autocfg",
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-bigint"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7f3fc75e3697059fb1bc465e3d8cca6cf92f56854f201158b3f9c77d5a3cfa0"
@@ -691,20 +663,11 @@ dependencies = [
 
 [[package]]
 name = "qr_code"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c69d9b6020738b3da422dcb1398fcaacd2db4ae81f917e0f28fdfbc716925c91"
-dependencies = [
- "bmp-monochrome 0.9.0",
-]
-
-[[package]]
-name = "qr_code"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3618935f76644239ddbccbd691a2a67a3e720762153f78334843911e9262c864"
 dependencies = [
- "bmp-monochrome 0.13.0",
+ "bmp-monochrome",
 ]
 
 [[package]]

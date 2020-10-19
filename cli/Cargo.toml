@@ -11,7 +11,7 @@ description = "firma-cli is a command line interface tool to create bitcoin mult
 keywords = ["sign", "bitcoin", "cold", "offline", "cli"]
 
 [dependencies]
-firma = "0.13.0"
+firma = "0.14.0"
 bitcoincore-rpc = "0.12.0"
 bitcoin = { version = "0.25.0", features = [ "use-serde" ] }
 serde = { version = "1.0.105", features = [ "derive" ] }
