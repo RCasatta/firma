@@ -11,20 +11,19 @@ description = "Firma is a library to create bitcoin multisig wallets with privat
 keywords = ["sign", "bitcoin", "cold", "offline"]
 
 [dependencies]
-hex = "0.3.2"
+hex = "0.4.2"
 bitcoin = { version = "0.25.0", features = [ "use-serde" ] }
 bitcoincore-rpc = "0.12.0"
-base64 = "0.9.3"
-num-bigint = "0.2.6"
-qr_code = { version= "0.5.0", features = ["bmp"] }
-structopt = "0.3.12"
-log = "0.4.8"
-serde = { version = "1.0.105", features = [ "derive" ] }
-serde_json = "1.0.48"
-dirs = "2.0.2"
+base64 = "0.13.0"
+num-bigint = "0.3.0"
+qr_code = { version= "0.17.0", features = ["bmp"] }
+structopt = "0.3.20"
+log = "0.4.11"
+serde = { version = "1.0.117", features = [ "derive" ] }
+serde_json = "1.0.59"
+dirs = "3.0.1"
 rand = "0.7.3"
 miniscript = "3.0.0"
-regex = "1"
 
 [dev-dependencies]
 tempdir = "0.3"

@@ -94,6 +94,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
+name = "base64"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
+
+[[package]]
 name = "bech32"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -113,9 +119,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hashes"
-version = "0.9.0"
+version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ed2ce8078898876263683749be6f50af005cc77f93be1422f1c56fecf0b34d7"
+checksum = "56e41bd3c3dd8fccc78b7cf172fc047016590227bffc492ca6cdc2a0854a8603"
 dependencies = [
  "serde",
 ]
@@ -140,7 +146,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76d488ec31e9cb6726c361be5160f7d2aaace89a0681acf1f476b8fada770b6e"
 dependencies = [
  "bitcoin",
- "hex",
+ "hex 0.3.2",
  "serde",
  "serde_json",
 ]
@@ -167,6 +173,12 @@ name = "bmp-monochrome"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1172edcbf6a314250cbe1792724c506c46b827ae3ef3082d780f727b106175de"
+
+[[package]]
+name = "bmp-monochrome"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a932481121ee786bad077d9407b62122a31605ab193ad961afdad9d6d9a803f6"
 
 [[package]]
 name = "byteorder"
@@ -257,6 +269,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "3.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "142995ed02755914747cc6ca76fc7e4583cd18578746716d0508ea6ed558b9ff"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs-sys"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -297,19 +318,18 @@ name = "firma"
 version = "0.13.0"
 dependencies = [
  "android_logger",
- "base64 0.9.3",
+ "base64 0.13.0",
  "bitcoin",
  "bitcoincore-rpc",
- "dirs",
+ "dirs 3.0.1",
  "flate2",
- "hex",
+ "hex 0.4.2",
  "jni",
  "log 0.4.11",
  "miniscript",
- "num-bigint",
- "qr_code",
+ "num-bigint 0.3.0",
+ "qr_code 0.17.0",
  "rand 0.7.3",
- "regex",
  "remove_dir_all",
  "serde",
  "serde_cbor",
@@ -328,13 +348,13 @@ dependencies = [
  "base64 0.9.3",
  "bitcoin",
  "bitcoincore-rpc",
- "dirs",
- "hex",
+ "dirs 2.0.2",
+ "hex 0.3.2",
  "jni",
  "log 0.4.11",
  "miniscript",
- "num-bigint",
- "qr_code",
+ "num-bigint 0.2.6",
+ "qr_code 0.5.0",
  "rand 0.7.3",
  "regex",
  "serde",
@@ -416,6 +436,12 @@ name = "hex"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "805026a5d0141ffc30abb3be3173848ad46a1b1664fe632428479619a3644d77"
+
+[[package]]
+name = "hex"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 
 [[package]]
 name = "httparse"
@@ -579,6 +605,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7f3fc75e3697059fb1bc465e3d8cca6cf92f56854f201158b3f9c77d5a3cfa0"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-integer"
 version = "0.1.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -658,7 +695,16 @@ version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c69d9b6020738b3da422dcb1398fcaacd2db4ae81f917e0f28fdfbc716925c91"
 dependencies = [
- "bmp-monochrome",
+ "bmp-monochrome 0.9.0",
+]
+
+[[package]]
+name = "qr_code"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3618935f76644239ddbccbd691a2a67a3e720762153f78334843911e9262c864"
+dependencies = [
+ "bmp-monochrome 0.13.0",
 ]
 
 [[package]]
@@ -846,9 +892,9 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.116"
+version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96fe57af81d28386a513cbc6858332abc6117cfdb5999647c6444b8f43a370a5"
+checksum = "b88fa983de7720629c9387e9f517353ed404164b1e482c970a90c1a4aaf7dc1a"
 dependencies = [
  "serde_derive",
 ]
@@ -865,9 +911,9 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.116"
+version = "1.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f630a6370fd8e457873b4bd2ffdae75408bc291ba72be773772a4c2a065d9ae8"
+checksum = "cbd1ae72adb44aab48f325a02444a5fc079349a8d804c1fc922aed3f7454c74e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -917,9 +963,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.44"
+version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e03e57e4fcbfe7749842d53e24ccb9aa12b7252dbe5e91d2acad31834c8b8fdd"
+checksum = "ea9c5432ff16d6152371f808fb5a871cd67368171b09bb21b43df8e4a47a3556"
 dependencies = [
  "proc-macro2",
  "quote",
