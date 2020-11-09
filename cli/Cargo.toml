@@ -28,6 +28,6 @@ name = "firma-offline"
 path = "src/offline/main.rs"
 
 [dev-dependencies]
-tempdir = "0.3"
+tempfile = "3.1.0"
 rand = "0.7.3"
 remove_dir_all = "=0.5.2" # pinning to 0.5.2 otherwise MSRV 1.38.0 not supported

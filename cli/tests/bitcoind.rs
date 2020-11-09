@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus};
 use std::time::Duration;
 use std::{env, thread};
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 pub struct BitcoinD {
     process: Child,
@@ -17,7 +17,7 @@ pub struct BitcoinD {
 impl BitcoinD {
     pub fn new() -> BitcoinD {
         let exe = env::var("BITCOIND_EXE").expect("BITCOIND_EXE env var must be set");
-        let _work_dir = TempDir::new("bitcoin_test_firma").unwrap();
+        let _work_dir = TempDir::new().unwrap();
         let cookie_file = _work_dir.path().join("regtest").join(".cookie");
         let rpc_port = 18242u16;
         let url = format!("http://127.0.0.1:{}", rpc_port);

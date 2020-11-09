@@ -6,7 +6,7 @@ use rand::{self, thread_rng, Rng};
 use serde_json::{from_value, to_string_pretty, Value};
 use std::env;
 use std::process::Command;
-use tempdir::TempDir;
+use tempfile::TempDir;
 
 mod bitcoind;
 
@@ -275,7 +275,7 @@ struct FirmaCommand {
 
 impl FirmaCommand {
     pub fn new(exe_dir: &str, wallet_name: &str) -> Result<Self> {
-        let work_dir = TempDir::new(wallet_name).unwrap();
+        let work_dir = TempDir::new().unwrap();
         Ok(FirmaCommand {
             exe_dir: exe_dir.to_string(),
             wallet_name: wallet_name.to_string(),
