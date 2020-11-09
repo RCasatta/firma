@@ -58,11 +58,11 @@ mod tests {
     use crate::offline::derive_key::DeriveKeyOptions;
     use crate::offline::random::RandomOptions;
     use bitcoin::Network;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_derive_key() -> crate::Result<()> {
-        let temp_dir = TempDir::new("test_derive_key").unwrap();
+        let temp_dir = TempDir::new().unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
 
         let key_name = "random".to_string();
@@ -82,7 +82,7 @@ mod tests {
 
         assert_ne!(key.key, derived.key);
 
-        let temp_dir_2 = TempDir::new("test_derive_key_2").unwrap();
+        let temp_dir_2 = TempDir::new().unwrap();
         let temp_dir_str_2 = format!("{}/", temp_dir_2.path().display());
         let derived_2 =
             crate::offline::derive_key::start(&temp_dir_str_2, Network::Testnet, &der_opts)

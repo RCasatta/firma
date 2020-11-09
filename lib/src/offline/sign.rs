@@ -450,14 +450,14 @@ mod tests {
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
     use std::io::Write;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     fn test_sign(
         psbt_to_sign: &mut PSBT,
         psbt_signed: &PSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let temp_dir = TempDir::new("test_sign").unwrap().into_path();
+        let temp_dir = TempDir::new().unwrap().into_path();
         let mut psbt_signer =
             PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir, true)?;
         psbt_signer.sign()?;

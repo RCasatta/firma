@@ -119,11 +119,11 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::Kind;
     use bitcoin::Network;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_list() {
-        let temp_dir = TempDir::new("test_list").unwrap();
+        let temp_dir = TempDir::new().unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
 
         let key_name = "list".to_string();

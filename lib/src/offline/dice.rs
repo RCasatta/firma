@@ -181,11 +181,11 @@ mod tests {
     use crate::PrivateMasterKey;
     use bitcoin::Network;
     use num_bigint::BigUint;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_roll() {
-        let temp_dir = TempDir::new("test_derive_key").unwrap();
+        let temp_dir = TempDir::new().unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
         let launches = vec![2u32; 29];
         let mut opt = DiceOptions {

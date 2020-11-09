@@ -41,11 +41,11 @@ pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Resul
 mod tests {
     use crate::offline::random::{self, RandomOptions};
     use bitcoin::Network;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_random() {
-        let temp_dir = TempDir::new("test_random").unwrap();
+        let temp_dir = TempDir::new().unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
 
         let key_name = "random".to_string();

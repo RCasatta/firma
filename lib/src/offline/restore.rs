@@ -73,11 +73,11 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
     use bitcoin::Network;
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn test_restore() {
-        let temp_dir = TempDir::new("test_restore").unwrap();
+        let temp_dir = TempDir::new().unwrap();
         let temp_dir_str = format!("{}/", temp_dir.path().display());
         let key_name_random = "test_restore_random".to_string();
         let rand_opts = RandomOptions::new(key_name_random);
