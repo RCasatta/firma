@@ -1,0 +1,68 @@
+name: Test, lint and coverage
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+  BITCOIN_VER: 0.20.1
+
+jobs:
+
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        rust: [stable, nightly, 1.38.0]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - run: echo "BITCOIND_EXE=${{ github.workspace }}/bitcoin-${{ env.BITCOIN_VER }}/bin/bitcoind" >> $GITHUB_ENV
+      - run: curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz bitcoin-$BITCOIN_VER/bin/bitcoind
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args:  --verbose --all
+
+  cosmetics:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt, clippy
+      - name: fmt
+        run: cargo fmt -- --check
+      - name: clippy
+        run: cargo clippy -- -D warnings
+
+  coverage:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - run: echo "BITCOIND_EXE=${{ github.workspace }}/bitcoin-${{ env.BITCOIN_VER }}/bin/bitcoind" >> $GITHUB_ENV
+      - run: curl https://bitcoincore.org/bin/bitcoin-core-$BITCOIN_VER/bitcoin-$BITCOIN_VER-x86_64-linux-gnu.tar.gz | tar -xvz bitcoin-$BITCOIN_VER/bin/bitcoind
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - id: coverage
+        uses: actions-rs/grcov@v0.1
+      - name: Upload coverage html
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: ${{ steps.coverage.outputs.report }}
