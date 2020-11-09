@@ -21,7 +21,7 @@ structopt = "0.3.20"
 log = "0.4.11"
 serde = { version = "1.0.117", features = [ "derive" ] }
 serde_json = "1.0.59"
-dirs = "3.0.1"
+dirs-next = "2.0.0"
 rand = "0.7.3"
 miniscript = "3.0.0"
 

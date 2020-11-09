@@ -109,7 +109,7 @@ fn path_for(dirs: Vec<&str>) -> Result<PathBuf> {
 pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
-        let mut home_dir = dirs::home_dir().ok_or_else(|| Error::CannotRetrieveHomeDir)?;
+        let mut home_dir = dirs_next::home_dir().ok_or_else(|| Error::CannotRetrieveHomeDir)?;
         if p == Path::new("~") {
             Ok(home_dir)
         } else if home_dir == Path::new("/").to_path_buf() {
