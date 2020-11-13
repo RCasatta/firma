@@ -37,19 +37,6 @@ pub enum Error {
     IncompatibleNetworks,
     Mnemonic(crate::common::mnemonic::Error),
 
-    // Internal Qr
-    QrAtLeast2Pieces,
-    QrTotalMismatch(usize),
-    QrMissingParts,
-    QrParity,
-    QrTooShort,
-    QrStructuredWrongMode,
-    QrStructuredWrongEnc,
-    QrSeqGreaterThanTotal(u8, u8),
-    QrLengthMismatch(usize, usize),
-    QrUnsupportedVersion(i16),
-    QrSplitMax16(usize),
-
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
     BitcoinEncode(bitcoin::consensus::encode::Error),
@@ -139,18 +126,6 @@ impl fmt::Display for Error {
             Error::MissingRescanUpTo => write!(f, "Missing RescanUpTo"),
             Error::MissingHex => write!(f, "Missing hex"),
             Error::IncompatibleNetworks => write!(f, "Incompatible networks"),
-
-            Error::QrAtLeast2Pieces => write!(f, "Need at least 2 different pieces to merge structured QR"),
-            Error::QrTotalMismatch(i) => write!(f, "Total pieces in input {} does not match the encoded total, or different encoded totals", i ),
-            Error::QrMissingParts => write!(f, "Not all the part are present"),
-            Error::QrParity => write!(f, "Invalid parities while merging"),
-            Error::QrTooShort => write!(f, "QR data shorter than 5 bytes"),
-            Error::QrStructuredWrongMode => write!(f, "Structured append QR must have mode 3"),
-            Error::QrStructuredWrongEnc => write!(f, "Structured append QR must have encoding 4"),
-            Error::QrSeqGreaterThanTotal(s, t) => write!(f,  "QR sequence {} greater than total {}",s, t ),
-            Error::QrLengthMismatch(calc, exp) => write!(f,  "calculated end {} greater than effective length {}", calc, exp ),
-            Error::QrUnsupportedVersion(ver) => write!(f,  "Unsupported version {}", ver),
-            Error::QrSplitMax16(req) => write!(f,  "Could split into max 16 qr, requested {}", req),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),
