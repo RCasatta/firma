@@ -82,7 +82,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         }
         Some("save_psbt") => {
             let opts: SavePSBTOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::sign::save_psbt_opt(datadir, network, &opts)?;
+            let result = crate::offline::sign::save_psbt_options(datadir, network, &opts)?;
             serde_json::to_value(result)?
         }
         Some("derive_address") => {

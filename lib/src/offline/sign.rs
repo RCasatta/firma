@@ -70,8 +70,8 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-pub fn save_psbt_opt(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
-    info!("save_psbt_opt {:?}", opt);
+pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
+    info!("save_psbt_options {:?}", opt);
     let bytes = opt.psbt.as_bytes()?;
     let mut psbt: PSBT = deserialize(&bytes)?;
     let mut psbts_dir: PathBuf = datadir.into();
