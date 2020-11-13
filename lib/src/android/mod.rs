@@ -8,6 +8,7 @@ use crate::offline::sign::SignOptions;
 use crate::*;
 use android_logger::Config;
 use bitcoin::Network;
+use common::error::ToJson;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
 use jni::JNIEnv;
@@ -59,7 +60,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
             for string in string_values {
                 values.push(hex::decode(&string)?);
             }
-            match crate::common::qr::merge_qrs(values) {
+            match qr_code::structured::merge_qrs(values) {
                 Ok(merged) => hex::encode(merged).into(),
                 Err(e) => e.to_json(),
             }
