@@ -1,5 +1,6 @@
 use crate::ErrorJson;
 use bitcoin::hashes::core::fmt::Formatter;
+use qr_code::types::QrError;
 use serde_json::Value;
 use std::fmt;
 use std::path::PathBuf;
@@ -194,8 +195,21 @@ impl From<&str> for Error {
     }
 }
 
-impl Error {
-    pub fn to_json(&self) -> Value {
+pub trait ToJson {
+    fn to_json(&self) -> Value;
+}
+
+impl ToJson for Error {
+    fn to_json(&self) -> Value {
+        let value = ErrorJson {
+            error: self.to_string(),
+        };
+        serde_json::to_value(&value).unwrap() // safe to unwrap, ErrorJson does not contain map with non string keys
+    }
+}
+
+impl ToJson for QrError {
+    fn to_json(&self) -> Value {
         let value = ErrorJson {
             error: self.to_string(),
         };

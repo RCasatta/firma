@@ -17,6 +17,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::str::FromStr;
 use std::sync::Once;
+use common::error::ToJson;
 
 fn rust_call(c_str: &CStr) -> Result<CString> {
     let str = c_str.to_str()?;
@@ -59,7 +60,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
             for string in string_values {
                 values.push(hex::decode(&string)?);
             }
-            match crate::common::qr::merge_qrs(values) {
+            match qr_code::structured::merge_qrs(values) {
                 Ok(merged) => hex::encode(merged).into(),
                 Err(e) => e.to_json(),
             }
