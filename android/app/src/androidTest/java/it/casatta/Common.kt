@@ -12,8 +12,7 @@ import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.BoundedMatcher
 import androidx.test.espresso.matcher.RootMatchers
 import androidx.test.espresso.matcher.ViewMatchers
-import androidx.test.espresso.matcher.ViewMatchers.withClassName
-import androidx.test.espresso.matcher.ViewMatchers.withText
+import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.internal.util.Checks
 import androidx.test.platform.app.InstrumentationRegistry
 import org.hamcrest.Description
@@ -61,10 +60,17 @@ open class Common {
         }
     }
 
+    fun checkAndDismissDialog(substring: String) {
+        onView(withSubstring(substring))
+            .inRoot(RootMatchers.isDialog())
+            .check(ViewAssertions.matches(isDisplayed()))
+            .perform(ViewActions.pressBack())
+    }
+
     fun checkAndDismissDialog(id: Int) {
         onView(withText(id))
             .inRoot(RootMatchers.isDialog())
-            .check(ViewAssertions.matches(ViewMatchers.isDisplayed()))
+            .check(ViewAssertions.matches(isDisplayed()))
             .perform(ViewActions.pressBack())
     }
 

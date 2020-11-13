@@ -37,6 +37,21 @@ class TransactionTest : Common() {
         setTextInDialogAndConfirm(activity, transactionBase64)
         onView(withText(psbtName)).check(matches(isDisplayed()))
 
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialogAndConfirm(activity, transactionBase64)
+        checkAndDismissDialog("PSBT did not change after merge")
+
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialogAndConfirm(activity, "InvalidBase64")
+        checkAndDismissDialog("PSBT has bad base64 string encoding")
+
+        onView(withId(R.id.item_new)).perform(click())
+        clickElementInList(activity.getString(R.string.insert_manually))
+        setTextInDialogAndConfirm(activity, "Y2lhbwo=")  // valid base64 but not PSBT
+        checkAndDismissDialog("Cannot deserialize PSBT")
+
         clickElementInList(psbtName)
 
         onView(withId(R.id.delete)).perform(click())
