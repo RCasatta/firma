@@ -72,8 +72,11 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
 
 pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
     info!("save_psbt_options {:?}", opt);
-    let bytes = opt.psbt.as_bytes()?;
-    let mut psbt: PSBT = deserialize(&bytes)?;
+    let bytes = opt
+        .psbt
+        .as_bytes()
+        .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
+    let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
     let mut psbts_dir: PathBuf = datadir.into();
     psbts_dir.push(format!("{}", network));
     psbts_dir.push("psbts");
@@ -130,9 +133,17 @@ pub fn save_psbt(
     if psbts_dir.exists() {
         let mut old_psbt = psbts_dir.clone();
         old_psbt.push("psbt.json");
-        if let Ok(old_psbt) = read_psbt(&old_psbt) {
+        if let Ok(mut old_psbt) = read_psbt(&old_psbt) {
             info!("old psbt exist, merging together");
-            psbt.merge(old_psbt)?;
+            let before_psbt = psbt.clone();
+            psbt.merge(old_psbt.clone())?;
+
+            info!("checking if new psbt make changes to old one");
+            let before_old_psbt = old_psbt.clone();
+            old_psbt.merge(before_psbt)?;
+            if old_psbt == before_old_psbt {
+                return Err(Error::PSBTNotChangedAfterMerge);
+            }
         }
     } else {
         fs::create_dir_all(&psbts_dir)?;

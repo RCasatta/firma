@@ -36,6 +36,9 @@ pub enum Error {
     ScriptEmpty,
     IncompatibleNetworks,
     Mnemonic(crate::common::mnemonic::Error),
+    PSBTNotChangedAfterMerge,
+    PSBTBadStringEncoding(String),
+    PSBTCannotDeserialize(bitcoin::consensus::encode::Error),
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -102,14 +105,18 @@ impl fmt::Display for Error {
             Error::Generic(e) => write!(f, "{}", e),
 
             Error::FileExist(s) => write!(f, "File {:?} already exist", s),
-            Error::DiceValueErr(n, max) => write!(f, "Got {} but must be from 1 to {} included", n, max),
-            Error::WrongKeyFileName=> write!(f, "Private file name MUST be PRIVATE.json"),
+            Error::DiceValueErr(n, max) => {
+                write!(f, "Got {} but must be from 1 to {} included", n, max)
+            }
+            Error::WrongKeyFileName => write!(f, "Private file name MUST be PRIVATE.json"),
             Error::MissingPrevoutTx => write!(f, "Missing prevout tx"),
             Error::MismatchPrevoutHash => write!(f, "Prevout hash doesn't match previous tx"),
             Error::MissingDatadir => write!(f, "Missing datadir"),
             Error::MissingNetwork => write!(f, "Missing network"),
             Error::MissingDaemonOpts => write!(f, "Missing daemon options (url and cookie file)"),
-            Error::FileNotFoundOrCorrupt(p, e) => write!(f, "{:?} file not found or corrupted: {}", p, e),
+            Error::FileNotFoundOrCorrupt(p, e) => {
+                write!(f, "{:?} file not found or corrupted: {}", p, e)
+            }
             Error::MissingName => write!(f, "Missing name"),
             Error::NeedAtLeastOne => write!(f, "Need at least one"),
             Error::CannotRetrieveHomeDir => write!(f, "Cannot retrieve home dir"),
@@ -126,6 +133,11 @@ impl fmt::Display for Error {
             Error::MissingRescanUpTo => write!(f, "Missing RescanUpTo"),
             Error::MissingHex => write!(f, "Missing hex"),
             Error::IncompatibleNetworks => write!(f, "Incompatible networks"),
+            Error::PSBTNotChangedAfterMerge => write!(f, "PSBT did not change after merge"),
+            Error::PSBTBadStringEncoding(kind) => {
+                write!(f, "PSBT has bad {} string encoding", kind)
+            }
+            Error::PSBTCannotDeserialize(e) => write!(f, "Cannot deserialize PSBT ({})", e),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

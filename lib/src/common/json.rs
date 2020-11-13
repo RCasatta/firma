@@ -232,6 +232,15 @@ impl StringEncoding {
             }
         })
     }
+
+    pub fn kind(&self) -> String {
+        match self {
+            StringEncoding::Base64(_) => "base64",
+            StringEncoding::Hex(_) => "hex",
+            StringEncoding::Bech32(_) => "bech32",
+        }
+        .to_string()
+    }
 }
 
 pub fn get_name_key() -> raw::Key {

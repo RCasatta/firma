@@ -370,8 +370,9 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         try {
             Rust().savePSBT(filesDir.toString(), psbt, encoding)
         } catch (e: Exception) {
-            Log.e("LIST", e.message?:"Null")
-            setResultMessage(R.string.not_a_psbt)
+            val message = e.message ?: "Null"
+            Log.e("LIST", message)
+            setResultMessage(message)
         }
     }
 
@@ -423,7 +424,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             updateWallets()
                         }
                         PSBTS -> {
-                            savePsbt(result.contents, "base64")
+                            savePsbt(result.contents, "hex")
                             updatePsbts()
                         }
                     }
