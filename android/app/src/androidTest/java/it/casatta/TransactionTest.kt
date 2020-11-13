@@ -53,9 +53,7 @@ class TransactionTest : Common() {
         checkAndDismissDialog("Cannot deserialize PSBT")
 
         clickElementInList(psbtName)
-
         onView(withId(R.id.delete)).perform(click())
-
         setTextInDialogAndConfirm(activity, psbtName, "DELETE")
     }
 

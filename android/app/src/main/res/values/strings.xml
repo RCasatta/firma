@@ -18,4 +18,7 @@
     <string name="select_all">Select a key, a wallet and a transaction</string>
     <string name="invalid_xprv_or_mnemonic">Invalid Xprv or Mnemonic</string>
 
+    <string name="added_signatures">Added signatures</string>
+    <string name="no_signatures_added">No signatures added</string>
+
 </resources>

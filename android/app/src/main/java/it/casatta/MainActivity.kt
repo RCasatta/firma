@@ -43,10 +43,10 @@ class MainActivity : AppCompatActivity() {
                 val psbtFile = "$filesDir/${Network.TYPE}/psbts/${psbt_text.text}/psbt.json"
                 try {
                     val result = Rust().sign(filesDir.toString(), keyFile, walletFile, psbtFile)
-                    if (result.info.contains("Added signatures")) {
-                        AlertDialog.Builder(this).setMessage("Added signatures").create().show()
+                    if (result.info.contains(getString(R.string.added_signatures))) {
+                        AlertDialog.Builder(this).setMessage(R.string.added_signatures).create().show()
                     } else {
-                        AlertDialog.Builder(this).setMessage("No signatures added").create().show()
+                        AlertDialog.Builder(this).setMessage(R.string.no_signatures_added).create().show()
                     }
                 } catch (e: RustException) {
                     C.showMessageDialog(this, e.message?:"Null")

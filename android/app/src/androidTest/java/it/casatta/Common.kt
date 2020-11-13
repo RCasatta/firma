@@ -75,7 +75,7 @@ open class Common {
     }
 
     fun clickElementInList(subject: String) {
-        onView(ViewMatchers.withId(R.id.items_list)).perform(
+        onView(withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
                 withItemSubject(subject),
                 ViewActions.click()
@@ -84,7 +84,7 @@ open class Common {
     }
 
     fun checkElementNotInList(subject: String) {
-        onView(ViewMatchers.withId(R.id.items_list)).check(
+        onView(withId(R.id.items_list)).check(
             ViewAssertions.matches(
                 Matchers.not(
                     ViewMatchers.hasDescendant(
