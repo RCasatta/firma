@@ -46,10 +46,7 @@ impl Wallet {
             .client
             .derive_addresses(&descriptor, Some([index, index]))?;
         //TODO derive it twice? You know bitflips
-        let address = addresses
-            .first()
-            .ok_or_else(|| Error::MissingAddress)?
-            .clone();
+        let address = addresses.first().ok_or(Error::MissingAddress)?.clone();
         if address.network != self.context.network {
             return Err("address returned is not on the same network as given".into());
         }

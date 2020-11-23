@@ -88,9 +88,7 @@ pub fn estimate_weight(psbt: &PSBT) -> Result<usize> {
 fn expected_signatures(script: &Script) -> Result<usize> {
     let bytes = script.as_bytes();
     Ok(
-        if bytes.last().ok_or_else(|| Error::ScriptEmpty)?
-            == &opcodes::all::OP_CHECKMULTISIG.into_u8()
-        {
+        if bytes.last().ok_or(Error::ScriptEmpty)? == &opcodes::all::OP_CHECKMULTISIG.into_u8() {
             read_pushnum(bytes[0])
                 .map(|el| el as usize)
                 .unwrap_or(0usize)

@@ -12,6 +12,6 @@ pub struct RescanOptions {
 impl crate::Wallet {
     pub fn rescan(&self, opt: &RescanOptions) -> crate::Result<Value> {
         let (_a, b) = self.client.rescan_blockchain(Some(opt.start_from), None)?;
-        Ok(b.ok_or_else(|| crate::Error::MissingRescanUpTo)?.into())
+        Ok(b.ok_or(crate::Error::MissingRescanUpTo)?.into())
     }
 }

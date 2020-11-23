@@ -28,7 +28,7 @@ pub fn derive_address(
     let address = descriptor
         .derive(ChildNumber::from_normal_idx(opt.index)?)
         .address(network)
-        .ok_or_else(|| Error::AddressFromDescriptorFails)?;
+        .ok_or(Error::AddressFromDescriptorFails)?;
     let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, opt.index))?;
 
     Ok(GetAddressOutput {

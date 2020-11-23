@@ -45,7 +45,7 @@ impl Wallet {
         let finalized = self.client.finalize_psbt(&combined, Some(true))?;
         debug!("finalized {:?}", finalized);
 
-        let bytes = finalized.hex.ok_or_else(|| Error::MissingHex)?;
+        let bytes = finalized.hex.ok_or(Error::MissingHex)?;
         let hex = hex::encode(&bytes);
 
         let mut broadcasted = false;

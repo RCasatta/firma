@@ -314,10 +314,9 @@ impl PSBTSigner {
                     let script_keys = extract_pub_keys(&witness_script)?;
                     for key in script_keys {
                         if keys.contains_key(&key) {
-                            input.hd_keypaths.insert(
-                                key,
-                                keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
-                            );
+                            input
+                                .hd_keypaths
+                                .insert(key, keys.get(&key).ok_or(Error::MissingKey)?.clone());
                             added = true;
                         }
                     }
@@ -329,10 +328,9 @@ impl PSBTSigner {
                     let script_keys = extract_pub_keys(&witness_script)?;
                     for key in script_keys {
                         if keys.contains_key(&key) {
-                            output.hd_keypaths.insert(
-                                key,
-                                keys.get(&key).ok_or_else(|| Error::MissingKey)?.clone(),
-                            );
+                            output
+                                .hd_keypaths
+                                .insert(key, keys.get(&key).ok_or(Error::MissingKey)?.clone());
                             added = true;
                         }
                     }
@@ -380,11 +378,11 @@ impl PSBTSigner {
             let (hash, sighash);
             if is_segwit {
                 let wutxo = input.witness_utxo.as_ref();
-                let value = wutxo.ok_or_else(|| Error::MissingWitnessUtxo)?.value;
+                let value = wutxo.ok_or(Error::MissingWitnessUtxo)?.value;
                 sighash = input.sighash_type.unwrap_or(SigHashType::All);
                 hash = sig_hash_cache.signature_hash(input_index, script, value, sighash);
             } else {
-                sighash = input.sighash_type.ok_or_else(|| Error::MissingSighash)?;
+                sighash = input.sighash_type.ok_or(Error::MissingSighash)?;
                 hash = tx.signature_hash(input_index, &script, sighash.as_u32());
             };
             let msg = &Message::from_slice(&hash.into_inner()[..])?;
@@ -431,9 +429,9 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
 pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
     let is_key = path
         .file_name()
-        .ok_or_else(|| Error::WrongKeyFileName)?
+        .ok_or(Error::WrongKeyFileName)?
         .to_str()
-        .ok_or_else(|| Error::WrongKeyFileName)?
+        .ok_or(Error::WrongKeyFileName)?
         == "PRIVATE.json";
     if !is_key {
         return Err(Error::WrongKeyFileName);
