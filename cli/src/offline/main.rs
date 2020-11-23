@@ -1,6 +1,6 @@
-use bitcoin::Network;
-use firma::{common, init_logger, offline, Result};
-use serde_json::Value;
+use firma::bitcoin::Network;
+use firma::serde_json::{self, Value};
+use firma::{common, init_logger, offline, Result, ToJson};
 use std::convert::TryInto;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;

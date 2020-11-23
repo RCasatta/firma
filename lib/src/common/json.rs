@@ -95,6 +95,8 @@ pub struct BalanceOutput {
 pub struct GetAddressOutput {
     pub address: Address,
     pub path: DerivationPath,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qr_file: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -1,12 +1,11 @@
-use crate::FirmaOnlineSubcommands::*;
-use bitcoin::Network;
-use bitcoincore_rpc::json::*;
-use bitcoincore_rpc::{Auth, RpcApi};
+use firma::bitcoin::Network;
+use firma::bitcoincore_rpc::{Auth, RpcApi};
+use firma::log::debug;
+use firma::serde_json::Value;
 use firma::*;
-use log::debug;
-use serde_json::Value;
 use std::convert::TryInto;
 use structopt::StructOpt;
+use FirmaOnlineSubcommands::*;
 
 /// firma-online is an helper tool to use with bitcoin core, it allows to:
 /// create a watch-only multisig wallet,
@@ -100,7 +99,7 @@ fn start() -> Result<Value> {
 
     match cmd.subcommand {
         CreateWallet(ref opt) => wallet.create(&daemon_opts, opt, result.blocks)?.try_into(),
-        GetAddress(ref opt) => wallet.get_address(opt.index, false)?.try_into(),
+        GetAddress(ref opt) => wallet.get_address(opt)?.try_into(),
         CreateTx(ref opt) => wallet.create_tx(opt)?.try_into(),
         SendTx(ref opt) => wallet.send_tx(opt)?.try_into(),
         Balance => wallet.balance()?.try_into(),

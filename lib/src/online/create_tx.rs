@@ -1,5 +1,7 @@
 use crate::offline::sign::save_psbt;
+use crate::online::get_address::GetAddressOptions;
 use crate::online::Wallet;
+use crate::qr::QrMode;
 use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::bitcoincore_rpc_json::{
@@ -98,7 +100,12 @@ impl Wallet {
 
         let mut options: WalletCreateFundedPsbtOptions = Default::default();
         options.include_watching = Some(true);
-        options.change_address = Some(self.get_address(None, true)?.address);
+        let get_addr_opts = GetAddressOptions {
+            index: None,
+            is_change: true,
+            qr_mode: QrMode::None,
+        };
+        options.change_address = Some(self.get_address(&get_addr_opts)?.address);
         let result = self.client.wallet_create_funded_psbt(
             &inputs,
             &outputs,

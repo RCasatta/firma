@@ -31,7 +31,11 @@ pub fn derive_address(
         .ok_or_else(|| Error::AddressFromDescriptorFails)?;
     let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, opt.index))?;
 
-    Ok(GetAddressOutput { address, path })
+    Ok(GetAddressOutput {
+        address,
+        path,
+        qr_file: None,
+    })
 }
 
 /// extract the xpubs from a descriptor in the form "wsh(multi({n},{x}/0/*,{y}/0/*,...))#5wstxmwd"

@@ -1,10 +1,12 @@
 use crate::*;
 use log::info;
 use qr_code::structured::SplittedQr;
-use std::fs;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use std::str::FromStr;
+use std::{fs, io};
 
 #[derive(Debug)]
 pub enum QrError {}
@@ -57,7 +59,7 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
         wallet_qr_files.push(qr_file.clone());
 
         for b in &[true, false] {
-            let qr_txt = qr.to_string(*b);
+            let qr_txt = qr.to_string(*b, 3);
             text_qr[*b as usize].push_str(&qr_txt);
         }
     }
@@ -67,4 +69,34 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
     qr_txt_file.write_all(text_qr[0].as_bytes())?;
     qr_txt_file.write_all(text_qr[1].as_bytes())?;
     Ok(wallet_qr_files)
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum QrMode {
+    Text { inverted: bool },
+    Image,
+    None,
+}
+
+impl Default for QrMode {
+    fn default() -> Self {
+        QrMode::None
+    }
+}
+
+impl FromStr for QrMode {
+    type Err = io::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "none" => Ok(QrMode::None),
+            "image" => Ok(QrMode::Image),
+            "text" => Ok(QrMode::Text { inverted: true }),
+            "inverted" => Ok(QrMode::Text { inverted: false }),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("({}) valid values are: none, image, text, inverted", s),
+            )),
+        }
+    }
 }
