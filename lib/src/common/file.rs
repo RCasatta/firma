@@ -1,3 +1,4 @@
+use crate::offline::decrypt::MaybeEncrypted;
 use crate::*;
 use bitcoin::Network;
 use log::info;
@@ -138,11 +139,19 @@ pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()>
     save(serde_json::to_string_pretty(public_key)?, output)
 }
 
-pub fn save_private(private_key: &PrivateMasterKey, output: &PathBuf) -> Result<()> {
+pub fn save_private(
+    private_key: &PrivateMasterKey,
+    output: &PathBuf,
+    encryption_key: Option<&StringEncoding>,
+) -> Result<()> {
     if output.exists() {
         return Err(Error::FileExist(output.clone()));
     }
-    save(serde_json::to_string_pretty(private_key)?, output)
+    let mut maybe_encrypted = MaybeEncrypted::plain(private_key.clone());
+    if let Some(encryption_key) = encryption_key {
+        maybe_encrypted = maybe_encrypted.encrypt(&encryption_key.get_exactly_32()?)?;
+    }
+    save(serde_json::to_string_pretty(&maybe_encrypted)?, output)
 }
 
 pub fn save_keys(
@@ -151,12 +160,13 @@ pub fn save_keys(
     key_name: &str,
     key: PrivateMasterKey,
     qr_version: i16,
+    encryption_key: Option<&StringEncoding>,
 ) -> Result<MasterKeyOutput> {
     let option_name = Some(key_name.to_string());
     let path_builder = PathBuilder::new(datadir, network, Kind::Key, option_name.clone());
     let private_key_file = path_builder.file("PRIVATE.json")?;
     let public_key_file = path_builder.file("public.json")?;
-    save_private(&key, &private_key_file)?;
+    save_private(&key, &private_key_file, encryption_key)?;
     let public_master_key = key.clone().into();
     save_public(&public_master_key, &public_key_file)?;
 

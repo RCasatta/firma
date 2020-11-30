@@ -39,6 +39,10 @@ pub enum Error {
     PSBTNotChangedAfterMerge,
     PSBTBadStringEncoding(String),
     PSBTCannotDeserialize(bitcoin::consensus::encode::Error),
+    MaybeEncryptedWrongState,
+    Encryption(aes_gcm_siv::aead::Error),
+    EncryptionKeyNot32Bytes(usize),
+    MissingEncryptionKey,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -98,6 +102,7 @@ impl_error!(std::num::ParseIntError, ParseInt);
 impl_error!(miniscript::Error, Miniscript);
 impl_error!(crate::common::mnemonic::Error, Mnemonic);
 impl_error!(qr_code::bmp_monochrome::BmpError, Bmp);
+impl_error!(aes_gcm_siv::aead::Error, Encryption);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -138,6 +143,12 @@ impl fmt::Display for Error {
                 write!(f, "PSBT has bad {} string encoding", kind)
             }
             Error::PSBTCannotDeserialize(e) => write!(f, "Cannot deserialize PSBT ({})", e),
+            Error::MaybeEncryptedWrongState => write!(f, "Wrong State"),
+            Error::Encryption(e) => write!(f, "Encryption ({})", e),
+            Error::EncryptionKeyNot32Bytes(s) => {
+                write!(f, "Encryption key must be 32 bytes but it's {} bytes", s)
+            }
+            Error::MissingEncryptionKey => write!(f, "MissingEncryptionKey"),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

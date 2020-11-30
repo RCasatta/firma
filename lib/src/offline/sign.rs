@@ -1,3 +1,4 @@
+use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
 use crate::offline::print::pretty_print;
 use crate::qr::save_qrs;
 use crate::*;
@@ -23,26 +24,31 @@ use structopt::StructOpt;
 pub struct SignOptions {
     /// File containing the master key (xpriv...)
     #[structopt(short, long, parse(from_os_str))]
-    key: PathBuf,
+    pub key: PathBuf,
 
     /// derivations to consider if psbt doesn't contain HD paths
     #[structopt(short, long, default_value = "1000")]
-    total_derivations: u32,
+    pub total_derivations: u32,
 
     /// File containing the wallet descriptor, show if outputs are mine.
     #[structopt(short, long, parse(from_os_str))]
-    wallet_descriptor_file: PathBuf,
-    //TODO remove and read all the available wallets?
+    pub wallet_descriptor_file: PathBuf, //TODO remove and read all the available wallets?
+
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
 
     /// PSBT json file
-    psbt_file: PathBuf,
+    pub psbt_file: PathBuf,
 
     /// Allow any derivations (to avoid ramson attacks, by default only 2 levels are allowed, and the first level must be 0 or 1)
     #[structopt(long)]
-    allow_any_derivations: bool,
+    pub allow_any_derivations: bool,
+
+    /// Optional encryption key for saving the key file encrypted
+    /// in CLI it is populated from standard input
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
 }
 
 pub struct SignResult {
@@ -196,7 +202,7 @@ impl PSBTSigner {
         let psbt_file = opt.psbt_file.clone();
         let psbts_dir = psbt_file.parent().unwrap().parent().unwrap().to_path_buf(); //TODO remove unwrap
 
-        let xprv_json = read_key(&opt.key)?;
+        let xprv_json = read_key(&opt.key, opt.encryption_key.as_ref())?;
 
         let signer = PSBTSigner::new(
             &psbt,
@@ -426,7 +432,10 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     Ok(psbt_print)
 }
 
-pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
+pub fn read_key(
+    path: &PathBuf,
+    encryption_key: Option<&StringEncoding>,
+) -> Result<PrivateMasterKey> {
     let is_key = path
         .file_name()
         .ok_or(Error::WrongKeyFileName)?
@@ -436,8 +445,14 @@ pub fn read_key(path: &PathBuf) -> Result<PrivateMasterKey> {
     if !is_key {
         return Err(Error::WrongKeyFileName);
     }
-    let xprv_string = std::fs::read(path)?;
-    Ok(serde_json::from_slice(&xprv_string)?)
+    let decrypted = match encryption_key {
+        encryption_key @ Some(_) => decrypt(&DecryptOptions::new(path, encryption_key))?,
+        None => serde_json::from_slice(&std::fs::read(path)?)?,
+    };
+    match decrypted {
+        MaybeEncrypted::Plain(value) => Ok(value),
+        MaybeEncrypted::Encrypted(_) => Err(Error::MaybeEncryptedWrongState),
+    }
 }
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {

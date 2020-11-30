@@ -1,5 +1,5 @@
 use crate::mnemonic::Mnemonic;
-use crate::{check_compatibility, Result};
+use crate::{check_compatibility, Result, StringEncoding};
 use crate::{save_keys, MasterKeyOutput, PrivateMasterKey};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
@@ -15,22 +15,27 @@ use structopt::StructOpt;
 pub struct RestoreOptions {
     /// Name of the key
     #[structopt(short, long)]
-    key_name: String,
+    pub key_name: String,
 
     /// Kind of the secret material
     #[structopt(short, long)]
-    nature: Nature,
+    pub nature: Nature,
 
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
 
+    /// Optional encryption key for saving the key file encrypted
+    /// in CLI it is populated from standard input
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
+
     /// value of the secret component, could be xprv or seed in hex or bech32
-    value: String,
+    pub value: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-enum Nature {
+pub enum Nature {
     Xprv,
     Mnemonic,
 }
@@ -64,7 +69,14 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
         }
     };
 
-    let output = save_keys(datadir, network, &opt.key_name, master_key, opt.qr_version)?;
+    let output = save_keys(
+        datadir,
+        network,
+        &opt.key_name,
+        master_key,
+        opt.qr_version,
+        opt.encryption_key.as_ref(),
+    )?;
     Ok(output)
 }
 
@@ -93,6 +105,7 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.key.xprv.to_string(),
             qr_version: 14,
+            encryption_key: None,
         };
         let key_restored =
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
@@ -106,6 +119,7 @@ mod tests {
             nature: Nature::Mnemonic,
             value: key_orig.key.mnemonic.as_ref().unwrap().to_string(),
             qr_version: 14,
+            encryption_key: None,
         };
         let key_restored =
             crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
@@ -121,6 +135,7 @@ mod tests {
             nature: Nature::Xprv,
             value: "X".to_string(),
             qr_version: 14,
+            encryption_key: None,
         };
         let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
         assert!(result.is_err());
@@ -131,6 +146,7 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.key.xpub.to_string(),
             qr_version: 14,
+            encryption_key: None,
         };
         let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
         assert!(result.is_err());

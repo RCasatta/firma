@@ -13,34 +13,39 @@ use structopt::StructOpt;
 pub struct DiceOptions {
     /// Number of faces of the dice, only platonic solid are valid (4, 6, 8, 12, 20) or a coin (2)
     #[structopt(short, long)]
-    faces: Base,
+    pub faces: Base,
 
     /// Number of bits of entropy
     #[structopt(short, long, default_value = "256")]
-    bits: Bits,
+    pub bits: Bits,
 
     /// Name of the key
     #[structopt(short, long)]
-    key_name: String,
+    pub key_name: String,
 
     /// Value of the die launch, to be repeated multiple times
     #[structopt(short, required = true)]
-    launches: Vec<u32>,
+    pub launches: Vec<u32>,
 
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
+
+    /// in CLI it is populated from standard input
+    /// It is an Option so that structopt could skip, however it must be Some
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum Bits {
+pub enum Bits {
     _128,
     _192,
     _256,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-enum Base {
+pub enum Base {
     _2 = 2,
     _4 = 4,
     _6 = 6,
@@ -80,7 +85,14 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Master
     opt.validate()?;
 
     let master_key = calculate_key(&opt.launches, opt.faces as u32, network, &opt.key_name)?;
-    let output = save_keys(datadir, network, &opt.key_name, master_key, opt.qr_version)?;
+    let output = save_keys(
+        datadir,
+        network,
+        &opt.key_name,
+        master_key,
+        opt.qr_version,
+        opt.encryption_key.as_ref(),
+    )?;
 
     Ok(output)
 }
@@ -194,6 +206,7 @@ mod tests {
             key_name: "a".to_string(),
             launches,
             qr_version: 14,
+            encryption_key: None,
         };
 
         roll(&temp_dir_str, Network::Testnet, &opt).unwrap();

@@ -11,7 +11,8 @@ description = "firma-cli is a command line interface tool to create bitcoin mult
 keywords = ["sign", "bitcoin", "cold", "offline", "cli"]
 
 [dependencies]
-firma = "0.16.0"
+#firma = "0.16.0"
+firma = { path = "../lib" }
 structopt = "0.3.20"
 
 [[bin]]

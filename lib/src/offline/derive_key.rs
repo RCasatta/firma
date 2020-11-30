@@ -1,6 +1,6 @@
 use crate::file::save_keys;
 use crate::offline::sign::read_key;
-use crate::{MasterKeyOutput, PrivateMasterKey};
+use crate::{MasterKeyOutput, PrivateMasterKey, StringEncoding};
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
@@ -13,15 +13,20 @@ use structopt::StructOpt;
 pub struct DeriveKeyOptions {
     /// Name of the master^2 key
     #[structopt(short, long)]
-    from_key_file: PathBuf,
+    pub from_key_file: PathBuf,
 
     /// Name of the generated master key, used as path to generate the child key
     #[structopt(short, long)]
-    to_key_name: String,
+    pub to_key_name: String,
 
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
+
+    /// Optional encryption key for reading/writing the key file encrypted.
+    /// in CLI it is populated from standard input
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
 }
 
 pub fn start(
@@ -33,7 +38,7 @@ pub fn start(
         return Err("--to-key-name must have 1 or more characters".into());
     }
     let secp = Secp256k1::signing_only();
-    let from_key_json = read_key(&opt.from_key_file)?;
+    let from_key_json = read_key(&opt.from_key_file, opt.encryption_key.as_ref())?;
     let mut child_key = from_key_json.xprv;
     let bytes = opt.to_key_name.as_bytes();
     for byte in bytes {
@@ -48,6 +53,7 @@ pub fn start(
         &opt.to_key_name,
         child_key_json,
         opt.qr_version,
+        opt.encryption_key.as_ref(),
     )?;
 
     Ok(output)
@@ -75,6 +81,7 @@ mod tests {
             from_key_file: key.private_file.clone(),
             to_key_name,
             qr_version: 14,
+            encryption_key: None,
         };
         let derived =
             crate::offline::derive_key::start(&temp_dir_str, Network::Testnet, &der_opts.clone())

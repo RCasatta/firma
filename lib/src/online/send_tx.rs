@@ -7,11 +7,11 @@ use std::path::PathBuf;
 
 #[derive(structopt::StructOpt, Debug)]
 pub struct SendTxOptions {
-    /// filename containing the PSBT
+    /// filename containing the PSBTs
     #[structopt(long = "psbt-file")]
     pub psbts_file: Vec<PathBuf>,
 
-    /// filename containing the PSBT
+    /// the PSBTs content as base64
     #[structopt(long = "psbt")]
     pub psbts: Vec<String>,
 

@@ -205,6 +205,7 @@ pub enum StringEncoding {
     Base64(String),
     Hex(String),
     Bech32(String),
+    //Base58(String)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -224,6 +225,10 @@ pub struct Balances {
 }
 
 impl StringEncoding {
+    pub fn new_base64(content: &[u8]) -> Self {
+        StringEncoding::Base64(base64::encode(content))
+    }
+
     pub fn as_bytes(&self) -> crate::Result<Vec<u8>> {
         Ok(match self {
             StringEncoding::Base64(s) => base64::decode(s)?,
@@ -233,6 +238,16 @@ impl StringEncoding {
                 Vec::<u8>::from_base32(&vec_u5)?
             }
         })
+    }
+
+    pub fn get_exactly_32(&self) -> crate::Result<[u8; 32]> {
+        let bytes = self.as_bytes()?;
+        if bytes.len() != 32 {
+            return Err(crate::Error::EncryptionKeyNot32Bytes(bytes.len()));
+        }
+        let mut result = [0u8; 32];
+        result.copy_from_slice(&bytes[..]);
+        Ok(result)
     }
 
     pub fn kind(&self) -> String {

@@ -17,7 +17,7 @@ type HDKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
 #[structopt(name = "firma")]
 pub struct PrintOptions {
     /// PSBT json file
-    psbt_file: PathBuf,
+    pub psbt_file: PathBuf,
 }
 
 pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
 /// Generate a bitcoin master key in bip32 randomly
-#[derive(StructOpt, Debug, Serialize, Deserialize)]
+#[derive(StructOpt, Debug, Serialize, Deserialize, Clone)]
 #[structopt(name = "random")]
 pub struct RandomOptions {
     /// Name of the key
@@ -17,6 +17,11 @@ pub struct RandomOptions {
     #[structopt(long, default_value = "14")]
     #[serde(default)]
     pub qr_version: i16,
+
+    /// Optional encryption key for saving the key file encrypted
+    /// in CLI it is populated from standard input
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
 }
 
 impl RandomOptions {
@@ -24,6 +29,7 @@ impl RandomOptions {
         RandomOptions {
             key_name,
             qr_version: 20,
+            encryption_key: None,
         }
     }
 }
@@ -32,7 +38,14 @@ pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Resul
     let sec = rand::thread_rng().gen::<[u8; 32]>();
     let mnemonic = Mnemonic::new(&sec)?;
     let master_key = PrivateMasterKey::new(network, &mnemonic, &opt.key_name)?;
-    let output = save_keys(datadir, network, &opt.key_name, master_key, opt.qr_version)?;
+    let output = save_keys(
+        datadir,
+        network,
+        &opt.key_name,
+        master_key,
+        opt.qr_version,
+        opt.encryption_key.as_ref(),
+    )?;
 
     Ok(output)
 }

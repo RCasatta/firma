@@ -1,7 +1,9 @@
 use firma::bitcoin::Network;
 use firma::serde_json::{self, Value};
-use firma::{common, init_logger, offline, Result, ToJson};
+use firma::{common, init_logger, offline, Result, StringEncoding, ToJson};
 use std::convert::TryInto;
+use std::io;
+use std::io::Read;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
@@ -16,6 +18,11 @@ struct FirmaOfflineCommands {
     /// Directory where wallet info are saved
     #[structopt(short, long, default_value = "~/.firma/")]
     firma_datadir: String,
+
+    /// Flag to indicate that input is expected in standard input
+    /// Since reading stdin is locking, we need this flag to have it optionally
+    #[structopt(long)]
+    pub read_stdin: bool,
 
     //TODO ContextOffline with network, json, firma_datadir
     #[structopt(subcommand)] // Note that we mark a field as a subcommand
@@ -44,11 +51,33 @@ enum FirmaOfflineSubcommands {
 
     /// Hard derive a master key from a master^2 key
     DeriveKey(offline::derive_key::DeriveKeyOptions),
+
+    /// Decrypt an encrypted file
+    Decrypt(offline::decrypt::DecryptOptions),
 }
 
 fn main() -> Result<()> {
     init_logger();
-    let cmd = FirmaOfflineCommands::from_args();
+    let mut cmd = FirmaOfflineCommands::from_args();
+
+    if cmd.read_stdin {
+        // read encryption key from stdin and initialize encryption_key field
+        let mut buffer = vec![];
+        io::stdin().read_to_end(&mut buffer)?;
+        let encoded = StringEncoding::new_base64(&buffer);
+        match &mut cmd.subcommand {
+            Random(opt) => opt.encryption_key = Some(encoded),
+            Sign(opt) => opt.encryption_key = Some(encoded),
+            Decrypt(opt) => opt.encryption_key = Some(encoded),
+            _ => {
+                println!(
+                    "{}",
+                    firma::Error::Generic("Subcommand doesn't need encryption key".to_string())
+                );
+                return Ok(());
+            }
+        }
+    }
 
     let value = match launch_subcommand(&cmd) {
         Ok(value) => value,
@@ -71,5 +100,6 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         Restore(opt) => offline::restore::start(datadir, net, &opt)?.try_into(),
         DeriveKey(opt) => offline::derive_key::start(datadir, net, &opt)?.try_into(),
         List(opt) => common::list::list(datadir, net, &opt)?.try_into(),
+        Decrypt(opt) => offline::decrypt::decrypt::<Value>(&opt),
     }
 }

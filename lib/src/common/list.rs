@@ -67,7 +67,8 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                 Kind::Key => {
                     path.push("PRIVATE.json");
                     debug!("try to read key {:?}", path);
-                    match read_key(&path) {
+                    match read_key(&path, None) {
+                        //TODO now with encryption???
                         Ok(key) => {
                             let public_qr_files = read_qrs(&path)?;
                             let key = MasterKeyOutput {
