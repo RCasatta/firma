@@ -51,7 +51,7 @@ It is based on:
 
 You need [Bitcoin core 0.20.1](https://bitcoincore.org/)
 
-To build executables you need [rust](https://www.rust-lang.org/) (version >= 1.38.0).
+To build executables you need [rust](https://www.rust-lang.org/) (MSRV  >= 1.41.0).
 
 ```
 git clone https://github.com/RCasatta/firma/
