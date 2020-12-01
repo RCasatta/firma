@@ -1,6 +1,6 @@
 name: Test, lint and coverage
 
-on: [push, pull_request]
+on: [push]
 
 env:
   CARGO_TERM_COLOR: always
