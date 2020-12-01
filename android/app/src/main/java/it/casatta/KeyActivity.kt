@@ -9,6 +9,7 @@ import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import it.casatta.json.Data.*;
 import kotlinx.android.synthetic.main.activity_key.*
 import kotlinx.android.synthetic.main.activity_key.delete
 import kotlinx.android.synthetic.main.activity_key.items
@@ -26,7 +27,7 @@ class KeyActivity : AppCompatActivity() {
 
         val keyString = intent.getStringExtra(C.KEY)
         Log.d("KEY", "${Network.TYPE} $keyString")
-        val keyJson = mapper.readValue(keyString, Rust.MasterKeyOutput::class.java)
+        val keyJson = mapper.readValue(keyString, MasterKeyOutput::class.java)
         val keyTitle = "key: ${keyJson.key.name}"
         title = keyTitle
 

@@ -1,10 +1,10 @@
 use crate::{Error, Result, StringEncoding};
-use aes_gcm_siv::aead::generic_array::GenericArray;
-use aes_gcm_siv::aead::{Aead, NewAead};
+use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
+use log::warn;
 use rand::{thread_rng, Rng};
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use std::fmt::Debug;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -22,7 +22,7 @@ pub struct DecryptOptions {
 
 pub fn decrypt<T>(opt: &DecryptOptions) -> Result<T>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Debug,
 {
     let file_content = std::fs::read(&opt.path)?;
     let maybe_encrypted: MaybeEncrypted<T> = serde_json::from_slice(&file_content)?;
@@ -31,7 +31,11 @@ where
         (maybe_encrypted @ MaybeEncrypted::Encrypted(_), Some(encryption_key)) => {
             match maybe_encrypted.decrypt(&encryption_key.get_exactly_32()?) {
                 Ok(MaybeEncrypted::Plain(value)) => Ok(value),
-                _ => Err(Error::MaybeEncryptedWrongState),
+                Ok(_) => Err(Error::MaybeEncryptedWrongState),
+                Err(e) => {
+                    warn!("Other error {:?}", e);
+                    Err(e)
+                }
             }
         }
         _ => Err(Error::MaybeEncryptedWrongState),
@@ -56,7 +60,7 @@ pub enum MaybeEncrypted<T> {
 
 impl<T> MaybeEncrypted<T>
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Debug,
 {
     pub fn plain(element: T) -> Self {
         MaybeEncrypted::Plain(element)
@@ -100,11 +104,6 @@ where
 fn get_cipher(encryption_key: &[u8; 32]) -> Aes256GcmSiv {
     let encryption_key = GenericArray::from_slice(&encryption_key[..]);
     Aes256GcmSiv::new(&encryption_key)
-}
-
-#[derive(Debug, Serialize)]
-struct S {
-    a: u32,
 }
 
 #[cfg(test)]

@@ -42,7 +42,7 @@ class MainActivity : AppCompatActivity() {
                 val walletFile = "$filesDir/${Network.TYPE}/wallets/${wallet_text.text}/descriptor.json"
                 val psbtFile = "$filesDir/${Network.TYPE}/psbts/${psbt_text.text}/psbt.json"
                 try {
-                    val result = Rust().sign(filesDir.toString(), keyFile, walletFile, psbtFile)
+                    val result = Rust().sign(filesDir.toString(), keyFile, walletFile, psbtFile, EncryptionKey.get(applicationContext))
                     if (result.info.contains(getString(R.string.added_signatures))) {
                         AlertDialog.Builder(this).setMessage(R.string.added_signatures).create().show()
                     } else {

@@ -83,7 +83,7 @@ impl Wallet {
                 let (output_file, name) = addr_to_file(&derive_address.address, "bmp")?;
                 derive_address.qr_file = Some(name);
                 qr.to_bmp()
-                    .mul(3)?
+                    .mul(4)?
                     .add_white_border(12)?
                     .write(output_file)?;
             }

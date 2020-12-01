@@ -52,7 +52,7 @@ pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<Pat
         } else {
             qr_file.set_file_name(&format!("qr-{}.bmp", i));
         }
-        let qr_data = qr.to_bmp();
+        let qr_data = qr.to_bmp().mul(4)?.add_white_border(12)?;
         info!("Saving qr in {:?}", &qr_file);
         qr_data.write(File::create(&qr_file)?)?;
 

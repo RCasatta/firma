@@ -69,6 +69,7 @@ fn main() -> Result<()> {
             Random(opt) => opt.encryption_key = Some(encoded),
             Sign(opt) => opt.encryption_key = Some(encoded),
             Decrypt(opt) => opt.encryption_key = Some(encoded),
+            List(opt) => opt.encryption_keys = vec![encoded],
             _ => {
                 println!(
                     "{}",

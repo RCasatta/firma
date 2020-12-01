@@ -23,7 +23,10 @@ pub struct PrintOptions {
 pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
     let psbt = read_psbt(&opt.psbt_file)?;
     let kind = Kind::Wallet;
-    let opt = ListOptions { kind };
+    let opt = ListOptions {
+        kind,
+        encryption_keys: vec![],
+    };
     let result = common::list::list(datadir, network, &opt)?;
     let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();
     let output = pretty_print(&psbt, network, &wallets)?;

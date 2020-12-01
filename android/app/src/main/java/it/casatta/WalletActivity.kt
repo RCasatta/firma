@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import it.casatta.json.Data
 import kotlinx.android.synthetic.main.activity_wallet.*
 
 class WalletActivity : AppCompatActivity() {
@@ -21,7 +22,7 @@ class WalletActivity : AppCompatActivity() {
 
         val walletString = intent.getStringExtra(C.WALLET)
         Log.d("WALLET", "${Network.TYPE} $walletString")
-        val walletJson = mapper.readValue(walletString, Rust.CreateWalletOutput::class.java)
+        val walletJson = mapper.readValue(walletString, Data.CreateWalletOutput::class.java)
         walletDescriptor = walletJson.wallet.descriptor_main
         val walletTitle = "wallet: ${walletJson.wallet.name}"
         title = walletTitle

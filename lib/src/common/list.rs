@@ -4,6 +4,7 @@ use crate::*;
 use bitcoin::Network;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
+use std::iter::once;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -12,6 +13,10 @@ pub struct ListOptions {
     /// list wallets, keys or psbts
     #[structopt(short, long)]
     pub kind: Kind,
+
+    /// Optional encryption keys to read encrypted [PrivateMasterKey]
+    #[structopt(skip)]
+    pub encryption_keys: Vec<StringEncoding>,
 }
 
 pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOutput> {
@@ -67,20 +72,22 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                 Kind::Key => {
                     path.push("PRIVATE.json");
                     debug!("try to read key {:?}", path);
-                    match read_key(&path, None) {
-                        //TODO now with encryption???
-                        Ok(key) => {
-                            let public_qr_files = read_qrs(&path)?;
-                            let key = MasterKeyOutput {
-                                key,
-                                private_file: path.clone(),
-                                public_file: None,
-                                public_qr_files, //TODO populate if they exists
-                            };
-                            list.keys.push(key);
-                        }
-                        Err(e) => {
-                            warn!("Can't read key {:?}", e);
+                    let keys_iter = opt.encryption_keys.iter().map(Option::Some);
+                    for encryption_key in keys_iter.chain(once(None)) {
+                        match read_key(&path, encryption_key) {
+                            Ok(key) => {
+                                let public_qr_files = read_qrs(&path)?;
+                                let key = MasterKeyOutput {
+                                    key,
+                                    private_file: path.clone(),
+                                    public_file: None,
+                                    public_qr_files, //TODO populate if they exists
+                                };
+                                list.keys.push(key);
+                            }
+                            Err(e) => {
+                                debug!("Can't read key {:?} because {:?}", &path, e);
+                            }
                         }
                     }
                 }
@@ -133,7 +140,10 @@ mod tests {
             .unwrap();
 
         let kind = Kind::Key;
-        let opt = ListOptions { kind };
+        let opt = ListOptions {
+            kind,
+            encryption_keys: vec![],
+        };
         let result = list(&temp_dir_str, Network::Testnet, &opt);
         assert!(result.is_ok());
         let list = result.unwrap();

@@ -446,7 +446,9 @@ pub fn read_key(
         return Err(Error::WrongKeyFileName);
     }
     let decrypted = match encryption_key {
-        encryption_key @ Some(_) => decrypt(&DecryptOptions::new(path, encryption_key))?,
+        encryption_key @ Some(_) => {
+            MaybeEncrypted::Plain(decrypt(&DecryptOptions::new(path, encryption_key))?)
+        }
         None => serde_json::from_slice(&std::fs::read(path)?)?,
     };
     match decrypted {

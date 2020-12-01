@@ -117,7 +117,7 @@ pub extern "C" fn c_call(to: *const c_char) -> *mut c_char {
     info!("<-- ({:?})", input);
     let output = rust_call(input)
         .unwrap_or_else(|e| CString::new(serde_json::to_vec(&e.to_json()).unwrap()).unwrap());
-
+    //TODO !IMPORTANT remove encryption KEY
     info!("--> ({:?})", output);
     output.into_raw()
 }

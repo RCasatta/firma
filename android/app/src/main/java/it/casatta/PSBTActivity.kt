@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import it.casatta.json.Data
 import kotlinx.android.synthetic.main.activity_psbt.*
 import java.io.Serializable
 import java.util.*
@@ -37,7 +38,7 @@ class PSBTActivity : AppCompatActivity() {
 
         val psbtString = intent.getStringExtra(C.PSBT)
         Log.d("PSBT", "${Network.TYPE} $psbtString")
-        val psbtJson = mapper.readValue(psbtString, Rust.PsbtJsonOutput::class.java)
+        val psbtJson = mapper.readValue(psbtString, Data.PsbtJsonOutput::class.java)
         val psbtFileDir = "$filesDir/${Network.TYPE}/psbts/${psbtJson.psbt.name}/"
         val psbtFileName = "$psbtFileDir/psbt.json"
         val psbtPretty = Rust().print(filesDir.toString(), psbtFileName)

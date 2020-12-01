@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.google.zxing.integration.android.IntentIntegrator
+import it.casatta.json.Data
 import kotlinx.android.synthetic.main.activity_list.*
 import java.io.File
 import java.io.Serializable
@@ -23,7 +24,7 @@ import java.io.Serializable
 class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
 
     private val itemsAdapter = ItemsAdapter()
-    private var listOutput = Rust.ListOutput( emptyList(),  emptyList(),  emptyList())
+    private var listOutput = Data.ListOutput(emptyList(), emptyList(), emptyList())
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
     private var rawHexes: ArrayList<String> = ArrayList()
     private var diceLaunches: ArrayList<Int> = ArrayList()
@@ -151,7 +152,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun updateKeys() {
-        update("keys")
+        update(Data.Kind.KEY)
         for (key in listOutput.keys) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(key)
             itemsAdapter.list.add(Item(key.key.name, key.key.fingerprint, details, key.public_qr_files))
@@ -160,7 +161,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun updateWallets() {
-        update("wallets")
+        update(Data.Kind.WALLET)
         for (wallet in listOutput.wallets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet)
             itemsAdapter.list.add(Item(wallet.wallet.name, wallet.wallet.fingerprints.toString(), details, wallet.qr_files))
@@ -169,7 +170,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun updatePsbts() {
-        update("psbts")
+        update(Data.Kind.PSBT)
         for (psbt in listOutput.psbts) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(psbt)
             itemsAdapter.list.add(Item(psbt.psbt.name, psbt.signatures, details, psbt.qr_files))
@@ -177,10 +178,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         itemsAdapter.notifyDataSetChanged()
     }
 
-    private fun update(kind: String) {
+    private fun update(kind: Data.Kind) {
         try {
             itemsAdapter.list.clear()
-            listOutput = Rust().list(filesDir.toString(), kind)
+            listOutput = Rust().list(filesDir.toString(), kind, EncryptionKey.get(applicationContext))
         } catch (e: RustException) {
             C.showMessageDialog(this, e.message?:"Null")
         }
@@ -228,7 +229,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             .setView(valueEditText)
                             .setPositiveButton("Ok") { _, _ ->
                                 val text = valueEditText.text.toString()
-                                savePsbt(text, "base64")
+                                savePsbt(text, Data.Encoding.BASE64)
                                 finish()
                             }
                             .setNegativeButton("Cancel", null)
@@ -304,7 +305,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             .setPositiveButton("Ok") { _, _ ->
                 val text = valueEditText.text.toString()
                 try {
-                    Rust().restore(filesDir.toString(), name, nature, text)
+                    Rust().restore(filesDir.toString(), name, Data.Nature.valueOf(nature), text, EncryptionKey.get(applicationContext))
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Log.e("LIST", e.message?:"Null")
@@ -335,7 +336,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     } else {
                         when (what) {
                             getString(R.string.random) -> {
-                                Rust().random(filesDir.toString(), keyName)
+                                Rust().random(filesDir.toString(), keyName, EncryptionKey.get(applicationContext))
                                 setResult(Activity.RESULT_OK, Intent())
                                 finish()
                             }
@@ -357,7 +358,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun saveWallet(content: String) {
         Log.d("LIST", "saveWallet $content")
         try {
-            val json = mapper.readValue(content, Rust.WalletJson::class.java)
+            val json = mapper.readValue(content, Data.WalletJson::class.java)
             Rust().importWallet(filesDir.toString(), json)
         } catch (e: Exception) {
             Log.e("LIST", e.message?:"Null")
@@ -365,10 +366,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         }
     }
 
-    private fun savePsbt(psbt: String, encoding: String) {
+    private fun savePsbt(psbt: String, encoding: Data.Encoding) {
         Log.d("LIST", "savePsbt ${psbt.length} chars length, encoding: $encoding")
         try {
-            Rust().savePSBT(filesDir.toString(), psbt, encoding)
+            Rust().savePSBT(filesDir.toString(),  Data.StringEncoding( encoding, psbt))
         } catch (e: Exception) {
             val message = e.message ?: "Null"
             Log.e("LIST", message)
@@ -410,7 +411,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                                 finish()
                             }
                             IMPORT_PSBT -> {
-                                savePsbt(hexResult, "hex")
+                                savePsbt(hexResult, Data.Encoding.HEX)
                                 finish()
                             }
                         }
@@ -424,7 +425,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             updateWallets()
                         }
                         PSBTS -> {
-                            savePsbt(result.contents, "hex")
+                            savePsbt(result.contents, Data.Encoding.HEX)
                             updatePsbts()
                         }
                     }
@@ -442,7 +443,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             diceLaunches.add(launch.toInt())
             if (diceLaunches.size == launchesRequired(faces)) {
                 Log.d("LIST", "finish diceLaunches $diceLaunches")
-                Rust().dice(filesDir.toString(), keyName!!, faces.toString(), diceLaunches)
+                Rust().dice(filesDir.toString(), keyName!!, Data.Base.valueOf(faces.toString()), diceLaunches, EncryptionKey.get(applicationContext))
                 resetFields()
                 finish()
             } else {

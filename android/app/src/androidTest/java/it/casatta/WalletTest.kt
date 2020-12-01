@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ActivityTestRule
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import it.casatta.json.Data
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -49,7 +50,7 @@ class WalletTest : Common() {
         val network = getNetwork()
 
         val name = "wallet-${System.currentTimeMillis()}"
-        val wallet = Rust.WalletJson(
+        val wallet = Data.WalletJson(
             name,
             mainDescriptors[network]!!,
             changeDescriptors[network]!!,
@@ -77,7 +78,7 @@ class WalletTest : Common() {
         checkElementNotInList(name)
 
         val invalidNetwork = invalidNetwork(network)
-        val invalidWallet = Rust.WalletJson(
+        val invalidWallet = Data.WalletJson(
             name,
             mainDescriptors[invalidNetwork]!!,
             changeDescriptors[invalidNetwork]!!,

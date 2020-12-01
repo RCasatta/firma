@@ -205,7 +205,6 @@ pub enum StringEncoding {
     Base64(String),
     Hex(String),
     Bech32(String),
-    //Base58(String)
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
