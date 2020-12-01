@@ -72,7 +72,6 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         when (intent.getIntExtra(C.WHAT, 0)) {
             KEYS -> {
                 title = "Keys"
-                updateKeys()
                 item_new.setOnClickListener {
                     comeHere(this, NEW_KEY)
                 }
@@ -87,14 +86,12 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             }
             WALLETS -> {
                 title = "Wallets"
-                updateWallets()
                 item_new.setOnClickListener {
                     comeHere(this, IMPORT_WALLET)
                 }
             }
             PSBTS -> {
                 title = "Transactions"
-                updatePsbts()
                 item_new.setOnClickListener {
                     comeHere(this, IMPORT_PSBT)
                 }
@@ -305,7 +302,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             .setPositiveButton("Ok") { _, _ ->
                 val text = valueEditText.text.toString()
                 try {
-                    Rust().restore(filesDir.toString(), name, Data.Nature.valueOf(nature), text, EncryptionKey.get(applicationContext))
+                    Rust().restore(filesDir.toString(), name, Data.Nature.valueOf(nature.toUpperCase()), text, EncryptionKey.get(applicationContext))
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Log.e("LIST", e.message?:"Null")

@@ -33,10 +33,17 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
     let network = Network::from_str(network)?;
     let method = value.get("method").and_then(|s| s.as_str());
     let args = value.get("args").unwrap_or(&Value::Null);
-    info!(
-        "method:{:?} datadir:{} network:{} args:{:?}",
-        method, datadir, network, args
-    );
+    if !str.contains("encryption_key") {
+        info!(
+            "method:{:?} datadir:{} network:{} args:{:?}",
+            method, datadir, network, args
+        );
+    } else {
+        info!(
+            "method:{:?} datadir:{} network:{} args:REDACTED",
+            method, datadir, network
+        );
+    }
 
     let value = match method {
         Some("random") => {
@@ -114,10 +121,14 @@ pub extern "C" fn c_call(to: *const c_char) -> *mut c_char {
     });
 
     let input = unsafe { CStr::from_ptr(to) };
-    info!("<-- ({:?})", input);
+    if !input.to_str().unwrap().contains("encryption_key") {
+        info!("<-- ({:?})", input.to_str());
+    } else {
+        info!("<-- (REDACTED)");
+    }
+
     let output = rust_call(input)
         .unwrap_or_else(|e| CString::new(serde_json::to_vec(&e.to_json()).unwrap()).unwrap());
-    //TODO !IMPORTANT remove encryption KEY
     info!("--> ({:?})", output);
     output.into_raw()
 }

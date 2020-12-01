@@ -142,8 +142,8 @@ class Data {
     }
 
     enum class Nature(@JsonValue val code: String) {
-        XPRV("xprv"),
-        MNEMONIC("mnemonic")
+        XPRV("Xprv"),
+        MNEMONIC("Mnemonic")
     }
 
     enum class Encoding(@JsonValue val code: String) {
