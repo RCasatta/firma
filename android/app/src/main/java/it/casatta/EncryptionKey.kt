@@ -24,7 +24,6 @@ class EncryptionKey {
             )
             val encryptionKeyHex = sharedPreferences.getString("encryption_key_hex", "")!!
             if (encryptionKeyHex.isEmpty()) {
-
                 val newEncryptionKeyHex = create()
                 sharedPreferences.edit().putString("encryption_key_hex", newEncryptionKeyHex).commit()
                 return get(context)

@@ -440,7 +440,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             diceLaunches.add(launch.toInt())
             if (diceLaunches.size == launchesRequired(faces)) {
                 Log.d("LIST", "finish diceLaunches $diceLaunches")
-                Rust().dice(filesDir.toString(), keyName!!, Data.Base.valueOf(faces.toString()), diceLaunches, EncryptionKey.get(applicationContext))
+                Rust().dice(filesDir.toString(), keyName!!, Data.Base.valueOf("_$faces"), diceLaunches, EncryptionKey.get(applicationContext))
                 resetFields()
                 finish()
             } else {

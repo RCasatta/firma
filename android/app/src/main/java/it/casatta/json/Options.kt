@@ -28,7 +28,7 @@ class Options {
         val wallet_descriptor_file: String,
         val qr_version: Int,
         val psbt_file: String,
-        val allow_any_derivation: Boolean,
+        val allow_any_derivations: Boolean,
         val encryption_key: Data.StringEncoding?
     )
 

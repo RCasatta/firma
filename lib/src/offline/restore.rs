@@ -3,7 +3,6 @@ use crate::{check_compatibility, Result, StringEncoding};
 use crate::{save_keys, MasterKeyOutput, PrivateMasterKey};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
-use log::debug;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::str::FromStr;
@@ -56,7 +55,6 @@ impl FromStr for Nature {
 }
 
 pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<MasterKeyOutput> {
-    debug!("restore {:?}", &opt);
     let master_key = match opt.nature {
         Nature::Xprv => {
             let key = ExtendedPrivKey::from_str(&opt.value)?;

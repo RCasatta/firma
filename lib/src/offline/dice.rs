@@ -2,7 +2,7 @@ use crate::mnemonic::Mnemonic;
 use crate::*;
 use bitcoin::Network;
 use num_bigint::BigUint;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use std::io;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -37,14 +37,14 @@ pub struct DiceOptions {
     pub encryption_key: Option<StringEncoding>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Bits {
     _128,
     _192,
     _256,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize)]
 pub enum Base {
     _2 = 2,
     _4 = 4,
@@ -168,6 +168,16 @@ impl FromStr for Bits {
     }
 }
 
+impl<'de> Deserialize<'de> for Base {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
 impl FromStr for Base {
     type Err = io::Error;
 
@@ -184,6 +194,16 @@ impl FromStr for Base {
                 format!("{} not in (2, 4, 6, 8, 12, 20)", s),
             )),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for Bits {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
     }
 }
 

@@ -33,17 +33,18 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
     let network = Network::from_str(network)?;
     let method = value.get("method").and_then(|s| s.as_str());
     let args = value.get("args").unwrap_or(&Value::Null);
-    if !str.contains("encryption_key") {
-        info!(
-            "method:{:?} datadir:{} network:{} args:{:?}",
-            method, datadir, network, args
-        );
-    } else {
-        info!(
-            "method:{:?} datadir:{} network:{} args:REDACTED",
-            method, datadir, network
-        );
+
+    let mut print_args = args.clone();
+    if let Some(value) = print_args.get_mut("encryption_key") {
+        *value = Value::String("REDACTED".to_string());
     }
+    if let Some(value) = print_args.get_mut("encryption_keys") {
+        *value = Value::String("REDACTED".to_string());
+    }
+    info!(
+        "method:{:?} datadir:{} network:{} args:{:?}",
+        method, datadir, network, print_args
+    );
 
     let value = match method {
         Some("random") => {
