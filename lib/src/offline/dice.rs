@@ -320,6 +320,7 @@ mod tests {
         let expected: PrivateMasterKey = serde_json::from_slice(bytes).unwrap();
         let calculated =
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
+        println!("{:?}", expected);
         assert_eq!(
             calculated.fingerprint.to_string(),
             expected.fingerprint.to_string()

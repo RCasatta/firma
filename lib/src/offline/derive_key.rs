@@ -6,6 +6,7 @@ use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
 use std::path::PathBuf;
 use structopt::StructOpt;
+use std::ops::Deref;
 
 /// Restore a master key from the secret component
 #[derive(StructOpt, Debug, Clone)]
@@ -39,7 +40,7 @@ pub fn start(
     }
     let secp = Secp256k1::signing_only();
     let from_key_json = read_key(&opt.from_key_file, opt.encryption_key.as_ref())?;
-    let mut child_key = from_key_json.xprv;
+    let mut child_key = from_key_json.xprv.deref().clone();
     let bytes = opt.to_key_name.as_bytes();
     for byte in bytes {
         let path = [ChildNumber::from_hardened_idx(*byte as u32)?];

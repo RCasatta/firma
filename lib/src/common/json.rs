@@ -11,24 +11,33 @@ use serde_json::Value;
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::fmt::Debug;
+use crate::offline::decrypt::RedactDebug;
+use bitcoin::hashes::core::fmt::Formatter;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKey {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mnemonic: Option<Mnemonic>,
     pub xpub: ExtendedPubKey,
-    pub xprv: ExtendedPrivKey,
+    pub xprv: RedactDebug<ExtendedPrivKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dice: Option<Dice>,
     pub name: String,
     pub fingerprint: Fingerprint,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Dice {
     pub launches: String,
     pub faces: u32,
     pub value: String,
+}
+
+impl Debug for Dice {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "REDACTED")
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -306,7 +315,7 @@ impl PrivateMasterKey {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let seed = mnemonic.to_seed(None);
 
-        let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
+        let xprv = RedactDebug(ExtendedPrivKey::new_master(network, &seed.0)?);
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
         Ok(PrivateMasterKey {
@@ -323,7 +332,7 @@ impl PrivateMasterKey {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
         PrivateMasterKey {
-            xprv,
+            xprv: RedactDebug(xprv),
             xpub,
             mnemonic: None,
             dice: None,

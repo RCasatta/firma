@@ -25,11 +25,18 @@ use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 use std::str::FromStr;
+use std::fmt::Debug;
 
 /// Represent the BIP39 mnemonic as a vector of values representing 11 bits each
 /// It is conveniently stored in usize to be used as index of the WORDS const vec
-#[derive(Clone, Eq, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Mnemonic(String);
+
+impl Debug for Mnemonic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result  {
+        write!(f, "REDACTED")
+    }
+}
 
 /// BIP39 possible errors
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -81,7 +88,7 @@ impl FromStr for Mnemonic {
 
 impl Display for Mnemonic {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "REDACTED")
     }
 }
 

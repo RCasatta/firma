@@ -4,9 +4,10 @@ use aes_gcm_siv::Aes256GcmSiv;
 use log::warn;
 use rand::{thread_rng, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{Debug, Formatter};
 use std::path::PathBuf;
 use structopt::StructOpt;
+use std::ops::Deref;
 
 #[derive(StructOpt, Debug, Serialize, Deserialize)]
 pub struct DecryptOptions {
@@ -17,7 +18,7 @@ pub struct DecryptOptions {
     /// in CLI it is populated from standard input
     /// It is an Option so that structopt could skip, however it must be Some
     #[structopt(skip)]
-    pub encryption_key: Option<StringEncoding>,
+    pub encryption_key: Option<RedactDebug<StringEncoding>>,
 }
 
 pub fn decrypt<T>(opt: &DecryptOptions) -> Result<T>
@@ -38,6 +39,7 @@ where
                 }
             }
         }
+        (MaybeEncrypted::Encrypted(_), None) => Err(Error::MissingEncryptionKey),
         _ => Err(Error::MaybeEncryptedWrongState),
     }
 }
@@ -46,7 +48,7 @@ impl DecryptOptions {
     pub fn new(path: &PathBuf, encryption_key: Option<&StringEncoding>) -> Self {
         DecryptOptions {
             path: path.clone(),
-            encryption_key: encryption_key.cloned(),
+            encryption_key: encryption_key.cloned().map(|e| RedactDebug(e)),
         }
     }
 }
@@ -106,15 +108,39 @@ fn get_cipher(encryption_key: &[u8; 32]) -> Aes256GcmSiv {
     Aes256GcmSiv::new(&encryption_key)
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct RedactDebug<T>(pub T);
+
+impl<T> Deref for RedactDebug<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> Debug for RedactDebug<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result  {
+        write!(f, "REDACTED")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::common::mnemonic::Mnemonic;
-    use crate::offline::decrypt::MaybeEncrypted;
-    use crate::PrivateMasterKey;
+    use crate::offline::decrypt::{MaybeEncrypted, RedactDebug};
+    use crate::{PrivateMasterKey};
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Network;
     use rand::{thread_rng, Rng};
     use std::str::FromStr;
+
+    #[test]
+    fn test_redact_debug() {
+        let sec = RedactDebug("secret".to_string());
+
+        assert!(! format!("{:?}", sec).contains("secret"));
+    }
 
     #[test]
     fn test_maybe_encrypted_rt() {
@@ -135,10 +161,10 @@ mod tests {
             &Mnemonic::from_str(
                 "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",
             )
-            .unwrap(),
+                .unwrap(),
             "ciao",
         )
-        .unwrap();
+            .unwrap();
         let maybe_plain = MaybeEncrypted::plain(key_json);
         let maybe_encrypt = maybe_plain.encrypt(&cipher_key).unwrap();
         let maybe_plain_again = maybe_encrypt.decrypt(&cipher_key).unwrap();

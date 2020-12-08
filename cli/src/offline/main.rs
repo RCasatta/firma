@@ -70,6 +70,8 @@ fn main() -> Result<()> {
             Sign(opt) => opt.encryption_key = Some(encoded),
             Decrypt(opt) => opt.encryption_key = Some(encoded),
             List(opt) => opt.encryption_keys = vec![encoded],
+            Dice(opt) => opt.encryption_key = Some(encoded),
+            Restore(opt) => opt.encryption_key = Some(encoded),
             _ => {
                 println!(
                     "{}",
