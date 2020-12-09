@@ -6,6 +6,7 @@ env:
   CARGO_TERM_COLOR: always
   ANDROID_NDK_VER: android-ndk-r21d
   HOST: linux-x86_64
+  DEBUG: debug
 
 jobs:
 
@@ -17,19 +18,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Setup cache
+        id: setup_cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+            ${{ env.ANDROID_NDK_VER }}
+          key: cache-${{ matrix.target }}-${{ env.ANDROID_NDK_VER }}-${{ hashFiles('**/Cargo.toml','**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           target: ${{ matrix.target }}
-      - run: echo "NDK=${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}" >> $GITHUB_ENV
-      - run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
+      - run: echo "NDK=${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}" >> $GITHUB_ENV
+      - name: Download Android NDK
+        run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
+        if: steps.setup_cache.outputs.cache-hit != 'true'
       - run: cd lib && ./build-android/${{ matrix.target }}.sh
       - name: Upload libs
         uses: actions/upload-artifact@v2
         with:
           name: lib_${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/libfirma.so
+          path: target/${{ matrix.target }}/${{ env.DEBUG }}/libfirma.so
 
   android-apk:
     runs-on: ubuntu-20.04
