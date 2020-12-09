@@ -26,7 +26,6 @@ class KeyActivity : AppCompatActivity() {
         setContentView(R.layout.activity_key)
 
         val keyString = intent.getStringExtra(C.KEY)
-        Log.d("KEY", "${Network.TYPE} $keyString")
         val keyJson = mapper.readValue(keyString, MasterKeyOutput::class.java)
         val keyTitle = "key: ${keyJson.key.name}"
         title = keyTitle

@@ -436,7 +436,6 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             launchDice(1)
         } else if (requestCode == DICE_LAUNCH && resultCode== Activity.RESULT_OK) {
             val launch = data?.getStringExtra(C.RESULT)!!
-            Log.d("LIST", "launch is $launch")
             diceLaunches.add(launch.toInt())
             if (diceLaunches.size == launchesRequired(faces)) {
                 Log.d("LIST", "finish diceLaunches $diceLaunches")
