@@ -13,11 +13,7 @@ pub struct DeriveAddressOpts {
 }
 
 /// derive address from descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
-pub fn derive_address(
-    network: Network,
-    opt: &DeriveAddressOpts,
-    int_or_ext: u32,
-) -> Result<GetAddressOutput> {
+pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAddressOutput> {
     // checksum not supported at the moment, stripping out
     let end = opt
         .descriptor
@@ -29,7 +25,7 @@ pub fn derive_address(
         .derive(ChildNumber::from_normal_idx(opt.index)?)
         .address(network)
         .ok_or(Error::AddressFromDescriptorFails)?;
-    let path = DerivationPath::from_str(&format!("m/{}/{}", int_or_ext, opt.index))?;
+    let path = DerivationPath::from_str(&format!("m/0/{}", opt.index))?;
 
     Ok(GetAddressOutput {
         address,
@@ -71,7 +67,7 @@ mod tests {
             descriptor: DESCRIPTOR.to_string(),
             index: 0,
         };
-        let derived_address = derive_address(Network::Testnet, &opts, 0).unwrap();
+        let derived_address = derive_address(Network::Testnet, &opts).unwrap();
 
         assert_eq!(
             "tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk",
@@ -81,7 +77,7 @@ mod tests {
         assert_eq!("m/0/0", derived_address.path.to_string());
         opts.index = 2147483648;
         assert_eq!(
-            derive_address(Network::Testnet, &opts, 0)
+            derive_address(Network::Testnet, &opts)
                 .unwrap_err()
                 .to_string(),
             "InvalidChildNumber(2147483648)"

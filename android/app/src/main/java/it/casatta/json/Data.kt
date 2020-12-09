@@ -46,8 +46,7 @@ class Data {
 
     data class WalletJson(
         val name: String,
-        val descriptor_main: String,
-        val descriptor_change: String,
+        val descriptor: String,
         val fingerprints: List<String>,
         val required_sig: Int,
         val created_at_height: Int,

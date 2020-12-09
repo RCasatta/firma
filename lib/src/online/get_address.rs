@@ -16,10 +16,6 @@ pub struct GetAddressOptions {
     #[structopt(long)]
     pub index: Option<u32>,
 
-    /// If we are asking for an internal address, aka change address
-    #[structopt(long)]
-    pub is_change: bool,
-
     /// Show the qr in text mode inside the returned json, note that new line are encoded,
     /// to properly see the qr_code you can pipe the json in jq eg. ` | jq -r .qr_text`
     #[structopt(long, default_value = "none")]
@@ -29,23 +25,15 @@ pub struct GetAddressOptions {
 impl Wallet {
     pub fn get_address(&self, opts: &GetAddressOptions) -> Result<GetAddressOutput> {
         let (wallet, mut indexes) = self.context.load_wallet_and_index()?;
+        let index = opts.index.unwrap_or(indexes.main);
+        let descriptor = wallet.descriptor;
 
-        let (int_or_ext, index, descriptor) = if opts.is_change {
-            (1, indexes.change, wallet.descriptor_change)
-        } else {
-            match opts.index {
-                Some(index) => (0, index, wallet.descriptor_main),
-                None => (0, indexes.main, wallet.descriptor_main),
-            }
-        };
-        let address_type = if opts.is_change { "change" } else { "external" };
-
-        info!("Creating {} address at index {}", address_type, index);
+        info!("Creating address at index {}", index);
 
         let addresses = self
             .client
             .derive_addresses(&descriptor, Some([index, index]))?;
-        //TODO derive it twice? You know bitflips
+
         let address = addresses.first().ok_or(Error::MissingAddress)?.clone();
         if address.network != self.context.network {
             return Err("address returned is not on the same network as given".into());
@@ -53,23 +41,15 @@ impl Wallet {
         info!("{}", address);
 
         let derive_opts = DeriveAddressOpts { descriptor, index };
-        let mut derive_address = crate::offline::descriptor::derive_address(
-            self.context.network,
-            &derive_opts,
-            int_or_ext,
-        )?;
+        let mut derive_address =
+            crate::offline::descriptor::derive_address(self.context.network, &derive_opts)?;
         assert_eq!(
             derive_address.address, address,
             "address generated from the node differs from the one generated from miniscript"
         );
 
-        if opts.is_change {
-            indexes.change += 1;
-            self.context.save_index(&indexes)?;
-        } else if opts.index.is_none() {
-            indexes.main += 1;
-            self.context.save_index(&indexes)?;
-        }
+        indexes.main += 1;
+        self.context.save_index(&indexes)?;
 
         match opts.qr_mode {
             QrMode::Text { inverted } => {

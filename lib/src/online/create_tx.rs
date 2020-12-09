@@ -50,11 +50,10 @@ impl CreateTxOptions {
     }
 
     fn recipients_as_outputs(&self) -> HashMap<String, Amount> {
-        let mut outputs = HashMap::new();
-        for recipient in self.recipients.iter() {
-            outputs.insert(recipient.address.to_string(), recipient.amount);
-        }
-        outputs
+        self.recipients
+            .iter()
+            .map(|r| (r.address.to_string(), r.amount))
+            .collect()
     }
 
     fn coins_as_inputs(&self) -> Vec<CreateRawTransactionInput> {
@@ -102,7 +101,6 @@ impl Wallet {
         options.include_watching = Some(true);
         let get_addr_opts = GetAddressOptions {
             index: None,
-            is_change: true,
             qr_mode: QrMode::None,
         };
         options.change_address = Some(self.get_address(&get_addr_opts)?.address);
@@ -119,12 +117,12 @@ impl Wallet {
         let funded_psbt = match result {
             Ok(value) => {
                 if value.change_position == -1 {
-                    self.context.decrease_change_index()?;
+                    self.context.decrease_index()?;
                 }
                 value
             }
             Err(e) => {
-                self.context.decrease_change_index()?;
+                self.context.decrease_index()?;
                 return Err(format!("error creating psbt ({:?})", e).into());
             }
         };

@@ -31,21 +31,12 @@ class WalletTest : Common() {
         val activity = activityRule.launchActivity(Intent())
         val descriptorMainMainnet =
             "wsh(multi(2,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*))#q0agyfvx";
-        val descriptorChangeMainnet =
-            "wsh(multi(2,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/1/*,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/1/*))#r0dapdc4";
         val descriptorMainTestnet =
             "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/0/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/0/*))#q0agyfvx";
-        val descriptorChangeTestnet =
-            "wsh(multi(2,tpubD6NzVbkrYhZ4XeQW5Adf6Cho9eaBWTzoCApPf2NGsyFCYx2WVEFWQ9hmuwdJi3WbnG33CqAqFGrZYVrZeUztHoUGmPaxqzp96w2oMu9JCUV/1/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/1/*))#r0dapdc4";
         val mainDescriptors = mapOf(
             "mainnet" to descriptorMainMainnet,
             "testnet" to descriptorMainTestnet,
             "regtest" to descriptorMainTestnet
-        )
-        val changeDescriptors = mapOf(
-            "mainnet" to descriptorChangeMainnet,
-            "testnet" to descriptorChangeTestnet,
-            "regtest" to descriptorChangeTestnet
         )
         val network = getNetwork()
 
@@ -53,7 +44,6 @@ class WalletTest : Common() {
         val wallet = Data.WalletJson(
             name,
             mainDescriptors[network]!!,
-            changeDescriptors[network]!!,
             listOf("8f335370", "6b9128bc"),
             2,
             1718227,
@@ -81,7 +71,6 @@ class WalletTest : Common() {
         val invalidWallet = Data.WalletJson(
             name,
             mainDescriptors[invalidNetwork]!!,
-            changeDescriptors[invalidNetwork]!!,
             listOf("8f335370", "6b9128bc"),
             2,
             1718227,

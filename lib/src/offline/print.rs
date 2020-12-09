@@ -209,8 +209,7 @@ fn wallet_with_path(
                 let path_vec: Vec<ChildNumber> = path.clone().into();
                 if let ChildNumber::Normal { index } = path_vec.first()? {
                     let descriptor = match index {
-                        0 => &wallet.descriptor_main,
-                        1 => &wallet.descriptor_change,
+                        0 => &wallet.descriptor,
                         _ => return None,
                     };
                     if let ChildNumber::Normal { index } = path_vec.last()? {
@@ -218,7 +217,7 @@ fn wallet_with_path(
                             descriptor: descriptor.to_string(),
                             index: *index,
                         };
-                        if let Ok(derived) = derive_address(address.network, &opts, *index) {
+                        if let Ok(derived) = derive_address(address.network, &opts) {
                             if &derived.address == address {
                                 return Some((wallet.name.clone(), path.clone()));
                             }

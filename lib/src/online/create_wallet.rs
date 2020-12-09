@@ -84,19 +84,8 @@ impl Wallet {
         let mut xpubs = read_xpubs_files(&opt.xpub_files)?;
         xpubs.extend(&opt.xpubs);
 
-        let mut descriptors = vec![];
-        for i in 0..=1 {
-            let mut xpub_paths = vec![];
-            for xpub in xpubs.iter() {
-                let xpub_path = format!("{}/{}/*", xpub, i);
-                xpub_paths.push(xpub_path)
-            }
-            let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
-            descriptors.push(descriptor);
-        }
-
-        let descriptor_main = self.client.get_descriptor_info(&descriptors[0])?.descriptor;
-        let descriptor_change = self.client.get_descriptor_info(&descriptors[1])?.descriptor;
+        let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("0/{}/*", xpub)).collect();
+        let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
 
         self.client
             .create_wallet(&self.context.wallet_name, Some(true), None, None, None)?;
@@ -106,12 +95,8 @@ impl Wallet {
         multi_request.timestamp = ImportMultiRescanSince::Now;
         multi_request.keypool = Some(true);
         multi_request.watchonly = Some(true);
-        let mut main = multi_request.clone();
-        main.descriptor = Some(&descriptor_main);
-        main.internal = Some(false);
-        let mut change = multi_request.clone();
-        change.descriptor = Some(&descriptor_change);
-        change.internal = Some(true);
+        multi_request.descriptor = Some(&descriptor);
+        multi_request.internal = Some(false);
 
         let multi_options = ImportMultiOptions {
             rescan: Some(false),
@@ -119,24 +104,20 @@ impl Wallet {
 
         let import_multi_result = self
             .client
-            .import_multi(&[main, change], Some(&multi_options));
+            .import_multi(&[multi_request], Some(&multi_options));
         info!("import_multi_result {:?}", import_multi_result);
 
         let fingerprints = xpubs.iter().map(|x| x.fingerprint()).collect();
 
         let wallet = WalletJson {
             name: self.context.wallet_name.to_string(),
-            descriptor_main,
-            descriptor_change,
+            descriptor,
             daemon_opts: Some(daemon_opts.clone()),
             fingerprints,
             required_sig: opt.r,
             created_at_height: height,
         };
-        let indexes = WalletIndexes {
-            main: 0u32,
-            change: 0u32,
-        };
+        let indexes = WalletIndexes { main: 0u32 };
 
         let wallet_file = self.context.save_wallet(&wallet)?;
         self.context.save_index(&indexes)?;
@@ -159,11 +140,7 @@ impl Wallet {
 }
 
 pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Result<()> {
-    extract_xpubs(&wallet.descriptor_main)?
-        .iter()
-        .map(|xpub| check_compatibility(network, xpub.network))
-        .collect::<Result<()>>()?;
-    extract_xpubs(&wallet.descriptor_change)?
+    extract_xpubs(&wallet.descriptor)?
         .iter()
         .map(|xpub| check_compatibility(network, xpub.network))
         .collect::<Result<()>>()?;

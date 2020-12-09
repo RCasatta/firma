@@ -23,7 +23,7 @@ class WalletActivity : AppCompatActivity() {
         val walletString = intent.getStringExtra(C.WALLET)
         Log.d("WALLET", "${Network.TYPE} $walletString")
         val walletJson = mapper.readValue(walletString, Data.CreateWalletOutput::class.java)
-        walletDescriptor = walletJson.wallet.descriptor_main
+        walletDescriptor = walletJson.wallet.descriptor
         val walletTitle = "wallet: ${walletJson.wallet.name}"
         title = walletTitle
 
@@ -46,8 +46,7 @@ class WalletActivity : AppCompatActivity() {
         items.adapter = itemsAdapter
 
         itemsAdapter.list.add(DescItem("Fingerprints", walletJson.wallet.fingerprints.toString() ))
-        itemsAdapter.list.add(DescItem("Descriptor main", walletJson.wallet.descriptor_main ))
-        itemsAdapter.list.add(DescItem("Descriptor change", walletJson.wallet.descriptor_change ))
+        itemsAdapter.list.add(DescItem("Descriptor main", walletJson.wallet.descriptor ))
         itemsAdapter.list.add(DescItem("Required sig", walletJson.wallet.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.wallet.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson.wallet) ))

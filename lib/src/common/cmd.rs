@@ -70,9 +70,9 @@ impl Context {
         Ok(())
     }
 
-    pub fn decrease_change_index(&self) -> Result<()> {
+    pub fn decrease_index(&self) -> Result<()> {
         let (_, mut indexes) = self.load_wallet_and_index()?;
-        indexes.change -= 1;
+        indexes.main -= 1;
         self.save_index(&indexes)?;
         Ok(())
     }
