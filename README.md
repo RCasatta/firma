@@ -99,8 +99,18 @@ Check the bin [readme](cli/README.md) for an example with CLI
 <details>
   <summary>How Firma tackle physical attacks on the device?</summary>
 
-  It doesn't. The security is given by the multi-signature scheme, the offline software doesn't use any secure element of the device.
-   
+  Secret informations, such as bitcoin extended private key could be encrypted.
+  
+  On cli, user could leverage their existing gpg infrastructure with:
+  ```
+  # encryption key creation and storage in encrypted gpg
+  dd if=/dev/urandom bs=1 count=32 | gpg --encrypt >encryption_key.gpg
+  
+  # bitcoin private key creation
+  gpg --decrypt encryption_key.gpg | firma-offline --read-stdin --key-name bitcoin-key random
+  ```
+
+  On android, system keystore is used to encrypt 32 random bytes, so that physical attacks need to break the secure element if the device has one.
 </details>
 
 <details>
@@ -112,6 +122,14 @@ Check the bin [readme](cli/README.md) for an example with CLI
   
 </details>
 
+<details>
+  <summary>I've seen secret data in the logs even if I am using the `encryption_key`, what are you doing?</summary>
+
+  Logs output is disabled in release build, but you may see secrets in logs if you are using a debug builds.
+  Actively redacting sensible data has been pursued, however, it could always be printed the json used to communicate with the lib
+  that must containing this secret data to work, so the disable logs in release build approach has been taken. 
+
+</details>
 
 ## Donations
 

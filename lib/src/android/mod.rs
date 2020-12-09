@@ -34,16 +34,9 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
     let method = value.get("method").and_then(|s| s.as_str());
     let args = value.get("args").unwrap_or(&Value::Null);
 
-    let mut print_args = args.clone();
-    if let Some(value) = print_args.get_mut("encryption_key") {
-        *value = Value::String("REDACTED".to_string());
-    }
-    if let Some(value) = print_args.get_mut("encryption_keys") {
-        *value = Value::String("REDACTED".to_string());
-    }
     info!(
         "method:{:?} datadir:{} network:{} args:{:?}",
-        method, datadir, network, print_args
+        method, datadir, network, args
     );
 
     let value = match method {
@@ -117,16 +110,14 @@ static START: Once = Once::new();
 
 #[no_mangle]
 pub extern "C" fn c_call(to: *const c_char) -> *mut c_char {
-    START.call_once(|| {
-        android_logger::init_once(Config::default().with_min_level(Level::Debug));
-    });
+    if cfg!(debug_assertions) {
+        START.call_once(|| {
+            android_logger::init_once(Config::default().with_min_level(Level::Debug));
+        });
+    }
 
     let input = unsafe { CStr::from_ptr(to) };
-    if !input.to_str().unwrap().contains("encryption_key") {
-        info!("<-- ({:?})", input.to_str());
-    } else {
-        info!("<-- (REDACTED)");
-    }
+    info!("<-- ({:?})", input.to_str());
 
     let output = rust_call(input)
         .unwrap_or_else(|e| CString::new(serde_json::to_vec(&e.to_json()).unwrap()).unwrap());

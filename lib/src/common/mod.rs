@@ -44,8 +44,13 @@ impl log::Log for SimpleLogger {
 }
 
 pub fn init_logger() {
+    let level = if cfg!(debug_assertions) {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Off
+    };
     log::set_logger(&LOGGER)
-        .map(|()| log::set_max_level(LevelFilter::Debug))
+        .map(|()| log::set_max_level(level))
         .expect("cannot initialize logging");
 }
 

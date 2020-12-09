@@ -1,6 +1,6 @@
 use firma::bitcoin::Network;
 use firma::serde_json::{self, Value};
-use firma::{common, init_logger, offline, Result, StringEncoding, ToJson};
+use firma::{common, init_logger, offline, Error, Result, StringEncoding, ToJson};
 use std::convert::TryInto;
 use std::io;
 use std::io::Read;
@@ -70,11 +70,12 @@ fn main() -> Result<()> {
             Sign(opt) => opt.encryption_key = Some(encoded),
             Decrypt(opt) => opt.encryption_key = Some(encoded),
             List(opt) => opt.encryption_keys = vec![encoded],
+            Dice(opt) => opt.encryption_key = Some(encoded),
+            Restore(opt) => opt.encryption_key = Some(encoded),
+            DeriveKey(opt) => opt.encryption_key = Some(encoded),
             _ => {
-                println!(
-                    "{}",
-                    firma::Error::Generic("Subcommand doesn't need encryption key".to_string())
-                );
+                let err = Error::Generic("Subcommand doesn't need encryption key".to_string());
+                println!("{}", serde_json::to_string_pretty(&err.to_json())?);
                 return Ok(());
             }
         }
