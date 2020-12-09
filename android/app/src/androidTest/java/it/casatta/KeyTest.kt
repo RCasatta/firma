@@ -1,48 +1,41 @@
 package it.casatta
 
-import android.content.Intent
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.pressBack
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
+import androidx.test.ext.junit.rules.activityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.rule.ActivityTestRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class KeyTest : Common() {
-
     @get:Rule
-    var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(
-        MainActivity::class.java,
-        true,
-        false
-    )
+    val activityScenarioRule = activityScenarioRule<MainActivity>()
 
     @Test
     fun randomKey() {
-        val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
 
         onView(withId(R.id.key_button)).perform(click())
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(keyName)
         onView(withText(keyName)).check(matches(isDisplayed()))
 
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList("Random")
-        setTextInDialogAndConfirm(activity, keyName)
+        setTextInDialogAndConfirm(keyName)
         checkAndDismissDialog(R.string.key_exists)
 
         onView(isRoot()).perform(pressBack())
         clickElementInList(keyName)
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialogAndConfirm(activity, keyName, "DELETE")
+        setTextInDialogAndConfirm(keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
         checkElementNotInList(keyName)
@@ -50,7 +43,6 @@ class KeyTest : Common() {
 
     @Test
     fun xprv() {
-        val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
@@ -72,13 +64,13 @@ class KeyTest : Common() {
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        setTextInDialogAndConfirm(activity, keyName)
-        setTextInDialogAndConfirm(activity, xprvs[network]!!)
+        setTextInDialogAndConfirm(keyName)
+        setTextInDialogAndConfirm(xprvs[network]!!)
         onView(withText(keyName)).check(matches(isDisplayed()))
         clickElementInList(keyName)
         onView(withText(xpubs[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialogAndConfirm(activity, keyName, "DELETE")
+        setTextInDialogAndConfirm(keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
         checkElementNotInList(keyName)
@@ -86,14 +78,13 @@ class KeyTest : Common() {
         val invalidNetwork = invalidNetwork(network)
         onView(withId(R.id.item_new)).perform(click())
         clickElementInList(importsText[network]!!)
-        setTextInDialogAndConfirm(activity, keyName)
-        setTextInDialogAndConfirm(activity, xprvs[invalidNetwork]!!)
+        setTextInDialogAndConfirm(keyName)
+        setTextInDialogAndConfirm(xprvs[invalidNetwork]!!)
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
     }
 
     @Test
     fun mnemonic() {
-        val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
 
         val expectedXpubTestnet =
@@ -111,19 +102,19 @@ class KeyTest : Common() {
 
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.import_mnemonic))
-        setTextInDialogAndConfirm(activity, keyName)
-        setTextInDialogAndConfirm(activity, "invalid")
+        clickElementInList(getString(R.string.import_mnemonic))
+        setTextInDialogAndConfirm(keyName)
+        setTextInDialogAndConfirm("invalid")
         checkAndDismissDialog(R.string.invalid_xprv_or_mnemonic)
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.import_mnemonic))
-        setTextInDialogAndConfirm(activity, keyName)
-        setTextInDialogAndConfirm(activity, mnemonic)
+        clickElementInList(getString(R.string.import_mnemonic))
+        setTextInDialogAndConfirm(keyName)
+        setTextInDialogAndConfirm(mnemonic)
         onView(withText(keyName)).check(matches(isDisplayed()))
         clickElementInList(keyName)
         onView(withText(expectedXpub[network])).check(matches(isDisplayed()))
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialogAndConfirm(activity, keyName, "DELETE")
+        setTextInDialogAndConfirm(keyName, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.key_button)).perform(click())
         checkElementNotInList(keyName)
@@ -131,7 +122,6 @@ class KeyTest : Common() {
 
     @Test
     fun dice() {
-        val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
         val expectedXpubTestnet =
             "tpubD6NzVbkrYhZ4YSC7guz8W7xZW1ftPPwsB9bAcEHrmdvmzyUSfhTDE8YV3M8WYegAmGorTpGvVGVKdXS5gWkCQ7GPZNUABkchvCyNpA51h5b"
@@ -146,8 +136,8 @@ class KeyTest : Common() {
 
         onView(withId(R.id.key_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.dice))
-        setTextInDialogAndConfirm(activity, keyName)
+        clickElementInList(getString(R.string.dice))
+        setTextInDialogAndConfirm(keyName)
         clickElementInList("20")
         for (i in 1..59) {
             clickElementInList("2")

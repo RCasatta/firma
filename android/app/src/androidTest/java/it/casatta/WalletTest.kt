@@ -1,12 +1,11 @@
 package it.casatta
 
-import android.content.Intent
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
+import androidx.test.ext.junit.rules.activityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.rule.ActivityTestRule
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import it.casatta.json.Data
@@ -20,15 +19,11 @@ class WalletTest : Common() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     @get:Rule
-    var activityRule: ActivityTestRule<MainActivity> = ActivityTestRule(
-        MainActivity::class.java,
-        true,
-        false
-    )
+    val activityScenarioRule = activityScenarioRule<MainActivity>()
 
     @Test
     fun wallet() {
-        val activity = activityRule.launchActivity(Intent())
+
         val descriptorMainMainnet =
             "wsh(multi(2,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*))#q0agyfvx";
         val descriptorMainTestnet =
@@ -53,16 +48,16 @@ class WalletTest : Common() {
 
         onView(withId(R.id.wallet_button)).perform(click())
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.insert_manually))
-        setTextInDialogAndConfirm(activity, walletString)
+        clickElementInList(getString(R.string.insert_manually))
+        setTextInDialogAndConfirm(walletString)
         onView(withText(name)).check(matches(isDisplayed()))
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.insert_manually))
-        setTextInDialogAndConfirm(activity, walletString)
+        clickElementInList(getString(R.string.insert_manually))
+        setTextInDialogAndConfirm( walletString)
         checkAndDismissDialog(R.string.wallet_not_imported)
         clickElementInList(name)
         onView(withId(R.id.delete)).perform(click())
-        setTextInDialogAndConfirm(activity, name, "DELETE")
+        setTextInDialogAndConfirm(name, "DELETE")
         checkAndDismissDialog(R.string.deleted)
         onView(withId(R.id.wallet_button)).perform(click())
         checkElementNotInList(name)
@@ -78,9 +73,10 @@ class WalletTest : Common() {
         )
         val invalidWalletString = mapper.writeValueAsString(invalidWallet)
         onView(withId(R.id.item_new)).perform(click())
-        clickElementInList(activity.getString(R.string.insert_manually))
-        setTextInDialogAndConfirm(activity, invalidWalletString)
+        clickElementInList(getString(R.string.insert_manually))
+        setTextInDialogAndConfirm(invalidWalletString)
         checkAndDismissDialog(R.string.wallet_not_imported)
+
     }
 
 }

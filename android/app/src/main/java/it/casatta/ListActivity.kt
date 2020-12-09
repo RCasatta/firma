@@ -353,7 +353,6 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun saveWallet(content: String) {
-        Log.d("LIST", "saveWallet $content")
         try {
             val json = mapper.readValue(content, Data.WalletJson::class.java)
             Rust().importWallet(filesDir.toString(), json)
