@@ -5,7 +5,8 @@ use rand::distributions::Alphanumeric;
 use rand::{self, thread_rng, Rng};
 use serde_json::{from_value, to_string_pretty, Value};
 use std::env;
-use std::process::Command;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
 mod bitcoind;
@@ -30,7 +31,7 @@ fn integration_test() {
     // create firma 2of2 wallet
     let name_2of2 = "n2of2".to_string();
     let firma_2of2 = FirmaCommand::new(&firma_exe_dir, &name_2of2).unwrap();
-    let r1 = firma_2of2.offline_random("r1").unwrap();
+    let r1 = firma_2of2.offline_random("r1", None).unwrap();
     let r2 = firma_2of2.offline_dice("r2", vec![2u32; 59], 20).unwrap();
     let r_err = firma_2of2.offline_dice("r3", vec![0u32; 59], 20);
     assert_eq!(
@@ -66,7 +67,7 @@ fn integration_test() {
     let firma_2of3 = FirmaCommand::new(&firma_exe_dir, &name_2of3).unwrap();
     let mut vec = vec![];
     for i in 0..3 {
-        vec.push(firma_2of3.offline_random(&format!("p{}", i)).unwrap());
+        vec.push(firma_2of3.offline_random(&format!("p{}", i), None).unwrap());
     }
     let xpubs_2of3: Vec<String> = vec.iter().map(|e| e.public_file_str().unwrap()).collect();
     let xprvs_2of3: Vec<String> = vec.iter().map(|e| e.private_file_str().unwrap()).collect();
@@ -248,18 +249,41 @@ fn integration_test() {
     let coins_output = firma_2of3.online_list_coins().unwrap();
     assert!(!coins_output.coins.is_empty());
 
-    let list_keys = firma_2of2.offline_list(Kind::Key).unwrap();
+    let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
     assert!(list_keys.keys.iter().any(|k| k.key.name == r1.key.name));
     assert!(list_keys.keys.iter().any(|k| k.key.name == r2.key.name));
-    let list_wallets = firma_2of2.offline_list(Kind::Wallet).unwrap();
+    let list_wallets = firma_2of2.offline_list(Kind::Wallet, None).unwrap();
     assert!(list_wallets
         .wallets
         .iter()
         .any(|w| w.wallet.name == name_2of2));
-    let list_psbt = firma_2of2.offline_list(Kind::PSBT).unwrap();
+    let list_psbt = firma_2of2.offline_list(Kind::PSBT, None).unwrap();
     assert_eq!(list_psbt.psbts.len(), 2);
     let result = firma_2of3.online_rescan(); // TODO test restore a wallet, find funds with rescan
     assert!(result.is_ok());
+
+    // test key encryption
+    let encryption_key = Some(&[0u8; 32][..]);
+    let e1 = firma_2of2
+        .offline_random("key_encrypted", encryption_key)
+        .unwrap();
+    let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
+    assert!(
+        !list_keys.keys.iter().any(|k| k.key.name == e1.key.name),
+        "can see private key without encryption_key"
+    );
+    let list_keys = firma_2of2.offline_list(Kind::Key, encryption_key).unwrap();
+    assert!(
+        list_keys.keys.iter().any(|k| k.key.name == e1.key.name),
+        "can't see private key with encryption_key"
+    );
+    assert!(firma_2of2
+        .offline_decrypt(e1.private_file.to_str().unwrap(), None)
+        .is_err());
+    let d1 = firma_2of2
+        .offline_decrypt(e1.private_file.to_str().unwrap(), encryption_key)
+        .unwrap();
+    assert_eq!(d1.xprv, e1.key.xprv);
 
     // stop bitcoind
     bitcoind.client.stop().unwrap();
@@ -388,31 +412,68 @@ impl FirmaCommand {
         Ok(from_value(value)?)
     }
 
-    pub fn offline(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
-        let output = Command::new(format!("{}/firma-offline", self.exe_dir))
+    pub fn offline(
+        &self,
+        subcmd: &str,
+        args: Vec<&str>,
+        encryption_key: Option<&[u8]>,
+    ) -> Result<Value> {
+        let (stdin, read_stdin_arg) = match encryption_key {
+            Some(_) => (Stdio::piped(), vec!["--read-stdin"]),
+            None => (Stdio::null(), vec![]),
+        };
+        let mut process = Command::new(format!("{}/firma-offline", self.exe_dir))
+            .stdin(stdin)
+            .stdout(Stdio::piped())
             .arg("--firma-datadir")
             .arg(format!("{}", self.work_dir.path().display()))
             .arg("--network")
             .arg("regtest")
+            .args(&read_stdin_arg)
             .arg(subcmd)
             .args(&args)
-            .output()
+            .spawn()
             .unwrap();
+        if let Some(encryption_key) = encryption_key {
+            let child_stdin = process.stdin.as_mut().unwrap();
+            child_stdin.write_all(encryption_key).unwrap();
+        }
+        let output = process.wait_with_output().unwrap();
         if !output.status.success() {
             println!("{}", std::str::from_utf8(&output.stderr)?);
         }
+
         assert!(
             output.status.success(),
-            format!("offline subcmd:{} args:{:?}", subcmd, args)
+            format!(
+                "offline subcmd:{} args:{:?} encryption_key:{:?}",
+                subcmd, args, encryption_key
+            )
         );
+
         let value: Value = serde_json::from_slice(&output.stdout)?;
-        println!("{}", to_string_pretty(&value).unwrap());
+        println!("{:?}", to_string_pretty(&value));
 
         Ok(value)
     }
 
-    pub fn offline_random(&self, key_name: &str) -> Result<MasterKeyOutput> {
-        let result = self.offline("random", vec!["--key-name", key_name]);
+    pub fn offline_random(
+        &self,
+        key_name: &str,
+        encryption_key: Option<&[u8]>,
+    ) -> Result<MasterKeyOutput> {
+        let result = self.offline("random", vec!["--key-name", key_name], encryption_key);
+        let value = map_json_error(result)?;
+        let output = from_value(value).unwrap();
+        Ok(output)
+    }
+
+    pub fn offline_decrypt(
+        &self,
+        file_name: &str,
+        encryption_key: Option<&[u8]>,
+    ) -> Result<PrivateMasterKey> {
+        let result = self.offline("decrypt", vec!["--path", file_name], encryption_key);
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)
@@ -431,7 +492,7 @@ impl FirmaCommand {
             args.push("-l");
             args.push(launch);
         }
-        let result = self.offline("dice", args);
+        let result = self.offline("dice", args, None);
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)
@@ -446,6 +507,7 @@ impl FirmaCommand {
         let result = self.offline(
             "restore",
             vec!["--key-name", key_name, "--nature", nature, value],
+            None,
         );
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
@@ -464,21 +526,22 @@ impl FirmaCommand {
                 "--wallet-descriptor-file",
                 &self.wallet_file(),
             ],
+            None,
         );
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)
     }
 
-    fn offline_list(&self, kind: Kind) -> Result<ListOutput> {
+    fn offline_list(&self, kind: Kind, encryption_key: Option<&[u8]>) -> Result<ListOutput> {
         Ok(from_value(
-            self.offline("list", vec!["--kind", &kind.to_string()])
+            self.offline("list", vec!["--kind", &kind.to_string()], encryption_key)
                 .unwrap(),
         )?)
     }
 
     pub fn offline_print(&self, psbt_file: &str) -> Result<PsbtPrettyPrint> {
-        let result = self.offline("print", vec![psbt_file]);
+        let result = self.offline("print", vec![psbt_file], None);
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)
