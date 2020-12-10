@@ -41,6 +41,10 @@ open class Common {
         return network
     }
 
+    fun isTestnet(): Boolean {
+        return getNetwork() == "testnet"
+    }
+
     fun getString(id: Int): String {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         return appContext.getString(id)

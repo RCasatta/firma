@@ -18,6 +18,9 @@ class KeyTest : Common() {
 
     @Test
     fun randomKey() {
+        if (!isTestnet())
+            return
+
         val keyName = "key${System.currentTimeMillis()}"
 
         onView(withId(R.id.key_button)).perform(click())
