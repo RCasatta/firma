@@ -73,8 +73,9 @@ fn main() -> Result<()> {
             Dice(opt) => opt.encryption_key = Some(encoded),
             Restore(opt) => opt.encryption_key = Some(encoded),
             DeriveKey(opt) => opt.encryption_key = Some(encoded),
-            _ => {
-                let err = Error::Generic("Subcommand doesn't need encryption key".to_string());
+            Print(_) => {
+                let err =
+                    Error::Generic("Print subcommand doesn't need encryption key".to_string());
                 println!("{}", serde_json::to_string_pretty(&err.to_json())?);
                 return Ok(());
             }

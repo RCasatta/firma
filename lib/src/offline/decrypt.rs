@@ -123,10 +123,18 @@ mod tests {
         let tpub_str = "tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU";
         let tpub = ExtendedPubKey::from_str(tpub_str).unwrap();
         let maybe_plain = MaybeEncrypted::plain(tpub);
+        assert!(
+            maybe_plain.decrypt(&cipher_key).is_err(),
+            "cannot decrypt plaintext"
+        );
         let maybe_encrypt = maybe_plain.encrypt(&cipher_key).unwrap();
         assert!(!serde_json::to_string(&maybe_encrypt)
             .unwrap()
             .contains(tpub_str));
+        assert!(
+            maybe_encrypt.encrypt(&cipher_key).is_err(),
+            "cannot encrypt ciphertext"
+        );
         let maybe_plain_again = maybe_encrypt.decrypt(&cipher_key).unwrap();
         assert_eq!(maybe_plain, maybe_plain_again);
 
