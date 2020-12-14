@@ -181,13 +181,13 @@ pub struct PsbtPrettyPrint {
 pub struct Fee {
     pub absolute: u64,
     pub absolute_fmt: String,
-    pub rate: f64,
+    pub rate: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct Size {
     pub unsigned: usize,
-    pub estimated: usize,
+    pub estimated: Option<usize>,
     pub psbt: usize,
 }
 

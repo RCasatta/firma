@@ -157,8 +157,8 @@ pub fn pretty_print(
 
     let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
     let tx_vbytes = tx.get_weight() / 4;
-    let estimated_tx_vbytes = estimate_weight(psbt)? / 4;
-    let estimated_fee_rate = fee as f64 / estimated_tx_vbytes as f64;
+    let estimated_tx_vbytes = estimate_weight(psbt).ok().map(|e| e / 4);
+    let estimated_fee_rate = estimated_tx_vbytes.map(|e| fee as f64 / e as f64);
 
     result.size = Size {
         estimated: estimated_tx_vbytes,
