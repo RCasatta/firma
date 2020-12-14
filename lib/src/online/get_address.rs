@@ -28,7 +28,7 @@ impl Wallet {
         let index = opts.index.unwrap_or(indexes.main);
         let descriptor = wallet.descriptor;
 
-        info!("Creating address at index {}", index);
+        info!("Creating address at index {} for {}", index, &descriptor);
 
         let addresses = self
             .client

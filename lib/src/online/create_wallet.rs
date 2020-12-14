@@ -84,8 +84,9 @@ impl Wallet {
         let mut xpubs = read_xpubs_files(&opt.xpub_files)?;
         xpubs.extend(&opt.xpubs);
 
-        let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("0/{}/*", xpub)).collect();
+        let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
         let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
+        let descriptor = self.client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
         self.client
             .create_wallet(&self.context.wallet_name, Some(true), None, None, None)?;
