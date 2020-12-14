@@ -12,16 +12,29 @@ use structopt::StructOpt;
 
 type HDKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
 
-/// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
+/// Print details regarding a Partially Signed Bitcoin Transaction (PSBT) given as parameter.
+/// A `psbt_file` or a `psbt_base` should be specified.
 #[derive(StructOpt, Debug, Serialize, Deserialize)]
 #[structopt(name = "firma")]
 pub struct PrintOptions {
     /// PSBT json file
-    pub psbt_file: PathBuf,
+    #[structopt(long)]
+    pub psbt_file: Option<PathBuf>,
+
+    /// PSBT as base64 string
+    #[structopt(long)]
+    pub psbt_base64: Option<String>,
 }
 
 pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
-    let psbt = read_psbt(&opt.psbt_file)?;
+    let psbt = match (&opt.psbt_file, &opt.psbt_base64) {
+        (Some(path), None) => read_psbt(path)?,
+        (None, Some(base64)) => psbt_from_base64(base64)?.1,
+        (None, None) => return Err("`psbt_file` or `psbt_base64` must be set".into()),
+        (Some(_), Some(_)) => {
+            return Err("`psbt_file` and `psbt_base64` cannot be both specified".into())
+        }
+    };
     let kind = Kind::Wallet;
     let opt = ListOptions {
         kind,

@@ -541,7 +541,7 @@ impl FirmaCommand {
     }
 
     pub fn offline_print(&self, psbt_file: &str) -> Result<PsbtPrettyPrint> {
-        let result = self.offline("print", vec![psbt_file], None);
+        let result = self.offline("print", vec!["--psbt-file", psbt_file], None);
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)
