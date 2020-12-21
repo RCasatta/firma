@@ -62,10 +62,7 @@ fn start() -> Result<Value> {
 
     let daemon_opts = match &cmd.subcommand {
         CreateWallet(ref opt) => opt.daemon_opts.clone(),
-        _ => {
-            let (wallet, _) = cmd.context.load_wallet_and_index()?;
-            wallet.daemon_opts.ok_or(Error::MissingDaemonOpts)?
-        }
+        _ => cmd.context.load_wallet_index_daemon()?.2,
     };
 
     let url_with_wallet = format!("{}/wallet/{}", daemon_opts.url, cmd.context.wallet_name);

@@ -70,28 +70,48 @@ impl Context {
         Ok(())
     }
 
+    pub fn save_daemon_opts(&self, daemon_opts: &DaemonOpts) -> Result<()> {
+        let path = self.filename_for_wallet("daemon_opts.json")?;
+        info!("Saving daemon_opts data in {:?}", path);
+        fs::write(path, serde_json::to_string_pretty(daemon_opts)?)?;
+        Ok(())
+    }
+
     pub fn decrease_index(&self) -> Result<()> {
-        let (_, mut indexes) = self.load_wallet_and_index()?;
+        let (_, mut indexes, _) = self.load_wallet_index_daemon()?;
         indexes.main -= 1;
         self.save_index(&indexes)?;
         Ok(())
     }
 
-    pub fn load_wallet_and_index(&self) -> Result<(WalletJson, WalletIndexes)> {
+    // TODO many times called only for one file, split?
+    /// load the wallet and related indexes and daemon opts
+    pub fn load_wallet_index_daemon(&self) -> Result<(WalletJson, WalletIndexes, DaemonOpts)> {
         let wallet_path = self.filename_for_wallet("descriptor.json")?;
-        debug!("load_wallet_and_index wallet_path: {:?}", wallet_path);
+        debug!("load wallet: {:?}", wallet_path);
         let wallet = read_wallet(&wallet_path)
             .map_err(|e| Error::FileNotFoundOrCorrupt(wallet_path.clone(), e.to_string()))?;
 
         let indexes_path = self.filename_for_wallet("indexes.json")?;
+        debug!("load indexes: {:?}", indexes_path);
         let indexes = read_indexes(&indexes_path)
             .map_err(|e| Error::FileNotFoundOrCorrupt(wallet_path.clone(), e.to_string()))?;
 
-        Ok((wallet, indexes))
+        let daemon_opts_path = self.filename_for_wallet("daemon_opts.json")?;
+        debug!("load daemon_opts: {:?}", daemon_opts_path);
+        let daemon_opts = read_daemon_opts(&daemon_opts_path)
+            .map_err(|e| Error::FileNotFoundOrCorrupt(daemon_opts_path.clone(), e.to_string()))?;
+
+        Ok((wallet, indexes, daemon_opts))
     }
 }
 
 fn read_indexes(path: &PathBuf) -> Result<WalletIndexes> {
     let indexes = fs::read(path)?;
     Ok(serde_json::from_slice(&indexes)?)
+}
+
+fn read_daemon_opts(path: &PathBuf) -> Result<DaemonOpts> {
+    let daemon_opts = fs::read(path)?;
+    Ok(serde_json::from_slice(&daemon_opts)?)
 }

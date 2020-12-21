@@ -1,6 +1,6 @@
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
-use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
+use crate::{psbt_from_base64, psbt_to_base64, PSBT};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
@@ -64,10 +64,8 @@ pub struct PsbtJsonOutput {
 pub struct WalletJson {
     pub name: String,
     pub descriptor: String,
-    pub fingerprints: HashSet<Fingerprint>,
-    pub required_sig: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub daemon_opts: Option<DaemonOpts>,
+    pub fingerprints: HashSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
+    pub required_sig: usize,                // TODO derive from descriptor?
     pub created_at_height: u64,
 }
 
@@ -358,12 +356,12 @@ mod tests {
 
     #[test]
     fn test_cbor_wallet() {
-        let wallet: WalletJson = serde_json::from_str("{\"name\":\"w3of5\",\"descriptor\":\"wsh(multi(3,tpubD6NzVbkrYhZ4XuzR59W1JHQpXcufQVj64NDa4eiALMJxC2xAwpY7wy2J9RVQ7BHDYK3eWrVRsuMUcdwGn9xVBmC9wfpVawpNGLyrdgAhehd/0/*,tpubD6NzVbkrYhZ4WarEBpY5okLrjRQ8sgfoEsxZfprQDEbAjWM585LhNeT9GuSeFRGL7yLheiRgtCQCBb73y21EsLzRfwdrRmfaAT4yUTEKtu7/0/*,tpubD6NzVbkrYhZ4WRwbTYgdGDMxPUzq5WwX8HwnAR6PYB291uUH63pCU1WFV6RRWGyA2Xy8okiFAqfAXEErx1SVh7mKSVQa34hFaa8GcmuEeds/0/*,tpubD6NzVbkrYhZ4YkVm13NDmMPEHEWXHoqGXBPCrtHbB1hE6GoTjdvXEKrtRBMtSe4gQQUSyvU78jgyrK5AfwLewr1cTkkojQbYTuyNtgQFEDb/0/*,tpubD6NzVbkrYhZ4YGeACdA4t1ZjEfJm8ExF818xG2ndsNoT61PwPnotxVQXDLZAZ5ut7t1iHR2FLEYnTzJTN5DGxQTKgwQpt7ftPzRwjugwuYg/0/*))#we4l0t0l\",\"fingerprints\":[\"171f9233\",\"37439b38\",\"ab4343d4\",\"deb8f1ba\",\"214c5f36\"],\"required_sig\":3,\"daemon_opts\":{\"url\":\"http://127.0.0.1:18332\",\"cookie_file\":\"/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie\"},\"created_at_height\":1720730}").unwrap();
+        let wallet: WalletJson = serde_json::from_str("{\"name\":\"w3of5\",\"descriptor\":\"wsh(multi(3,tpubD6NzVbkrYhZ4XuzR59W1JHQpXcufQVj64NDa4eiALMJxC2xAwpY7wy2J9RVQ7BHDYK3eWrVRsuMUcdwGn9xVBmC9wfpVawpNGLyrdgAhehd/0/*,tpubD6NzVbkrYhZ4WarEBpY5okLrjRQ8sgfoEsxZfprQDEbAjWM585LhNeT9GuSeFRGL7yLheiRgtCQCBb73y21EsLzRfwdrRmfaAT4yUTEKtu7/0/*,tpubD6NzVbkrYhZ4WRwbTYgdGDMxPUzq5WwX8HwnAR6PYB291uUH63pCU1WFV6RRWGyA2Xy8okiFAqfAXEErx1SVh7mKSVQa34hFaa8GcmuEeds/0/*,tpubD6NzVbkrYhZ4YkVm13NDmMPEHEWXHoqGXBPCrtHbB1hE6GoTjdvXEKrtRBMtSe4gQQUSyvU78jgyrK5AfwLewr1cTkkojQbYTuyNtgQFEDb/0/*,tpubD6NzVbkrYhZ4YGeACdA4t1ZjEfJm8ExF818xG2ndsNoT61PwPnotxVQXDLZAZ5ut7t1iHR2FLEYnTzJTN5DGxQTKgwQpt7ftPzRwjugwuYg/0/*))#we4l0t0l\",\"fingerprints\":[\"171f9233\",\"37439b38\",\"ab4343d4\",\"deb8f1ba\",\"214c5f36\"],\"required_sig\":3,\"created_at_height\":1720730}").unwrap();
 
         let vec_json = serde_json::to_vec(&wallet).unwrap();
         let vec_cbor = serde_cbor::to_vec(&wallet).unwrap();
 
-        assert_eq!(vec_json.len(), 866);
-        assert_eq!(vec_cbor.len(), 809);
+        assert_eq!(vec_json.len(), 751);
+        assert_eq!(vec_cbor.len(), 704);
     }
 }

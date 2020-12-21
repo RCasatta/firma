@@ -24,7 +24,7 @@ pub struct GetAddressOptions {
 
 impl Wallet {
     pub fn get_address(&self, opts: &GetAddressOptions) -> Result<GetAddressOutput> {
-        let (wallet, mut indexes) = self.context.load_wallet_and_index()?;
+        let (wallet, mut indexes, _) = self.context.load_wallet_index_daemon()?;
         let index = opts.index.unwrap_or(indexes.main);
         let descriptor = wallet.descriptor;
 

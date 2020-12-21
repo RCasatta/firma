@@ -117,7 +117,6 @@ impl Wallet {
         let wallet = WalletJson {
             name: self.context.wallet_name.to_string(),
             descriptor,
-            daemon_opts: Some(daemon_opts.clone()),
             fingerprints,
             required_sig: opt.r,
             created_at_height: height,
@@ -126,9 +125,9 @@ impl Wallet {
 
         let wallet_file = self.context.save_wallet(&wallet)?;
         self.context.save_index(&indexes)?;
+        self.context.save_daemon_opts(&daemon_opts)?;
 
-        let mut wallet_for_qr = wallet.clone();
-        wallet_for_qr.daemon_opts = None; // no need of this info in the qr code
+        let wallet_for_qr = wallet.clone();
         let qr_bytes = serde_json::to_vec(&wallet_for_qr)?;
 
         let wallet_qr_path = self.context.path_for_wallet_qr()?;
@@ -155,8 +154,7 @@ pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Re
         wallet_name: wallet.name.clone(),
     };
     context.save_wallet(&wallet)?;
-    let mut wallet_for_qr = wallet.clone();
-    wallet_for_qr.daemon_opts = None; // no need of this info in the qr code
+    let wallet_for_qr = wallet.clone();
     let qr_bytes = serde_json::to_vec(&wallet_for_qr)?;
 
     let wallet_qr_path = context.path_for_wallet_qr()?;
