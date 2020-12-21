@@ -1,8 +1,11 @@
 use crate::offline::descriptor::extract_xpubs;
 use crate::online::{read_xpubs_files, Wallet};
 use crate::*;
+use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
+use bitcoin::secp256k1::{Message, Secp256k1};
 use bitcoin::util::bip32::ExtendedPubKey;
-use bitcoin::Network;
+use bitcoin::util::misc::signed_msg_hash;
+use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use bitcoincore_rpc::bitcoincore_rpc_json::{
     ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince,
 };
@@ -10,6 +13,7 @@ use bitcoincore_rpc::RpcApi;
 use log::debug;
 use log::info;
 use std::path::PathBuf;
+use std::str::FromStr;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -158,4 +162,84 @@ pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Re
     let wallet_qr_path = context.path_for_wallet_qr()?;
     common::qr::save_qrs(qr_bytes, wallet_qr_path, 14)?;
     Ok(())
+}
+
+#[allow(dead_code)]
+/// Sign a `message` with the given `private_key` in wif format
+/// compatible with bitcoin core `signmessagewithprivkey`
+fn sign_message(private_key: &str, message: &str) -> Result<String> {
+    let secp = Secp256k1::signing_only();
+    let hash = signed_msg_hash(&message);
+    let message = Message::from_slice(&hash[..])?; // Can never panic because it's the right size.
+    let private_key = PrivateKey::from_wif(&private_key)?;
+    let (id, sig) = secp
+        .sign_recoverable(&message, &private_key.key)
+        .serialize_compact();
+    let mut rec_sig = [0u8; 65];
+    rec_sig[1..].copy_from_slice(&sig);
+    rec_sig[0] = if private_key.compressed {
+        27 + id.to_i32() as u8 + 4
+    } else {
+        27 + id.to_i32() as u8
+    };
+    let sig = base64::encode(&rec_sig[..]);
+    Ok(sig)
+}
+
+#[allow(dead_code)]
+/// Verify the `signature` on a `message` has been made from the private key behind `address`
+/// signature made must be recoverable
+/// compatible with bitcoin core `verifymessage`
+fn verify_message(address: &str, signature: &str, message: &str) -> Result<bool> {
+    let secp = Secp256k1::verification_only();
+    let sig = base64::decode(&signature)?;
+    if sig.len() != 65 {
+        return Err(Error::InvalidMessageSignature);
+    }
+    let recid = RecoveryId::from_i32(i32::from((sig[0] - 27) & 3))
+        .map_err(|_| Error::InvalidMessageSignature)?;
+    let recsig = RecoverableSignature::from_compact(&sig[1..], recid)
+        .map_err(|_| Error::InvalidMessageSignature)?;
+    let hash = signed_msg_hash(&message);
+    let msg = Message::from_slice(&hash[..]).unwrap(); // Can never panic because it's the right size.
+
+    let pubkey = PublicKey {
+        key: secp
+            .recover(&msg, &recsig)
+            .map_err(|_| Error::InvalidMessageSignature)?,
+        compressed: ((sig[0] - 27) & 4) != 0,
+    };
+
+    let address = Address::from_str(&address)?;
+    let restored = Address::p2pkh(&pubkey, address.network);
+
+    Ok(address == restored)
+}
+
+// json contains signature, the address and descriptor of the address!
+#[cfg(test)]
+mod tests {
+    use crate::online::create_wallet::{sign_message, verify_message};
+
+    /*
+    $ bitcoin-cli signmessagewithprivkey "KwQoPt6dL91fxRBWdt4nkCVrfo4ipeLcaD4ZCLntoTPhKGNgGqGm" ciao
+    IPJtNiCerA3gbXxSIMzmrUyFeeL0BT/BM0nQU43XRl9QBuZkSnlotcNAp0cg6VqTRCjJkxwg0KTtJS96YcnjzRs=
+    $ bitcoin-cli verifymessage 1AupUZ3sAdTjZSdG4D52eFoHdPtjwGZrTj "IPJtNiCerA3gbXxSIMzmrUyFeeL0BT/BM0nQU43XRl9QBuZkSnlotcNAp0cg6VqTRCjJkxwg0KTtJS96YcnjzRs=" ciao
+    true
+    */
+    const PRIV_WIF: &str = "KwQoPt6dL91fxRBWdt4nkCVrfo4ipeLcaD4ZCLntoTPhKGNgGqGm";
+    const MESSAGE: &str = "ciao";
+    const SIGNATURE: &str =
+        "IPJtNiCerA3gbXxSIMzmrUyFeeL0BT/BM0nQU43XRl9QBuZkSnlotcNAp0cg6VqTRCjJkxwg0KTtJS96YcnjzRs=";
+    const ADDRESS: &str = "1AupUZ3sAdTjZSdG4D52eFoHdPtjwGZrTj";
+
+    #[test]
+    fn test_sign_message() {
+        assert_eq!(SIGNATURE, sign_message(PRIV_WIF, MESSAGE).unwrap());
+    }
+
+    #[test]
+    fn test_verify_message() {
+        assert!(verify_message(ADDRESS, SIGNATURE, MESSAGE).unwrap());
+    }
 }

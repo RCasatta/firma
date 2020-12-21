@@ -43,6 +43,7 @@ pub enum Error {
     Encryption(aes_gcm_siv::aead::Error),
     EncryptionKeyNot32Bytes(usize),
     MissingEncryptionKey,
+    InvalidMessageSignature,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -149,6 +150,7 @@ impl fmt::Display for Error {
                 write!(f, "Encryption key must be 32 bytes but it's {} bytes", s)
             }
             Error::MissingEncryptionKey => write!(f, "MissingEncryptionKey"),
+            Error::InvalidMessageSignature => write!(f, "Invalid message signature"),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),
