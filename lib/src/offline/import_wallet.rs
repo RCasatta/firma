@@ -42,6 +42,9 @@ pub fn import_wallet(
         (Some(_), Some(_)) => return Err("cannot set both wallet_path and wallet_encoded".into()),
         (None, None) => return Err("both wallet_path and wallet_encoded are not set".into()),
     };
+    //TODO at the moment wallet file is saved with prettify but it seemed wrong to use that format
+    // for the signature, thus here I am using plain vec, requiring something like "| jq -c" to
+    // verify from shell tools, see verify-signature.md
     let wallet_bytes = serde_json::to_vec(&wallet)?;
 
     let secp = Secp256k1::signing_only();
@@ -57,6 +60,8 @@ pub fn import_wallet(
         address,
         signature,
     };
+
+    //TODO check it's part of the multisig
 
     extract_xpubs(&wallet.descriptor)?
         .iter()
