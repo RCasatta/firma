@@ -1,17 +1,16 @@
 package it.casatta
 
-import android.app.Activity
 import android.view.View
-import android.widget.EditText
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.typeText
 import androidx.test.espresso.assertion.ViewAssertions
 import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.BoundedMatcher
 import androidx.test.espresso.matcher.RootMatchers
-import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.internal.util.Checks
 import androidx.test.platform.app.InstrumentationRegistry
@@ -40,6 +39,15 @@ open class Common {
         val validNetworks = arrayOf("mainnet", "testnet", "regtest")
         Assert.assertTrue(validNetworks.contains(network))
         return network
+    }
+
+    fun isTestnet(): Boolean {
+        return getNetwork() == "testnet"
+    }
+
+    fun getString(id: Int): String {
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        return appContext.getString(id)
     }
 
     fun withItemSubject(subject: String): Matcher<RecyclerView.ViewHolder?>? {
@@ -78,7 +86,7 @@ open class Common {
         onView(withId(R.id.items_list)).perform(
             RecyclerViewActions.actionOnHolderItem<RecyclerView.ViewHolder>(
                 withItemSubject(subject),
-                ViewActions.click()
+                click()
             )
         )
     }
@@ -87,7 +95,7 @@ open class Common {
         onView(withId(R.id.items_list)).check(
             ViewAssertions.matches(
                 Matchers.not(
-                    ViewMatchers.hasDescendant(
+                    hasDescendant(
                         withText(subject)
                     )
                 )
@@ -95,19 +103,14 @@ open class Common {
         )
     }
 
-    fun setTextInDialogAndConfirm(activity: Activity, value: String) {
-        setTextInDialogAndConfirm(activity, value, "OK")
+    fun setTextInDialogAndConfirm(value: String) {
+        setTextInDialogAndConfirm(value, "OK")
 
     }
 
-    fun setTextInDialogAndConfirm(activity: Activity, value: String, buttonText: String) {
-        onView(withClassName(Matchers.containsString("EditText")))
-            .check { view, _ ->
-                activity.runOnUiThread {
-                    (view as EditText).setText(value)
-                }
-            }
-        onView(withText(buttonText)).perform(ViewActions.click())
+    fun setTextInDialogAndConfirm(value: String, buttonText: String) {
+        onView(withClassName(Matchers.containsString("EditText"))).perform(click()).perform(typeText(value))
+        onView(withText(buttonText)).perform(click())
     }
 
 }
