@@ -13,7 +13,7 @@ use std::convert::TryInto;
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PrivateMasterKey {
+pub struct PrivateMasterKeyJson {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mnemonic: Option<Mnemonic>,
     pub xpub: ExtendedPubKey,
@@ -33,7 +33,7 @@ pub struct Dice {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MasterKeyOutput {
-    pub key: PrivateMasterKey,
+    pub key: PrivateMasterKeyJson,
     pub private_file: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_file: Option<PathBuf>,
@@ -67,6 +67,13 @@ pub struct WalletJson {
     pub fingerprints: HashSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
     pub required_sig: usize,                // TODO derive from descriptor?
     pub created_at_height: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct WalletSignature {
+    pub xpub: ExtendedPubKey,
+    pub address: Address,
+    pub signature: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -293,19 +300,19 @@ impl MasterKeyOutput {
     }
 }
 
-impl PrivateMasterKey {
+impl PrivateMasterKeyJson {
     pub fn new(
         network: Network,
         mnemonic: &Mnemonic,
         name: &str,
-    ) -> crate::Result<PrivateMasterKey> {
+    ) -> crate::Result<PrivateMasterKeyJson> {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let seed = mnemonic.to_seed(None);
 
         let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
-        Ok(PrivateMasterKey {
+        Ok(PrivateMasterKeyJson {
             mnemonic: Some(mnemonic.clone()),
             xprv,
             xpub,
@@ -318,7 +325,7 @@ impl PrivateMasterKey {
     pub fn from_xprv(xprv: ExtendedPrivKey, name: &str) -> Self {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-        PrivateMasterKey {
+        PrivateMasterKeyJson {
             xprv,
             xpub,
             mnemonic: None,
@@ -349,6 +356,7 @@ impl_try_into!(BalanceOutput);
 impl_try_into!(ListCoinsOutput);
 impl_try_into!(GetAddressOutput);
 impl_try_into!(ListOutput);
+impl_try_into!(WalletSignature);
 
 #[cfg(test)]
 mod tests {

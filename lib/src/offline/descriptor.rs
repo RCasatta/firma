@@ -1,8 +1,9 @@
 use crate::*;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use bitcoin::Network;
 use miniscript::descriptor::DescriptorPublicKey;
-use miniscript::Descriptor;
+use miniscript::{Descriptor, DescriptorPublicKeyCtx};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -21,9 +22,10 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAd
         .unwrap_or_else(|| opt.descriptor.len());
     let descriptor: miniscript::Descriptor<DescriptorPublicKey> = opt.descriptor[..end].parse()?;
 
+    let secp = Secp256k1::verification_only();
+    let context = DescriptorPublicKeyCtx::new(&secp, ChildNumber::from_normal_idx(opt.index)?);
     let address = descriptor
-        .derive(ChildNumber::from_normal_idx(opt.index)?)
-        .address(network)
+        .address(network, context)
         .ok_or(Error::AddressFromDescriptorFails)?;
     let path = DerivationPath::from_str(&format!("m/0/{}", opt.index))?;
 
@@ -43,7 +45,7 @@ pub fn extract_xpubs(descriptor: &str) -> Result<Vec<ExtendedPubKey>> {
     if let Descriptor::Wsh(miniscript) = descriptor {
         for el in miniscript.get_leaf_pk() {
             if let DescriptorPublicKey::XPub(desc_xpub) = el {
-                xpubs.push(desc_xpub.xpub);
+                xpubs.push(desc_xpub.xkey);
             }
         }
     }

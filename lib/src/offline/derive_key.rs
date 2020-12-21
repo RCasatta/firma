@@ -1,6 +1,6 @@
 use crate::file::save_keys;
 use crate::offline::sign::read_key;
-use crate::{MasterKeyOutput, PrivateMasterKey, StringEncoding};
+use crate::{MasterKeyOutput, PrivateMasterKeyJson, StringEncoding};
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
@@ -46,7 +46,7 @@ pub fn start(
         child_key = child_key.derive_priv(&secp, &path)?;
     }
 
-    let child_key_json = PrivateMasterKey::from_xprv(child_key, &opt.to_key_name);
+    let child_key_json = PrivateMasterKeyJson::from_xprv(child_key, &opt.to_key_name);
     let output = save_keys(
         datadir,
         network,

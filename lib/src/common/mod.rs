@@ -54,8 +54,8 @@ pub fn init_logger() {
         .expect("cannot initialize logging");
 }
 
-impl From<PrivateMasterKey> for PublicMasterKey {
-    fn from(private: PrivateMasterKey) -> Self {
+impl From<PrivateMasterKeyJson> for PublicMasterKey {
+    fn from(private: PrivateMasterKeyJson) -> Self {
         PublicMasterKey { xpub: private.xpub }
     }
 }

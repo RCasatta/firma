@@ -37,7 +37,7 @@ impl RandomOptions {
 pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Result<MasterKeyOutput> {
     let sec = rand::thread_rng().gen::<[u8; 32]>();
     let mnemonic = Mnemonic::new(&sec)?;
-    let master_key = PrivateMasterKey::new(network, &mnemonic, &opt.key_name)?;
+    let master_key = PrivateMasterKeyJson::new(network, &mnemonic, &opt.key_name)?;
     let output = save_keys(
         datadir,
         network,

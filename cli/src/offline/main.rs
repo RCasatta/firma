@@ -54,6 +54,9 @@ enum FirmaOfflineSubcommands {
 
     /// Decrypt an encrypted file
     Decrypt(offline::decrypt::DecryptOptions),
+
+    /// Import a bitcoin wallet json containing the descriptor
+    ImportWallet(offline::import_wallet::ImportWalletOptions),
 }
 
 fn main() -> Result<()> {
@@ -73,6 +76,7 @@ fn main() -> Result<()> {
             Dice(opt) => opt.encryption_key = Some(encoded),
             Restore(opt) => opt.encryption_key = Some(encoded),
             DeriveKey(opt) => opt.encryption_key = Some(encoded),
+            ImportWallet(opt) => opt.encryption_key = Some(encoded),
             _ => {
                 let err = Error::Generic("Subcommand doesn't need encryption key".to_string());
                 println!("{}", serde_json::to_string_pretty(&err.to_json())?);
@@ -102,6 +106,7 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         Restore(opt) => offline::restore::start(datadir, net, &opt)?.try_into(),
         DeriveKey(opt) => offline::derive_key::start(datadir, net, &opt)?.try_into(),
         List(opt) => common::list::list(datadir, net, &opt)?.try_into(),
+        ImportWallet(opt) => offline::import_wallet::import_wallet(datadir, net, &opt)?.try_into(),
         Decrypt(opt) => offline::decrypt::decrypt::<Value>(&opt),
     }
 }

@@ -63,6 +63,16 @@ impl Context {
         Ok(path)
     }
 
+    pub fn save_signature(&self, wallet: &WalletSignature) -> Result<PathBuf> {
+        let path = self.filename_for_wallet("signature.json")?;
+        if path.exists() {
+            return Err(Error::FileExist(path));
+        }
+        info!("Saving wallet signature data in {:?}", &path);
+        fs::write(&path, serde_json::to_string_pretty(wallet)?)?;
+        Ok(path)
+    }
+
     pub fn save_index(&self, indexes: &WalletIndexes) -> Result<()> {
         let path = self.filename_for_wallet("indexes.json")?;
         info!("Saving index data in {:?}", path);

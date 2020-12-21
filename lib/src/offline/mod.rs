@@ -2,6 +2,7 @@ pub mod decrypt;
 pub mod derive_key;
 pub mod descriptor;
 pub mod dice;
+pub mod import_wallet;
 pub mod print;
 pub mod random;
 pub mod restore;
