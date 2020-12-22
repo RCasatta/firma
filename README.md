@@ -49,13 +49,21 @@ It is based on:
 
 ## Requirements
 
-You need [Bitcoin core 0.20.1](https://bitcoincore.org/)
+You need:
+* [Bitcoin core 0.20.1](https://bitcoincore.org/)
+* [rust](https://www.rust-lang.org/) (MSRV  >= 1.41.0).
 
-To build executables you need [rust](https://www.rust-lang.org/) (MSRV  >= 1.41.0).
+### Install from crates
+
+```
+cargo install firma-cli
+```
+
+### Install from sources
 
 ```
 git clone https://github.com/RCasatta/firma/
-cd firma
+cd firma/cli
 cargo build --release
 ```
 
@@ -107,10 +115,12 @@ Check the bin [readme](cli/README.md) for an example with CLI
   dd if=/dev/urandom bs=1 count=32 | gpg --encrypt >encryption_key.gpg
   
   # bitcoin private key creation
-  gpg --decrypt encryption_key.gpg | firma-offline --read-stdin --key-name bitcoin-key random
+  gpg --decrypt encryption_key.gpg | firma-offline --read-stdin random --key-name bitcoin-key
   ```
 
   On android, system keystore is used to encrypt 32 random bytes, so that physical attacks need to break the secure element if the device has one.
+
+  A possible attack on the device is tampering with the wallet descriptor, however this is signed with a key partecipating in the multisig wallet when imported, thus any tampering is detected.
 </details>
 
 <details>

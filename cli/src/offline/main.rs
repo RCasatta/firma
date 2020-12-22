@@ -19,7 +19,7 @@ struct FirmaOfflineCommands {
     #[structopt(short, long, default_value = "~/.firma/")]
     firma_datadir: String,
 
-    /// Flag to indicate that input is expected in standard input
+    /// Flag to indicate that input is expected in standard input.
     /// Since reading stdin is locking, we need this flag to have it optionally
     #[structopt(long)]
     pub read_stdin: bool,

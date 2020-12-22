@@ -11,7 +11,7 @@
 
     <string name="key_exists">This key name already exist</string>
     <string name="deleted">Deleted</string>
-    <string name="wallet_not_imported">This is not a json wallet, it is not in the right network or a wallet with the same name already exist</string>
+    <string name="wallet_not_imported">This is not a json wallet, it is not in the right network, a wallet with the same name already exist or a secret key partecipating in the wallet is not available</string>
     <string name="not_a_psbt">This is not a psbt transaction</string>
 
     <string name="cancelled">Cancelled</string>

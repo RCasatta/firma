@@ -29,6 +29,26 @@ firma-offline random --key-name a1
 }
 ```
 
+We could have encrypted the key before saving on disk, for example leveraging existing gpg setups like so
+
+```
+ # encryption key creation and storage in encrypted gpg
+  dd if=/dev/urandom bs=1 count=32 | gpg --encrypt >encryption_key.gpg
+
+  # bitcoin private key creation
+  gpg --decrypt encryption_key.gpg | firma-offline --read-stdin random --key-name a1
+```
+in this latter case the key file `~/.firma/testnet/keys/a1/PRIVATE.json` looks like this
+```json
+{
+  "t": "encrypted",
+  "c": {
+    "t": "base64",
+    "c": "BKiWANkLynJqncOkU/d2uFY+hh8rZcaM+92xCj5H1+RBrPScxz/SAxT6hYUW1R+BiPIj1KMVSenVQWgYFoV02b6DV8uC7pKTqkFwETNavG9ZZDZCQyEB4c4EnerqAyaDLQrw5y9eec/ChFh99k7n/oPMkP0sBdEw2LNod8G69DCOmU/BT20XbnXDwgNOA94R+QWSH4zLlGsOUXjb76IqTT9SYB/tOiRGZrgUj/1VpyLc3qebVI2aLzY3r3Ent+BMkq7UjdI1SJWtu0f45OWqUhEmlsUim38pvgVYPgYfUJMpIV510Zaq4l3H5y1G67NlFLFfQo0RRDAx6s7K4Awio+Aj/raby5RjaW2kK+LhjdS8E4jKil8wdQD7zw6MSCnsea7QcLmWRe7U7I7MVTLn513y2xQRK+RXySMs0wGxngU93zdCGeNmcbywaBPl+1Z0Yv2cM4SGTPMsQxeSV20pqoNrvw1Y8Ys5zk5Gs0SMBhMTknfxlxMexkn+ZCEqAcfJHaj1SIaF/nmMLz6IdoPXKPw1FgUaZON0k0IXYpslO/5FYfNbWCNwmJXZfi+AyxLdf4lck7Hm0u87TkLuVgsChv/693qtFgS16ZuTqsU+gjzGRxIqGj47+0xO5ahGjY/HGTbJCGI="
+  }
+}
+```
+
 ## Create second Master Key
 
 This one is created providing dice launches:
@@ -62,24 +82,20 @@ firma-offline dice --key-name a2 --faces 20 -l 12 -l 11 -l 1 -l 1 -l 16 -l 8 -l 
 For the example we are using the two master_key created in the previous step. From the offline machines 
 copy `$HOME/.firma/testnet/keys/a1/public.json` and `$HOME/.firma/testnet/keys/a2/public.json` to the 
 online machine. 
-`COOKIE_FILE` must point to the bitcoin node cookie file
+`COOKIE_FILE` must point to the bitcoin node cookie file (eg. `~/.bitcoin/testnet3/.cookie`)
 
 ```
-firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub-file $HOME/.firma/testnet/keys/a1/public.json --xpub-file $HOME/.firma/testnet/keys/a2/public.json```
+firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:18332 --cookie-file $COOKIE_FILE -r 2 --xpub-file $HOME/.firma/testnet/keys/a1/public.json --xpub-file $HOME/.firma/testnet/keys/a2/public.json
+```
+
 ```json
 {
   "qr_files": [
-    "$HOME/.firma/testnet/wallets/firma-wallet/qr/qr-0.png",
-    "$HOME/.firma/testnet/wallets/firma-wallet/qr/qr-1.png"
+    "/Users/casatta/.firma/testnet/wallets/firma-wallet/qr/qr.bmp"
   ],
   "wallet": {
-    "created_at_height": 1746374,
-    "daemon_opts": {
-      "cookie_file": "/Volumes/Transcend/bitcoin-testnet/testnet3/.cookie",
-      "url": "http://127.0.0.1:18332"
-    },
-    "descriptor_change": "wsh(multi(2,tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6/1/*,tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y/1/*))#wa245p6k",
-    "descriptor_main": "wsh(multi(2,tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6/0/*,tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y/0/*))#da6q39w9",
+    "created_at_height": 1899528,
+    "descriptor": "wsh(multi(2,tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6/0/*,tpubD6NzVbkrYhZ4WjQJ11opoGvw5D81FfKeu6DarBzVYK9UZJSFf4BJ6Dp3y8WeYWvgA5LXAjx4T2pjYVNTxBGAjwEHrcc7Q2Smkcy8VRQX62Y/0/*))#da6q39w9",
     "fingerprints": [
       "7938c502",
       "cabe32d7"
@@ -87,9 +103,11 @@ firma-online --wallet-name firma-wallet create-wallet --url http://127.0.0.1:183
     "name": "firma-wallet",
     "required_sig": 2
   },
-  "wallet_file": "$HOME/.firma/testnet/wallets/firma-wallet/descriptor.json"
+  "wallet_file": "/Users/casatta/.firma/testnet/wallets/firma-wallet/descriptor.json"
 }
 ```
+
+Note wallet file `descriptor.json` could be signed with one of the participant key using the `sign_wallet` command, this prevent an attacker to tamper with the file without getting noticed (command like `print` and `list` accept a flag to not show wallet without a signature)
 
 ## Create a receiving address
 
@@ -217,6 +235,11 @@ firma-offline sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/test
 ```
 
 The psbt.json  at `~/.firma/testnet/psbts/test/psbt.json` now has 1 signature.
+
+Note: if the key is encrypted, any command using the key like `sign`, need to be fed with the encryption_key
+```
+gpg --decrypt encryption_key.gpg | firma-offline --read-stdin sign ~/.firma/testnet/psbts/test/psbt.json --key $HOME/.firma/testnet/keys/a1/PRIVATE.json --wallet-descriptor-file ~/.firma/testnet/wallets/firma-wallet/descriptor.json
+```
 
 ## Sign from node B
 
