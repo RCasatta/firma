@@ -1,9 +1,9 @@
+use crate::common::list::ListOptions;
 use crate::offline::descriptor::extract_xpubs;
-use crate::offline::sign::read_key;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, SignOnly, VerifyOnly};
-use bitcoin::util::bip32::ExtendedPubKey;
+use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
@@ -15,10 +15,6 @@ use structopt::StructOpt;
 
 #[derive(Serialize, Deserialize, StructOpt, Debug)]
 pub struct SignWalletOptions {
-    /// Key name to use to sign the wallet file
-    #[structopt(long)]
-    pub key_name: String,
-
     /// Wallet name to be signed
     #[structopt(long)]
     pub wallet_name: String,
@@ -46,23 +42,27 @@ pub fn sign_wallet(
     debug!("wallet_file {:?}", wallet_file);
     let wallet = read_wallet(&wallet_file)?; // read the json
     let wallet_bytes = fs::read(wallet_file)?; // reading exact bytes to sign, (reserializing wallet would be wrong cause it's not guaranteed field are in the same order)
-    debug!("wallet_bytes: {}", hex::encode(&wallet_bytes));
     let message = std::str::from_utf8(&wallet_bytes)?;
-    debug!("message: {}", message);
+    let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
+    let encryption_keys = match opt.encryption_key.as_ref() {
+        Some(key) => vec![key.clone()],
+        None => vec![],
+    };
 
-    let private_key_file =
-        PathBuilder::new(datadir, network, Kind::Key, Some(opt.key_name.to_string()))
-            .file("PRIVATE.json")?;
-    debug!("private_key_file {:?}", private_key_file);
-    let master_private_key_json = read_key(&private_key_file, opt.encryption_key.as_ref())?;
-    let master_private_key = master_private_key_json.xprv; // TODO should be added a derivation?
+    // search a key that is in the wallet descriptor
+    let kind = Kind::Key;
+    let list_opt = ListOptions {
+        kind,
+        verify_wallets_signatures: false,
+        encryption_keys,
+    };
+    let available_keys = common::list::list(datadir, network, &list_opt)?;
+    let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
     let master_public_key = ExtendedPubKey::from_private(&secp, &master_private_key);
 
     let signature = sign_message_with_key(&master_private_key.private_key, message, &secp)?;
     let address = Address::p2pkh(&master_public_key.public_key, master_public_key.network);
 
-    let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
-    check_xpub_in_descriptor(&master_public_key, &xpubs)?;
     xpubs
         .iter()
         .map(|xpub| check_compatibility(network, xpub.network))
@@ -80,6 +80,18 @@ pub fn sign_wallet(
     };
     context.save_signature(&wallet_signature)?;
     Ok(wallet_signature)
+}
+
+fn find_key<'a>(
+    available_keys: &'a ListOutput,
+    xpubs: &[ExtendedPubKey],
+) -> Result<&'a ExtendedPrivKey> {
+    for key in available_keys.keys.iter() {
+        if let Ok(_) = check_xpub_in_descriptor(&key.key.xpub, &xpubs) {
+            return Ok(&key.key.xprv);
+        }
+    }
+    Err("There is No private key participating in the wallet available".into())
 }
 
 fn check_xpub_in_descriptor(

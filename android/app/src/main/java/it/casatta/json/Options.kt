@@ -4,7 +4,13 @@ class Options {
 
     data class ListOptions(
         val kind: Data.Kind,
-        val encryption_keys: List<Data.StringEncoding>
+        val encryption_keys: List<Data.StringEncoding>,
+        val verify_wallets_signatures: Boolean
+    )
+
+    data class SignWalletOptions(
+        val wallet_name: String,
+        val encryption_key: Data.StringEncoding?
     )
 
     data class RandomOptions(
@@ -41,7 +47,8 @@ class Options {
     )
 
     data class PrintOptions(
-        val psbt_file: String
+        val psbt_file: String,
+        val verify_wallets_signatures: Boolean
     )
 
     data class SavePSBTOptions(

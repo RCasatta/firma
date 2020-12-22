@@ -5,6 +5,7 @@ use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
 use crate::offline::restore::RestoreOptions;
 use crate::offline::sign::SignOptions;
+use crate::offline::sign_wallet::SignWalletOptions;
 use crate::*;
 use android_logger::Config;
 use bitcoin::Network;
@@ -94,6 +95,11 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         Some("import_wallet") => {
             let wallet: WalletJson = serde_json::from_value(args.clone())?;
             let result = crate::offline::import_wallet::import_wallet(datadir, network, &wallet)?;
+            serde_json::to_value(result)?
+        }
+        Some("sign_wallet") => {
+            let opts: SignWalletOptions = serde_json::from_value(args.clone())?;
+            let result = crate::offline::sign_wallet::sign_wallet(datadir, network, &opts)?;
             serde_json::to_value(result)?
         }
         _ => {

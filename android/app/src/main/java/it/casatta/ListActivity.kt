@@ -357,6 +357,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         try {
             val json = mapper.readValue(content, Data.WalletJson::class.java)
             Rust().importWallet(filesDir.toString(), json)
+            Rust().signWallet(filesDir.toString(), json.name, EncryptionKey.get(applicationContext))
         } catch (e: Exception) {
             Log.e("LIST", e.message?:"Null")
             setResultMessage(R.string.wallet_not_imported)

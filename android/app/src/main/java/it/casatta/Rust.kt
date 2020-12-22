@@ -28,7 +28,7 @@ class Rust {
 
     fun list(datadir: String, kind: Kind, encryptionKey: StringEncoding): ListOutput {
         val encryptionKeys = listOf(encryptionKey)
-        val opt = ListOptions(kind, encryptionKeys)
+        val opt = ListOptions(kind, encryptionKeys, true)
         val json = callMethod("list", datadir, Network.TYPE, opt)
         return mapper.convertValue(json, ListOutput::class.java)
     }
@@ -51,6 +51,11 @@ class Rust {
         callMethod("import_wallet", datadir, Network.TYPE, wallet)
     }
 
+    fun signWallet(datadir: String, walletName: String, encryptionKey: StringEncoding) {
+        val opt = SignWalletOptions(walletName, encryptionKey)
+        callMethod("sign_wallet", datadir, Network.TYPE, opt)
+    }
+
     fun sign(datadir: String, key: String, wallet: String, psbt: String, encryptionKey: StringEncoding): PsbtPrettyPrint {
         val opt = SignOptions(key, 100, wallet, 14, psbt, false, encryptionKey )
         val json = callMethod("sign", datadir, Network.TYPE, opt)
@@ -63,7 +68,7 @@ class Rust {
     }
 
     fun print(datadir: String, psbt_file: String): PsbtPrettyPrint {
-        val opt = PrintOptions(psbt_file)
+        val opt = PrintOptions(psbt_file, true)
         val json = callMethod("print", datadir, Network.TYPE, opt)
         return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
