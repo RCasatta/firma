@@ -93,7 +93,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         }
         Some("import_wallet") => {
             let wallet: WalletJson = serde_json::from_value(args.clone())?;
-            let result = crate::online::create_wallet::import_wallet(datadir, network, &wallet)?;
+            let result = crate::offline::import_wallet::import_wallet(datadir, network, &wallet)?;
             serde_json::to_value(result)?
         }
         _ => {

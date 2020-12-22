@@ -1,4 +1,4 @@
-WALLET_DIR=~/.firma/testnet/wallets/signed-wallet2/
+WALLET_DIR=~/.firma/testnet/wallets/signed-wallet3/
 SIGNATURE_FILE=${WALLET_DIR}signature.json
 WALLET_FILE=${WALLET_DIR}descriptor.json
 ADDRESS=$(cat $SIGNATURE_FILE | jq -r .address)

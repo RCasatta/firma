@@ -201,15 +201,12 @@ pub fn read_wallet(path: &PathBuf) -> Result<WalletJson> {
     Ok(serde_json::from_slice(&wallet)?)
 }
 
-/*
-
-pub fn filename_for_qr(datadir: &str,
-                       network: Network,
-                       what: &WKP, name: &str) -> Result<PathBuf> {
-    let content = what.name_to_string().ok_or_else(|| Error::Generic("missing content".into()) ) ?;
-    let path = filename_for()
-    let mut path = path_for(vec![datadir, &format!("{}", network), &what.type_to_string(), &content, "qrs"])?;
-    path.push(name);
-    Ok(path)
+pub fn read_indexes(path: &PathBuf) -> Result<WalletIndexes> {
+    let indexes = fs::read(path)?;
+    Ok(serde_json::from_slice(&indexes)?)
 }
-*/
+
+pub fn read_daemon_opts(path: &PathBuf) -> Result<DaemonOpts> {
+    let daemon_opts = fs::read(path)?;
+    Ok(serde_json::from_slice(&daemon_opts)?)
+}

@@ -115,13 +115,3 @@ impl Context {
         Ok((wallet, indexes, daemon_opts))
     }
 }
-
-fn read_indexes(path: &PathBuf) -> Result<WalletIndexes> {
-    let indexes = fs::read(path)?;
-    Ok(serde_json::from_slice(&indexes)?)
-}
-
-fn read_daemon_opts(path: &PathBuf) -> Result<DaemonOpts> {
-    let daemon_opts = fs::read(path)?;
-    Ok(serde_json::from_slice(&daemon_opts)?)
-}
