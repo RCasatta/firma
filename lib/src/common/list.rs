@@ -1,6 +1,8 @@
 use crate::offline::print::pretty_print;
 use crate::offline::sign::read_key;
+use crate::offline::sign_wallet::verify_wallet;
 use crate::*;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Network;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
@@ -13,6 +15,10 @@ pub struct ListOptions {
     /// list wallets, keys or psbts
     #[structopt(short, long)]
     pub kind: Kind,
+
+    /// Return wallets only if wallet signature file is present and signature verifies
+    #[structopt(long)]
+    pub verify_wallets_signatures: bool,
 
     /// Optional encryption keys to read encrypted [PrivateMasterKey]
     #[structopt(skip)]
@@ -30,17 +36,27 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
             let mut path = entry.path();
             match opt.kind {
                 Kind::Wallet => {
+                    let secp = Secp256k1::verification_only();
                     path.push("descriptor.json");
                     debug!("try to read wallet {:?}", path);
                     match read_wallet(&path) {
                         Ok(wallet) => {
+                            let wallet_path = path.clone();
                             let qr_files = read_qrs(&path)?;
                             let wallet = CreateWalletOutput {
                                 qr_files, //TODO check if file exist?
                                 wallet,
                                 wallet_file: path.clone(),
                             };
-                            list.wallets.push(wallet);
+
+                            path.set_file_name("signature.json");
+                            let signature_path = path.clone();
+
+                            if !opt.verify_wallets_signatures
+                                || verify_wallet(&wallet_path, &signature_path, &secp)?
+                            {
+                                list.wallets.push(wallet);
+                            }
                         }
                         Err(e) => {
                             warn!("Can't read wallet {:?}", e);
@@ -143,6 +159,7 @@ mod tests {
         let opt = ListOptions {
             kind,
             encryption_keys: vec![],
+            verify_wallets_signatures: false,
         };
         let result = list(&temp_dir_str, Network::Testnet, &opt);
         assert!(result.is_ok());

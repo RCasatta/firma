@@ -9,6 +9,7 @@ use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -61,10 +62,7 @@ pub fn sign_wallet(
     let address = Address::p2pkh(&master_public_key.public_key, master_public_key.network);
 
     let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
-    let is_wallet_key = xpubs.iter().any(|e| e == &master_public_key);
-    if !is_wallet_key {
-        return Err("Provided key is not part of this multisig wallet".into());
-    }
+    check_xpub_in_descriptor(&master_public_key, &xpubs)?;
     xpubs
         .iter()
         .map(|xpub| check_compatibility(network, xpub.network))
@@ -72,14 +70,8 @@ pub fn sign_wallet(
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,
-        wallet_name: wallet.name.clone(),
+        wallet_name: wallet.name,
     };
-
-    let secp = Secp256k1::verification_only();
-    assert!(
-        verify_message_with_address(&address, &signature, message, &secp)?,
-        "just made signature doesn't verify"
-    );
 
     let wallet_signature = WalletSignature {
         xpub: master_public_key,
@@ -88,6 +80,37 @@ pub fn sign_wallet(
     };
     context.save_signature(&wallet_signature)?;
     Ok(wallet_signature)
+}
+
+fn check_xpub_in_descriptor(
+    master_public_key: &ExtendedPubKey,
+    xpubs: &[ExtendedPubKey],
+) -> Result<()> {
+    let is_wallet_key = xpubs.iter().any(|e| e == master_public_key);
+    if !is_wallet_key {
+        Err("Provided key is not part of this multisig wallet".into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn verify_wallet(
+    wallet_path: &PathBuf,
+    signature_path: &PathBuf,
+    secp: &Secp256k1<VerifyOnly>,
+) -> Result<bool> {
+    let wallet = read_wallet(&wallet_path)?;
+    let wallet_bytes = fs::read(&wallet_path)?;
+    let signature = read_signature(&signature_path)?;
+    let xpubs = extract_xpubs(&wallet.descriptor)?;
+    let message = std::str::from_utf8(&wallet_bytes)?;
+    let master_address = Address::p2pkh(&signature.xpub.public_key, signature.xpub.network);
+
+    check_xpub_in_descriptor(&signature.xpub, &xpubs)?;
+    if master_address != signature.address {
+        return Err("Address in signature does not match master xpub address".into());
+    }
+    verify_message_with_address(&signature.address, &signature.signature, message, secp)
 }
 
 fn sign_message_with_key(

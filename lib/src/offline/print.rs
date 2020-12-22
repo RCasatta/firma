@@ -24,6 +24,10 @@ pub struct PrintOptions {
     /// PSBT as base64 string
     #[structopt(long)]
     pub psbt_base64: Option<String>,
+
+    /// Return wallets only if wallet signature file is present and signature verifies
+    #[structopt(long)]
+    pub verify_wallets_signatures: bool,
 }
 
 pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
@@ -38,6 +42,7 @@ pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<Psbt
     let kind = Kind::Wallet;
     let opt = ListOptions {
         kind,
+        verify_wallets_signatures: opt.verify_wallets_signatures,
         encryption_keys: vec![],
     };
     let result = common::list::list(datadir, network, &opt)?;

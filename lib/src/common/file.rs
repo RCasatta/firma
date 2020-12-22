@@ -210,3 +210,8 @@ pub fn read_daemon_opts(path: &PathBuf) -> Result<DaemonOpts> {
     let daemon_opts = fs::read(path)?;
     Ok(serde_json::from_slice(&daemon_opts)?)
 }
+
+pub fn read_signature(path: &PathBuf) -> Result<WalletSignature> {
+    let wallet_signature = fs::read(path)?;
+    Ok(serde_json::from_slice(&wallet_signature)?)
+}
