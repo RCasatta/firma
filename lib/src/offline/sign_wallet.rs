@@ -56,6 +56,7 @@ pub fn sign_wallet(
         verify_wallets_signatures: false,
         encryption_keys,
     };
+    debug!("list_opt {:?}", list_opt);
     let available_keys = common::list::list(datadir, network, &list_opt)?;
     let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
     let master_public_key = ExtendedPubKey::from_private(&secp, &master_private_key);
@@ -87,7 +88,7 @@ fn find_key<'a>(
     xpubs: &[ExtendedPubKey],
 ) -> Result<&'a ExtendedPrivKey> {
     for key in available_keys.keys.iter() {
-        if let Ok(_) = check_xpub_in_descriptor(&key.key.xpub, &xpubs) {
+        if check_xpub_in_descriptor(&key.key.xpub, &xpubs).is_ok() {
             return Ok(&key.key.xprv);
         }
     }

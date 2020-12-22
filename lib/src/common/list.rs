@@ -52,10 +52,19 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                             path.set_file_name("signature.json");
                             let signature_path = path.clone();
 
-                            if !opt.verify_wallets_signatures
-                                || verify_wallet(&wallet_path, &signature_path, &secp)?
-                            {
+                            if !opt.verify_wallets_signatures {
                                 list.wallets.push(wallet);
+                            } else {
+                                match verify_wallet(&wallet_path, &signature_path, &secp) {
+                                    Ok(result) => {
+                                        if result {
+                                            list.wallets.push(wallet)
+                                        } else {
+                                            warn!("signature doesn't match")
+                                        }
+                                    }
+                                    Err(e) => warn!("wallet not added because {:?}", e),
+                                }
                             }
                         }
                         Err(e) => {
@@ -90,6 +99,7 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                     debug!("try to read key {:?}", path);
                     let keys_iter = opt.encryption_keys.iter().map(Option::Some);
                     for encryption_key in keys_iter.chain(once(None)) {
+                        debug!("using encryption_key {:?}", encryption_key);
                         match read_key(&path, encryption_key) {
                             Ok(key) => {
                                 let public_qr_files = read_qrs(&path)?;
@@ -100,6 +110,8 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                                     public_qr_files, //TODO populate if they exists
                                 };
                                 list.keys.push(key);
+                                debug!("key decrypted");
+                                break;
                             }
                             Err(e) => {
                                 debug!("Can't read key {:?} because {:?}", &path, e);
