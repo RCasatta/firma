@@ -8,6 +8,7 @@ use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -42,11 +43,11 @@ pub fn sign_wallet(
     )
     .file("descriptor.json")?;
     debug!("wallet_file {:?}", wallet_file);
-    let wallet = read_wallet(&wallet_file)?;
-    // Note we are doing `to_vec` while file is saved with `to_vec_pretty`, the latter seems wrong to use when signing
-    // this mean when verifying from shell something like `cat descriptor.json | jq -c` must be used
-    let wallet_bytes = serde_json::to_vec(&wallet)?;
+    let wallet = read_wallet(&wallet_file)?; // read the json
+    let wallet_bytes = fs::read(wallet_file)?; // reading exact bytes to sign, (reserializing wallet would be wrong cause it's not guaranteed field are in the same order)
+    debug!("wallet_bytes: {}", hex::encode(&wallet_bytes));
     let message = std::str::from_utf8(&wallet_bytes)?;
+    debug!("message: {}", message);
 
     let private_key_file =
         PathBuilder::new(datadir, network, Kind::Key, Some(opt.key_name.to_string()))
@@ -95,6 +96,7 @@ fn sign_message_with_key(
     secp: &Secp256k1<SignOnly>,
 ) -> Result<String> {
     let hash = signed_msg_hash(&message);
+    debug!("Signed message hash:{}", hash);
     let message = Message::from_slice(&hash[..])?; // Can never panic because it's the right size.
 
     let (id, sig) = secp
