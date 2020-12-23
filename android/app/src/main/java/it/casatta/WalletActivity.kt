@@ -50,7 +50,7 @@ class WalletActivity : AppCompatActivity() {
         itemsAdapter.list.add(DescItem("Required sig", walletJson.wallet.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.wallet.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson.wallet) ))
-        itemsAdapter.list.add(DescItem("Wallet signature", mapper.writeValueAsString(walletJson.signature) ))
+        itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(walletJson.signature) ))
     }
 
     override fun onActivityResult(

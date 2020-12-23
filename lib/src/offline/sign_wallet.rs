@@ -8,7 +8,6 @@ use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -66,8 +65,7 @@ pub fn sign_wallet(
     .file("descriptor.json")?;
     debug!("wallet_file {:?}", wallet_file);
     let wallet = read_wallet(&wallet_file)?; // read the json
-    let wallet_bytes = fs::read(wallet_file)?; // reading exact bytes to sign, (reserializing wallet would be wrong cause it's not guaranteed field are in the same order)
-    let message = std::str::from_utf8(&wallet_bytes)?;
+    let message = &wallet.descriptor;
     let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
     let encryption_keys = match opt.encryption_key.as_ref() {
         Some(key) => vec![key.clone()],
@@ -138,10 +136,9 @@ pub fn verify_wallet_internal(
     secp: &Secp256k1<VerifyOnly>,
 ) -> Result<VerifyWalletResult> {
     let wallet = read_wallet(&wallet_path)?;
-    let wallet_bytes = fs::read(&wallet_path)?;
     let signature = read_signature(&signature_path)?;
     let xpubs = extract_xpubs(&wallet.descriptor)?;
-    let message = std::str::from_utf8(&wallet_bytes)?;
+    let message = &wallet.descriptor;
     let master_address = Address::p2pkh(&signature.xpub.public_key, signature.xpub.network);
 
     check_xpub_in_descriptor(&signature.xpub, &xpubs)?;
@@ -154,7 +151,7 @@ pub fn verify_wallet_internal(
         verify_message_with_address(&signature.address, &signature.signature, message, secp)?;
     debug!("verified {}", verified);
     let result = VerifyWalletResult {
-        wallet,
+        descriptor: wallet.descriptor,
         signature,
         verified,
     };

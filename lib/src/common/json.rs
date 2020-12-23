@@ -205,7 +205,7 @@ pub struct SavePSBTOptions {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct VerifyWalletResult {
-    pub wallet: WalletJson,
+    pub descriptor: String,
     pub signature: WalletSignature,
     pub verified: bool,
 }
