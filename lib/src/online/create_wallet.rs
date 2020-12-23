@@ -132,6 +132,7 @@ impl Wallet {
             qr_files,
             wallet_file,
             wallet,
+            signature: None,
         };
 
         Ok(create_wallet)

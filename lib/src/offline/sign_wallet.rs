@@ -25,6 +25,31 @@ pub struct SignWalletOptions {
     pub encryption_key: Option<StringEncoding>,
 }
 
+#[derive(Serialize, Deserialize, StructOpt, Debug)]
+pub struct VerifyWalletOptions {
+    /// Wallet name to be verified
+    #[structopt(long)]
+    pub wallet_name: String,
+}
+
+pub fn verify_wallet(
+    datadir: &str,
+    network: Network,
+    opt: &VerifyWalletOptions,
+) -> Result<VerifyWalletResult> {
+    let wallet_path = PathBuilder::new(
+        datadir,
+        network,
+        Kind::Wallet,
+        Some(opt.wallet_name.to_string()),
+    );
+    let wallet_file = wallet_path.file("descriptor.json")?;
+    let signature_file = wallet_path.file("signature.json")?;
+    let secp = Secp256k1::verification_only();
+
+    verify_wallet_internal(&wallet_file, &signature_file, &secp)
+}
+
 pub fn sign_wallet(
     datadir: &str,
     network: Network,
@@ -107,11 +132,11 @@ fn check_xpub_in_descriptor(
     }
 }
 
-pub fn verify_wallet(
+pub fn verify_wallet_internal(
     wallet_path: &PathBuf,
     signature_path: &PathBuf,
     secp: &Secp256k1<VerifyOnly>,
-) -> Result<bool> {
+) -> Result<VerifyWalletResult> {
     let wallet = read_wallet(&wallet_path)?;
     let wallet_bytes = fs::read(&wallet_path)?;
     let signature = read_signature(&signature_path)?;
@@ -120,10 +145,20 @@ pub fn verify_wallet(
     let master_address = Address::p2pkh(&signature.xpub.public_key, signature.xpub.network);
 
     check_xpub_in_descriptor(&signature.xpub, &xpubs)?;
+    debug!("xpub is in wallet");
     if master_address != signature.address {
         return Err("Address in signature does not match master xpub address".into());
     }
-    verify_message_with_address(&signature.address, &signature.signature, message, secp)
+    debug!("address matches");
+    let verified =
+        verify_message_with_address(&signature.address, &signature.signature, message, secp)?;
+    debug!("verified {}", verified);
+    let result = VerifyWalletResult {
+        wallet,
+        signature,
+        verified,
+    };
+    Ok(result)
 }
 
 fn sign_message_with_key(

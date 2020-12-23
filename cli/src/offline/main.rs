@@ -57,6 +57,9 @@ enum FirmaOfflineSubcommands {
 
     /// Sign a wallet json containing the descriptor to avoid tampering
     SignWallet(offline::sign_wallet::SignWalletOptions),
+
+    /// Verify a wallet json containing the descriptor to avoid tampering
+    VerifyWallet(offline::sign_wallet::VerifyWalletOptions),
 }
 
 fn main() -> Result<()> {
@@ -107,6 +110,7 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         DeriveKey(opt) => offline::derive_key::start(datadir, net, &opt)?.try_into(),
         List(opt) => common::list::list(datadir, net, &opt)?.try_into(),
         SignWallet(opt) => offline::sign_wallet::sign_wallet(datadir, net, &opt)?.try_into(),
+        VerifyWallet(opt) => offline::sign_wallet::verify_wallet(datadir, net, &opt)?.try_into(),
         Decrypt(opt) => offline::decrypt::decrypt::<Value>(&opt),
     }
 }

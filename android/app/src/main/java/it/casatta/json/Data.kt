@@ -41,7 +41,8 @@ class Data {
     data class CreateWalletOutput(
         val wallet_file: String,
         val wallet: WalletJson,
-        val qr_files: List<String>
+        val qr_files: List<String>,
+        val signature: WalletSignature?
     )
 
     data class WalletJson(
@@ -51,6 +52,12 @@ class Data {
         val required_sig: Int,
         val created_at_height: Int,
         val daemon_opts: DaemonOpts?
+    )
+
+    data class WalletSignature(
+        val xpub: String,
+        val address: String,
+        val signature: String
     )
 
     data class DaemonOpts(

@@ -8,7 +8,7 @@ use bitcoin::{bech32, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 
@@ -64,8 +64,8 @@ pub struct PsbtJsonOutput {
 pub struct WalletJson {
     pub name: String,
     pub descriptor: String,
-    pub fingerprints: HashSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
-    pub required_sig: usize,                // TODO derive from descriptor?
+    pub fingerprints: BTreeSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
+    pub required_sig: usize,                 // TODO derive from descriptor?
     pub created_at_height: u64,
 }
 
@@ -122,6 +122,7 @@ pub struct CreateWalletOutput {
     pub qr_files: Vec<PathBuf>,
     pub wallet_file: PathBuf,
     pub wallet: WalletJson,
+    pub signature: Option<WalletSignature>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
@@ -200,6 +201,13 @@ pub struct Size {
 pub struct SavePSBTOptions {
     pub psbt: StringEncoding,
     pub qr_version: i16,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct VerifyWalletResult {
+    pub wallet: WalletJson,
+    pub signature: WalletSignature,
+    pub verified: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -357,6 +365,7 @@ impl_try_into!(ListCoinsOutput);
 impl_try_into!(GetAddressOutput);
 impl_try_into!(ListOutput);
 impl_try_into!(WalletSignature);
+impl_try_into!(VerifyWalletResult);
 
 #[cfg(test)]
 mod tests {

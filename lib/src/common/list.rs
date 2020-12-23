@@ -1,6 +1,6 @@
 use crate::offline::print::pretty_print;
 use crate::offline::sign::read_key;
-use crate::offline::sign_wallet::verify_wallet;
+use crate::offline::sign_wallet::verify_wallet_internal;
 use crate::*;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Network;
@@ -43,22 +43,24 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                         Ok(wallet) => {
                             let wallet_path = path.clone();
                             let qr_files = read_qrs(&path)?;
-                            let wallet = CreateWalletOutput {
+                            let mut wallet_output = CreateWalletOutput {
                                 qr_files, //TODO check if file exist?
                                 wallet,
                                 wallet_file: path.clone(),
+                                signature: None,
                             };
 
                             path.set_file_name("signature.json");
                             let signature_path = path.clone();
 
                             if !opt.verify_wallets_signatures {
-                                list.wallets.push(wallet);
+                                list.wallets.push(wallet_output);
                             } else {
-                                match verify_wallet(&wallet_path, &signature_path, &secp) {
+                                match verify_wallet_internal(&wallet_path, &signature_path, &secp) {
                                     Ok(result) => {
-                                        if result {
-                                            list.wallets.push(wallet)
+                                        if result.verified {
+                                            wallet_output.signature = Some(result.signature);
+                                            list.wallets.push(wallet_output)
                                         } else {
                                             warn!("signature doesn't match")
                                         }
