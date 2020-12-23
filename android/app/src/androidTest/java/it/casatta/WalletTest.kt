@@ -75,8 +75,7 @@ class WalletTest : Common() {
             mainDescriptors[network]!!,
             listOf("8f335370", "6b9128bc"),
             2,
-            1718227,
-            null
+            1718227
         )
         val walletString = mapper.writeValueAsString(wallet)
 
@@ -102,8 +101,7 @@ class WalletTest : Common() {
             mainDescriptors[invalidNetwork]!!,
             listOf("8f335370", "6b9128bc"),
             2,
-            1718227,
-            null
+            1718227
         )
         val invalidWalletString = mapper.writeValueAsString(invalidWallet)
         onView(withId(R.id.item_new)).perform(click())
