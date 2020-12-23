@@ -50,19 +50,13 @@ class Data {
         val descriptor: String,
         val fingerprints: List<String>,
         val required_sig: Int,
-        val created_at_height: Int,
-        val daemon_opts: DaemonOpts?
+        val created_at_height: Int
     )
 
     data class WalletSignature(
         val xpub: String,
         val address: String,
         val signature: String
-    )
-
-    data class DaemonOpts(
-        val url: String,
-        val cookie_file: String
     )
 
     data class PsbtJson(
