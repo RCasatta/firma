@@ -90,13 +90,15 @@ impl Wallet {
         self.client
             .create_wallet(&self.context.wallet_name, Some(true), None, None, None)?;
 
-        let mut multi_request: ImportMultiRequest = Default::default();
-        multi_request.range = Some((0, 1000)); //TODO should be a parameter
-        multi_request.timestamp = ImportMultiRescanSince::Now;
-        multi_request.keypool = Some(true);
-        multi_request.watchonly = Some(true);
-        multi_request.descriptor = Some(&descriptor);
-        multi_request.internal = Some(false);
+        let multi_request = ImportMultiRequest {
+            range: Some((0, 1000)), //TODO should be a parameter
+            timestamp: ImportMultiRescanSince::Now,
+            keypool: Some(true),
+            watchonly: Some(true),
+            descriptor: Some(&descriptor),
+            internal: Some(false),
+            ..Default::default()
+        };
 
         let multi_options = ImportMultiOptions {
             rescan: Some(false),

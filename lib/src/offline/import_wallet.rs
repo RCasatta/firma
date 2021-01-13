@@ -7,8 +7,7 @@ use bitcoin::Network;
 pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Result<()> {
     extract_xpubs(&wallet.descriptor)?
         .iter()
-        .map(|xpub| check_compatibility(network, xpub.network))
-        .collect::<Result<()>>()?;
+        .try_for_each(|xpub| check_compatibility(network, xpub.network))?;
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,

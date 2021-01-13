@@ -89,8 +89,7 @@ pub fn sign_wallet(
 
     xpubs
         .iter()
-        .map(|xpub| check_compatibility(network, xpub.network))
-        .collect::<Result<()>>()?;
+        .try_for_each(|xpub| check_compatibility(network, xpub.network))?;
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,

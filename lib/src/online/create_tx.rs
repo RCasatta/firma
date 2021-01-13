@@ -97,13 +97,17 @@ impl Wallet {
         let inputs = opt.coins_as_inputs();
         debug!("{:?}", inputs);
 
-        let mut options: WalletCreateFundedPsbtOptions = Default::default();
-        options.include_watching = Some(true);
         let get_addr_opts = GetAddressOptions {
             index: None,
             qr_mode: QrMode::None,
         };
-        options.change_address = Some(self.get_address(&get_addr_opts)?.address);
+
+        let options = WalletCreateFundedPsbtOptions {
+            include_watching: Some(true),
+            change_address: Some(self.get_address(&get_addr_opts)?.address),
+            ..Default::default()
+        };
+
         let result = self.client.wallet_create_funded_psbt(
             &inputs,
             &outputs,
