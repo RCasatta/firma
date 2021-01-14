@@ -4,7 +4,8 @@ on: [push]
 
 env:
   CARGO_TERM_COLOR: always
-  ANDROID_NDK_VER: android-ndk-r21d
+  ANDROID_NDK_VER: r21d
+  ANDROID_NDK_FULL_VER: 21.3.6528147
   HOST: linux-x86_64
   DEBUG: debug
 
@@ -19,24 +20,24 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup cache
-        id: setup_cache
         uses: actions/cache@v2
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-            ${{ env.ANDROID_NDK_VER }}
-          key: cache-${{ matrix.target }}-${{ env.ANDROID_NDK_VER }}-${{ hashFiles('**/Cargo.toml','**/Cargo.lock') }}
+          key: cache-android-lib-${{ matrix.target }}-${{ env.ANDROID_NDK_VER }}--${{ hashFiles('**/Cargo.toml','**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
           target: ${{ matrix.target }}
-      - run: echo "NDK=${{ github.workspace }}/${{ env.ANDROID_NDK_VER }}" >> $GITHUB_ENV
-      - name: Download Android NDK
-        run: curl -o ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip https://dl.google.com/android/repository/${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip && unzip -q ${{ env.ANDROID_NDK_VER }}-${{ env.HOST }}.zip ${{ env.ANDROID_NDK_VER }}/toolchains/llvm/prebuilt/*
-        if: steps.setup_cache.outputs.cache-hit != 'true'
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VER }}
+      - run: echo "NDK=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
       - run: cd lib && ./build-android/${{ matrix.target }}.sh
       - name: Upload libs
         uses: actions/upload-artifact@v2
@@ -52,6 +53,20 @@ jobs:
         network: [Testnet, Mainnet, Regtest]
     steps:
       - uses: actions/checkout@v2
+      - name: Setup cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: cache-android-apk-${{ matrix.target }}-${{ env.ANDROID_NDK_VER }}--${{ hashFiles('**/Cargo.toml','**/Cargo.lock') }}
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VER }}
+      - run: echo "ndk.dir=${{ steps.setup-ndk.outputs.ndk-path }}" >> ${{ github.workspace }}/android/local.properties
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
       - uses: actions/download-artifact@v2
         with:
@@ -93,11 +108,17 @@ jobs:
         with:
           name: lib_i686-linux-android
       - run: mv libfirma.so android/app/src/main/jniLibs/x86/
+      - name: Setup Android NDK
+        id: setup-ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VER }}
       - name: Run Instrumentation Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ matrix.api }}
           target: default
+          ndk: ${{ env.ANDROID_NDK_FULL_VER }}
           arch: x86
           script: cd android && ./gradlew connectedCheck --stacktrace
       - name: Upload test reports
@@ -105,4 +126,4 @@ jobs:
         if: ${{ always() }}
         with:
           name: tests_report_${{ matrix.api }}
-          path: ${{ github.workspace }}/android/app/build/reports/androidTests/connected/flavors/
+          path: ${{ github.workspace }}/android/app/build/reports/androidTests/connected/flavors/
