@@ -6,22 +6,29 @@ use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fing
 use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{bech32, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
+use miniscript::descriptor::DescriptorXKey;
+use miniscript::DescriptorPublicKey;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKeyJson {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub mnemonic: Option<Mnemonic>,
-    pub xpub: ExtendedPubKey,
-    pub xprv: ExtendedPrivKey,
+    pub mnemonic: Option<Mnemonic>, // replace with enum Mnemonic or xpriv
+    pub xpub: ExtendedPubKey,  // remove
+    pub xprv: ExtendedPrivKey, // remove
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dice: Option<Dice>,
+    pub dice: Option<Dice>, // move
     pub name: String,
-    pub fingerprint: Fingerprint,
+    pub fingerprint: Fingerprint, // remove
+
+    /// ToString of [miniscript::descriptor::DescriptorPublicKey]
+    /// Example: `[28645006/48'/1'/0'/2']tpubDEwqCvJxKwKWX9xvRe48uofWJn1Y89Jn8UeH1Efrjb1UEVjUDy3URYTiqWaVCW7WdvHrL8XrSihHEhTwv5H3VDJoakjuCHiAnr6xcF2Xm4s/0/*`
+    pub desc_pub_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -312,13 +319,29 @@ impl PrivateMasterKeyJson {
     pub fn new(
         network: Network,
         mnemonic: &Mnemonic,
+        origin_derivation_path: Option<DerivationPath>,
         name: &str,
     ) -> crate::Result<PrivateMasterKeyJson> {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let seed = mnemonic.to_seed(None);
 
         let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
+        let path = origin_derivation_path.unwrap_or_else(|| {
+            let n = match network {
+                Network::Bitcoin => "0",
+                Network::Testnet => "1",
+                Network::Regtest => "2", // bip48 skip this
+            };
+            DerivationPath::from_str(&format!("m/48'/{}'/0'/2'", n)).unwrap() // safe
+        });
+        let xprv_derived = xprv.derive_priv(&secp, &path)?;
+        let xpub = ExtendedPubKey::from_private(&secp, &xprv_derived);
+        let desc_pub_key = DescriptorPublicKey::XPub(DescriptorXKey {
+            origin: Some((xprv.fingerprint(&secp), path)),
+            xkey: xpub,
+            derivation_path: DerivationPath::from_str("m/0")?,
+            is_wildcard: true,
+        });
 
         Ok(PrivateMasterKeyJson {
             mnemonic: Some(mnemonic.clone()),
@@ -327,6 +350,7 @@ impl PrivateMasterKeyJson {
             dice: None,
             name: name.to_string(),
             fingerprint: xpub.fingerprint(),
+            desc_pub_key: desc_pub_key.to_string(),
         })
     }
 
@@ -340,6 +364,7 @@ impl PrivateMasterKeyJson {
             dice: None,
             name: name.to_string(),
             fingerprint: xpub.fingerprint(),
+            desc_pub_key: "".to_string(),
         }
     }
 }
@@ -369,7 +394,10 @@ impl_try_into!(VerifyWalletResult);
 
 #[cfg(test)]
 mod tests {
-    use crate::WalletJson;
+    use crate::common::mnemonic::Mnemonic;
+    use crate::{PrivateMasterKeyJson, WalletJson};
+    use bitcoin::Network;
+    use std::str::FromStr;
 
     #[test]
     fn test_cbor_wallet() {
@@ -380,5 +408,21 @@ mod tests {
 
         assert_eq!(vec_json.len(), 751);
         assert_eq!(vec_cbor.len(), 704);
+    }
+
+    #[test]
+    fn test_new_private_json() {
+        let key_json = PrivateMasterKeyJson::new(
+            Network::Testnet,
+            &Mnemonic::from_str(
+                "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",
+            )
+            .unwrap(),
+            None,
+            "ciao",
+        )
+        .unwrap();
+
+        assert_eq!(key_json.desc_pub_key, "");
     }
 }

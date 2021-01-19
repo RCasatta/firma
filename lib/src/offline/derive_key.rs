@@ -15,9 +15,13 @@ pub struct DeriveKeyOptions {
     #[structopt(short, long)]
     pub from_key_file: PathBuf,
 
-    /// Name of the generated master key, used as path to generate the child key
+    /// Name of the new key
     #[structopt(short, long)]
     pub to_key_name: String,
+
+    /// Origin derivation path
+    //#[structopt(short, long)]
+    //pub derivation_path: DerivationPath,
 
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]

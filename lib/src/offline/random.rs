@@ -1,11 +1,12 @@
 use crate::*;
+use bitcoin::util::bip32::DerivationPath;
 use bitcoin::Network;
 use common::mnemonic::Mnemonic;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
-/// Generate a bitcoin master key in bip32 randomly
+/// Generate randomly a bitcoin master key
 #[derive(StructOpt, Debug, Serialize, Deserialize, Clone)]
 #[structopt(name = "random")]
 pub struct RandomOptions {
@@ -17,6 +18,10 @@ pub struct RandomOptions {
     #[structopt(long, default_value = "14")]
     #[serde(default)]
     pub qr_version: i16,
+
+    /// Origin derivation path of the key, by default m/48'/x'/0'/2' where x is 0 for mainnet and 1 for testnet
+    #[structopt(long)]
+    pub origin_derivation_path: Option<DerivationPath>,
 
     /// Optional encryption key for saving the key file encrypted
     /// in CLI it is populated from standard input
@@ -30,6 +35,7 @@ impl RandomOptions {
             key_name,
             qr_version: 20,
             encryption_key: None,
+            origin_derivation_path: None,
         }
     }
 }
@@ -37,7 +43,7 @@ impl RandomOptions {
 pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Result<MasterKeyOutput> {
     let sec = rand::thread_rng().gen::<[u8; 32]>();
     let mnemonic = Mnemonic::new(&sec)?;
-    let master_key = PrivateMasterKeyJson::new(network, &mnemonic, &opt.key_name)?;
+    let master_key = PrivateMasterKeyJson::new(network, &mnemonic, None, &opt.key_name)?;
     let output = save_keys(
         datadir,
         network,
@@ -54,7 +60,24 @@ pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Resul
 mod tests {
     use crate::offline::random::{self, RandomOptions};
     use bitcoin::Network;
+    use miniscript::descriptor::DescriptorSecretKey;
+    use miniscript::DescriptorPublicKey;
+    use std::str::FromStr;
     use tempfile::TempDir;
+
+    #[test]
+    fn test_descriptor_key() {
+        let xpub = "[a15f432e/48'/1'/0']tpubDDoLq7YG6qr18Paph1uJ8F2ncVuSh2DjkixS6CX37nCiJusecE82JXvFmfZh8hp86Bm7sv7Pkprv5phMXn1r49TU6YrDidGmemFAL1PNWXi/0/*";
+        assert!(DescriptorPublicKey::from_str(&xpub).is_ok());
+
+        let xpub = "tpubDDoLq7YG6qr18Paph1uJ8F2ncVuSh2DjkixS6CX37nCiJusecE82JXvFmfZh8hp86Bm7sv7Pkprv5phMXn1r49TU6YrDidGmemFAL1PNWXi";
+        assert!(DescriptorPublicKey::from_str(&xpub).is_ok());
+
+        let xpub = "[a15f432e/48'/1'/0']tpubDDoLq7YG6qr18Paph1uJ8F2ncVuSh2DjkixS6CX37nCiJusecE82JXvFmfZh8hp86Bm7sv7Pkprv5phMXn1r49TU6YrDidGmemFAL1PNWXi";
+        assert!(DescriptorPublicKey::from_str(&xpub).is_ok());
+
+        assert!(DescriptorSecretKey::from_str("xprv9s21ZrQH143K3yGb6gtghzHH4MPaEHGPN48sxoyYd4EdrQcaSVP2dxZS2vRwoKny1KRS5xMMyGunA3WkToah7ZmJ2fFtGK8vBBBiBkVFmTM").is_ok());
+    }
 
     #[test]
     fn test_random() {

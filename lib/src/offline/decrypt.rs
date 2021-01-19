@@ -144,6 +144,7 @@ mod tests {
                 "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",
             )
             .unwrap(),
+            None,
             "ciao",
         )
         .unwrap();

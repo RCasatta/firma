@@ -63,7 +63,7 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
         }
         Nature::Mnemonic => {
             let mnemonic = Mnemonic::from_str(&opt.value)?;
-            PrivateMasterKeyJson::new(network, &mnemonic, &opt.key_name)?
+            PrivateMasterKeyJson::new(network, &mnemonic, None, &opt.key_name)?
         }
     };
 

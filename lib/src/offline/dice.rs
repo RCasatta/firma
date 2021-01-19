@@ -129,7 +129,7 @@ fn calculate_key(
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;
 
-    let mut key = PrivateMasterKeyJson::new(network, &mnemonic, name)?;
+    let mut key = PrivateMasterKeyJson::new(network, &mnemonic, None, name)?;
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),

@@ -19,6 +19,7 @@ pub struct CreateWalletOptions {
 
     /// Extended Public Keys (xpub) that are composing the wallet, given as String (xprv...)
     #[structopt(long = "xpub")]
+    //pub xpubs: Vec<DescriptorPublicKey>,
     pub xpubs: Vec<ExtendedPubKey>,
 
     /// Extended Public Keys (xpub) that are composing the wallet, given as a json file
