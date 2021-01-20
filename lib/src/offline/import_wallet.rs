@@ -2,6 +2,8 @@ use crate::offline::descriptor::extract_xpubs;
 use crate::*;
 use bitcoin::Network;
 
+//TODO use import for every object, use only names as options parameters
+
 /// Import a json wallet, used in firma-offline to import existing wallet json descriptor
 //TODO android-only at the moment, add support also from command line
 pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Result<()> {

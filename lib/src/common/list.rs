@@ -1,5 +1,5 @@
 use crate::offline::print::pretty_print;
-use crate::offline::sign::read_key;
+use crate::offline::sign::{read_secret, read_descriptor_pub_key};
 use crate::offline::sign_wallet::verify_wallet_internal;
 use crate::*;
 use bitcoin::secp256k1::Secp256k1;
@@ -97,18 +97,22 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                     }
                 }
                 Kind::Key => {
-                    path.push("PRIVATE.json");
-                    debug!("try to read key {:?}", path);
+                    let mut private = path.clone();
+                    private.push("PRIVATE.json");
+                    let mut public = path.clone();
+                    public.push("public.json");
+
+                    debug!("try to read key {:?} {:?}", private, public);
                     let keys_iter = opt.encryption_keys.iter().map(Option::Some);
                     for encryption_key in keys_iter.chain(once(None)) {
                         debug!("using encryption_key {:?}", encryption_key);
-                        match read_key(&path, encryption_key) {
-                            Ok(key) => {
+                        match (read_secret(&private, encryption_key.clone()), read_descriptor_pub_key(&public, encryption_key)) {
+                            (Ok(secret),Ok(public)) => {
                                 let public_qr_files = read_qrs(&path)?;
                                 let key = MasterKeyOutput {
                                     key,
-                                    private_file: path.clone(),
-                                    public_file: None,
+                                    private_file: private,
+                                    public_file: public,
                                     public_qr_files, //TODO populate if they exists
                                 };
                                 list.keys.push(key);

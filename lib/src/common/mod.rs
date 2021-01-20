@@ -54,12 +54,6 @@ pub fn init_logger() {
         .expect("cannot initialize logging");
 }
 
-impl From<PrivateMasterKeyJson> for PublicMasterKey {
-    fn from(private: PrivateMasterKeyJson) -> Self {
-        PublicMasterKey { xpub: private.xpub }
-    }
-}
-
 pub fn psbt_from_base64(s: &str) -> Result<(Vec<u8>, PSBT)> {
     let bytes = base64::decode(s)?;
     let psbt = deserialize(&bytes)?;

@@ -1,6 +1,6 @@
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
-use crate::{psbt_from_base64, psbt_to_base64, PSBT};
+use crate::{psbt_from_base64, psbt_to_base64, PSBT, Result};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
@@ -15,22 +15,37 @@ use std::convert::TryInto;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PrivateMasterKeyJson {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mnemonic: Option<Mnemonic>, // replace with enum Mnemonic or xpriv
-    pub xpub: ExtendedPubKey,  // remove
-    pub xprv: ExtendedPrivKey, // remove
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dice: Option<Dice>, // move
-    pub name: String,
-    pub fingerprint: Fingerprint, // remove
 
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum MnemonicOrXpriv {
+    Mnemonic(Mnemonic, Network),
+    Xpriv(ExtendedPrivKey),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SecretMasterKey {
+    /// The name of this key
+    pub name: String,
+
+    /// The secret material of this key in mnemonic form or as extended private key
+    pub secret: MnemonicOrXpriv,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Dice material if this key has been created with dice
+    pub dice: Option<Dice>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct DescriptorPublicKeyJson {
     /// ToString of [miniscript::descriptor::DescriptorPublicKey]
     /// Example: `[28645006/48'/1'/0'/2']tpubDEwqCvJxKwKWX9xvRe48uofWJn1Y89Jn8UeH1Efrjb1UEVjUDy3URYTiqWaVCW7WdvHrL8XrSihHEhTwv5H3VDJoakjuCHiAnr6xcF2Xm4s/0/*`
+    /// TODO use DescriptorPublicKey when implement Serialize
     pub desc_pub_key: String,
 }
 
+//TODO save this data in a file? Must be encrypted, encrypt everything
+//TODO use coldcard algo https://coldcardwallet.com/docs/rolls.py
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Dice {
     pub launches: String,
@@ -40,16 +55,11 @@ pub struct Dice {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MasterKeyOutput {
-    pub key: PrivateMasterKeyJson,
+    pub master_secret: SecretMasterKey,
+    pub desc_public: DescriptorPublicKeyJson,
     pub private_file: PathBuf,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_file: Option<PathBuf>,
+    pub public_file: PathBuf,
     pub public_qr_files: Vec<PathBuf>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PublicMasterKey {
-    pub xpub: ExtendedPubKey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -246,7 +256,7 @@ impl StringEncoding {
         StringEncoding::Base64(base64::encode(content))
     }
 
-    pub fn as_bytes(&self) -> crate::Result<Vec<u8>> {
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
         Ok(match self {
             StringEncoding::Base64(s) => base64::decode(s)?,
             StringEncoding::Hex(s) => hex::decode(s)?,
@@ -257,7 +267,7 @@ impl StringEncoding {
         })
     }
 
-    pub fn get_exactly_32(&self) -> crate::Result<[u8; 32]> {
+    pub fn get_exactly_32(&self) -> Result<[u8; 32]> {
         let bytes = self.as_bytes()?;
         if bytes.len() != 32 {
             return Err(crate::Error::EncryptionKeyNot32Bytes(bytes.len()));
@@ -284,7 +294,7 @@ pub fn get_name_key() -> raw::Key {
     }
 }
 
-pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> crate::Result<PSBT> {
+pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> Result<PSBT> {
     let (_, mut psbt_with_name) = psbt_from_base64(&psbt.psbt)?;
 
     let pair = raw::Pair {
@@ -315,18 +325,67 @@ impl MasterKeyOutput {
     }
 }
 
-impl PrivateMasterKeyJson {
-    pub fn new(
-        network: Network,
-        mnemonic: &Mnemonic,
-        origin_derivation_path: Option<DerivationPath>,
-        name: &str,
-    ) -> crate::Result<PrivateMasterKeyJson> {
-        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-        let seed = mnemonic.to_seed(None);
+impl MnemonicOrXpriv {
+    pub fn network(&self) -> &Network {
+        match self {
+            MnemonicOrXpriv::Mnemonic(_,network) => network,
+            MnemonicOrXpriv::Xpriv(xpriv ) => &xpriv.network
+        }
+    }
+    pub fn xprv(&self) -> &ExtendedPrivKey {
+        match self {
+            MnemonicOrXpriv::Mnemonic(mnemonic,network) => {
+                let seed = mnemonic.to_seed(None);
+                let xprv = ExtendedPrivKey::new_master(*network, &seed.0).unwrap(); //TODO return Result
+                &xprv
+            },
+            MnemonicOrXpriv::Xpriv(xpriv ) => xpriv
+        }
+    }
+}
 
-        let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
-        let path = origin_derivation_path.unwrap_or_else(|| {
+impl Dice {
+    pub fn as_mnemonic(&self) -> Mnemonic {
+        //TODO implement as coldcard?
+        unimplemented!();
+    }
+}
+
+impl SecretMasterKey {
+    pub fn from_mnemonic(
+        network: Network,
+        mnemonic: Mnemonic,
+        name: &str,
+    ) -> Self {
+        SecretMasterKey {
+            secret: MnemonicOrXpriv::Mnemonic(mnemonic, network),
+            name: name.to_string(),
+            dice: None,
+        }
+    }
+
+    pub fn from_xprv(xprv: ExtendedPrivKey, name: &str) -> Self {
+        SecretMasterKey {
+            secret: MnemonicOrXpriv::Xpriv(xprv),
+            name: name.to_string(),
+            dice: None,
+        }
+    }
+
+    pub fn from_dice(network: Network, dice: Dice, name: &str) -> Self {
+        let mnemonic = dice.as_mnemonic();
+        SecretMasterKey {
+            secret: MnemonicOrXpriv::Mnemonic(mnemonic, network),
+            name: name.to_string(),
+            dice: Some(dice),
+        }
+    }
+
+    pub fn as_desc_pub_key(&self, custom_origin: &Option<DerivationPath>) -> Result<DescriptorPublicKeyJson> {
+        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+
+        let network = self.secret.network();
+        let path = custom_origin.unwrap_or_else(|| {
             let n = match network {
                 Network::Bitcoin => "0",
                 Network::Testnet => "1",
@@ -334,38 +393,15 @@ impl PrivateMasterKeyJson {
             };
             DerivationPath::from_str(&format!("m/48'/{}'/0'/2'", n)).unwrap() // safe
         });
-        let xprv_derived = xprv.derive_priv(&secp, &path)?;
+        let xprv_derived = self.secret.xprv().derive_priv(&secp, &path)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv_derived);
         let desc_pub_key = DescriptorPublicKey::XPub(DescriptorXKey {
-            origin: Some((xprv.fingerprint(&secp), path)),
+            origin: Some((self.secret.xprv().fingerprint(&secp), path)),
             xkey: xpub,
             derivation_path: DerivationPath::from_str("m/0")?,
             is_wildcard: true,
         });
-
-        Ok(PrivateMasterKeyJson {
-            mnemonic: Some(mnemonic.clone()),
-            xprv,
-            xpub,
-            dice: None,
-            name: name.to_string(),
-            fingerprint: xpub.fingerprint(),
-            desc_pub_key: desc_pub_key.to_string(),
-        })
-    }
-
-    pub fn from_xprv(xprv: ExtendedPrivKey, name: &str) -> Self {
-        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-        PrivateMasterKeyJson {
-            xprv,
-            xpub,
-            mnemonic: None,
-            dice: None,
-            name: name.to_string(),
-            fingerprint: xpub.fingerprint(),
-            desc_pub_key: "".to_string(),
-        }
+        Ok(DescriptorPublicKeyJson{desc_pub_key: desc_pub_key.to_string()})
     }
 }
 
@@ -374,7 +410,7 @@ macro_rules! impl_try_into {
         impl TryInto<Value> for $for {
             type Error = crate::Error;
 
-            fn try_into(self) -> Result<Value, Self::Error> {
+            fn try_into(self) -> std::result::Result<Value, Self::Error> {
                 Ok(serde_json::to_value(self)?)
             }
         }
@@ -395,7 +431,7 @@ impl_try_into!(VerifyWalletResult);
 #[cfg(test)]
 mod tests {
     use crate::common::mnemonic::Mnemonic;
-    use crate::{PrivateMasterKeyJson, WalletJson};
+    use crate::{SecretMasterKey, WalletJson};
     use bitcoin::Network;
     use std::str::FromStr;
 
@@ -412,17 +448,15 @@ mod tests {
 
     #[test]
     fn test_new_private_json() {
-        let key_json = PrivateMasterKeyJson::new(
+        let key_json = SecretMasterKey::from_mnemonic(
             Network::Testnet,
-            &Mnemonic::from_str(
+            Mnemonic::from_str(
                 "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",
             )
             .unwrap(),
-            None,
             "ciao",
-        )
-        .unwrap();
+        );
 
-        assert_eq!(key_json.desc_pub_key, "");
+        assert_eq!(key_json.as_desc_pub_key(&None).unwrap().desc_pub_key, "");
     }
 }

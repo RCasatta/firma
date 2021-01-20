@@ -17,13 +17,13 @@ class Data {
     )
 
     data class MasterKeyOutput(
-        val key: PrivateMasterKey,
+        val key: SecretMasterKey,
         val private_file: String,
         val public_file: String?,
         val public_qr_files: List<String>
     )
 
-    data class PrivateMasterKey(
+    data class SecretMasterKey(
         val name: String,
         val xpub: String,
         val xprv: String,

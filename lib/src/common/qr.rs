@@ -11,6 +11,11 @@ use std::{fs, io};
 #[derive(Debug)]
 pub enum QrError {}
 
+//TODO instead of saving files, qr are returned as StringEncoding? less code around, everything is
+// encrypted without qr-codes leaking things to be rendered it's possibile via qr_text or
+// trough pipes | jq -r data | base64 -d >file.bmp
+// but what about multiple qr-codes?
+
 /// path contains up to the filename (use dummy value) that will be replaced by qr file name
 pub fn save_qrs(bytes: Vec<u8>, qr_dir: PathBuf, version: i16) -> Result<Vec<PathBuf>> {
     match version {

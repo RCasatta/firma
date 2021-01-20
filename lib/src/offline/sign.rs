@@ -202,11 +202,11 @@ impl PSBTSigner {
         let psbt_file = opt.psbt_file.clone();
         let psbts_dir = psbt_file.parent().unwrap().parent().unwrap().to_path_buf(); //TODO remove unwrap
 
-        let xprv_json = read_key(&opt.key, opt.encryption_key.as_ref())?;
+        let master = read_secret(&opt.key, opt.encryption_key.as_ref())?;
 
         let signer = PSBTSigner::new(
             &psbt,
-            &xprv_json.xprv,
+            &master.secret.xprv(),
             network,
             opt.total_derivations,
             psbts_dir,
@@ -443,16 +443,42 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
     Ok(psbt_print)
 }
 
-pub fn read_key(
+pub fn read_secret(
     path: &PathBuf,
     encryption_key: Option<&StringEncoding>,
-) -> Result<PrivateMasterKeyJson> {
+) -> Result<SecretMasterKey> {
     let is_key = path
         .file_name()
         .ok_or(Error::WrongKeyFileName)?
         .to_str()
         .ok_or(Error::WrongKeyFileName)?
         == "PRIVATE.json";
+    if !is_key {
+        return Err(Error::WrongKeyFileName);
+    }
+    let decrypted = match encryption_key {
+        encryption_key @ Some(_) => {
+            MaybeEncrypted::Plain(decrypt(&DecryptOptions::new(path, encryption_key))?)
+        }
+        None => serde_json::from_slice(&std::fs::read(path)?)?,
+    };
+    match decrypted {
+        MaybeEncrypted::Plain(value) => Ok(value),
+        MaybeEncrypted::Encrypted(_) => Err(Error::MaybeEncryptedWrongState),
+    }
+}
+
+pub fn read_descriptor_pub_key(
+    path: &PathBuf,
+    encryption_key: Option<&StringEncoding>,
+) -> Result<DescriptorPublicKeyJson> {
+    //TODO make it generic over json type, move all under file.rs, make all encrypted
+    let is_key = path
+        .file_name()
+        .ok_or(Error::WrongKeyFileName)?
+        .to_str()
+        .ok_or(Error::WrongKeyFileName)?
+        == "public.json";
     if !is_key {
         return Err(Error::WrongKeyFileName);
     }
@@ -547,7 +573,7 @@ mod tests {
         let (_, mut psbt_to_sign) = extract_psbt(bytes);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
-        let key: crate::PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::SecretMasterKey = serde_json::from_slice(bytes).unwrap();
 
         let tx1 = "0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f618765000000";
         let tx1: Transaction = deserialize(&hex::decode(tx1).unwrap()).unwrap();
@@ -633,7 +659,7 @@ mod tests {
         let (_, orig) = extract_psbt(bytes);
         let mut psbt_to_sign = orig.clone();
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
-        let key: crate::PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::SecretMasterKey = serde_json::from_slice(bytes).unwrap();
         assert_eq!(
             key.xpub.to_string(),
             ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
@@ -652,7 +678,7 @@ mod tests {
         let (_, psbt_2) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
         let mut psbt_to_sign = orig.clone();
-        let key: crate::PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::SecretMasterKey = serde_json::from_slice(bytes).unwrap();
         assert_eq!(
             key.xpub.to_string(),
             ExtendedPubKey::from_private(&secp, &key.xprv).to_string()

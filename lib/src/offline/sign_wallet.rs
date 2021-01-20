@@ -12,6 +12,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
+//TODO sign only the descriptor
+
 #[derive(Serialize, Deserialize, StructOpt, Debug)]
 pub struct SignWalletOptions {
     /// Wallet name to be signed
@@ -110,7 +112,7 @@ fn find_key<'a>(
     xpubs: &[ExtendedPubKey],
 ) -> Result<&'a ExtendedPrivKey> {
     for key in available_keys.keys.iter() {
-        if check_xpub_in_descriptor(&key.key.xpub, &xpubs).is_ok() {
+        if check_xpub_in_descriptor(&key.key.as_desc_pub_key()?.xpub(), &xpubs).is_ok() {
             return Ok(&key.key.xprv);
         }
     }

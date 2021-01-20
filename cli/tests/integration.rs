@@ -472,7 +472,7 @@ impl FirmaCommand {
         &self,
         file_name: &str,
         encryption_key: Option<&[u8]>,
-    ) -> Result<PrivateMasterKeyJson> {
+    ) -> Result<SecretMasterKey> {
         let result = self.offline("decrypt", vec!["--path", file_name], encryption_key);
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();

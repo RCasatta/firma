@@ -88,9 +88,10 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Master
         datadir,
         network,
         &opt.key_name,
-        master_key,
+        master_key.0,
         opt.qr_version,
         opt.encryption_key.as_ref(),
+        None,
     )?;
 
     Ok(output)
@@ -123,21 +124,20 @@ fn calculate_key(
     faces: u32,
     network: Network,
     name: &str,
-) -> Result<PrivateMasterKeyJson> {
+) -> Result<(SecretMasterKey, Dice)> {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;
 
-    let mut key = PrivateMasterKeyJson::new(network, &mnemonic, None, name)?;
+    let mut key = SecretMasterKey::from_mnemonic(network, mnemonic, name);
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),
         value: acc.to_string(),
     };
-    key.dice = Some(dice);
 
-    Ok(key)
+    Ok((key, dice))
 }
 
 impl From<Bits> for BigUint {
@@ -209,7 +209,7 @@ impl<'de> Deserialize<'de> for Bits {
 #[cfg(test)]
 mod tests {
     use crate::offline::dice::*;
-    use crate::PrivateMasterKeyJson;
+    use crate::SecretMasterKey;
     use bitcoin::Network;
     use num_bigint::BigUint;
     use tempfile::TempDir;
@@ -255,7 +255,7 @@ mod tests {
             master_key.key.dice.unwrap().value,
             "2825636378947368421052631578947368421"
         );
-        assert_eq!("xprv9s21ZrQH143K3yGb6gtghzHH4MPaEHGPN48sxoyYd4EdrQcaSVP2dxZS2vRwoKny1KRS5xMMyGunA3WkToah7ZmJ2fFtGK8vBBBiBkVFmTM", master_key.key.xprv.to_string());
+        assert_eq!("xprv9s21ZrQH143K3yGb6gtghzHH4MPaEHGPN48sxoyYd4EdrQcaSVP2dxZS2vRwoKny1KRS5xMMyGunA3WkToah7ZmJ2fFtGK8vBBBiBkVFmTM", master_key.key.secret.xprv().to_string());
     }
 
     #[test]
@@ -316,15 +316,11 @@ mod tests {
         */
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let expected: SecretMasterKey = serde_json::from_slice(bytes).unwrap();
         let calculated =
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
-        assert_eq!(
-            calculated.fingerprint.to_string(),
-            expected.fingerprint.to_string()
-        );
-        assert_eq!(calculated.xprv.to_string(), expected.xprv.to_string());
-        assert_eq!(calculated.xpub.to_string(), expected.xpub.to_string());
+        //assert_eq!(calculated.xprv.to_string(), expected.xprv.to_string());
+        //assert_eq!(calculated.xpub.to_string(), expected.xpub.to_string());
         assert_eq!(calculated, expected);
     }
 }

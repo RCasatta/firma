@@ -31,7 +31,7 @@ fn read_xpubs_files(paths: &[PathBuf]) -> Result<Vec<ExtendedPubKey>> {
     let mut xpubs = vec![];
     for xpub_path in paths.iter() {
         let content = fs::read(xpub_path)?;
-        let json: PublicMasterKey = serde_json::from_slice(&content)?;
+        let json: DescriptorPublicKeyJson = serde_json::from_slice(&content)?;
         xpubs.push(json.xpub);
     }
     Ok(xpubs)

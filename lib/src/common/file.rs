@@ -3,11 +3,14 @@ use crate::*;
 use bitcoin::Network;
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::convert::Into;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::string::ToString;
 use std::{fs, io};
+use bitcoin::util::bip32::DerivationPath;
+
+// .firma directory structure
+// https://dreampuf.github.io/GraphvizOnline/#digraph%20G%20%7B%0A%20%20%22.firma%22%20-%3E%20%22%5Bnetwork%5D%22%0A%20%20%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20wallets%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20keys%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20psbts%0A%20%20%0A%20%20keys%20-%3E%20%22%5Bkey%20name%5D%22%0A%20%20%22MASTER_SECRET.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22descriptor_public_key.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22MASTER_SECRET.json%22%20%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22descriptor_public_key.json%22%20%0A%20%20%0A%20%20wallets%20-%3E%20%22%5Bwallet%20name%5D%22%0A%20%20%22descriptor.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22indexes.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22daemon_opts.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22signature.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22descriptor.json%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22indexes.json%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22daemon_opts.json%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22signature.json%22%20%0A%20%20%0A%20%20psbts%20-%3E%20%22%5Bpsbt%20name%5D%22%0A%20%20%22psbt.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bpsbt%20name%5D%22%20-%3E%20%22psbt.json%22%20%0A%20%20%0A%7D
 
 pub struct PathBuilder {
     datadir: String,
@@ -132,7 +135,7 @@ fn save(value: String, output: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()> {
+pub fn save_public(public_key: &DescriptorPublicKeyJson, output: &PathBuf) -> Result<()> {
     if output.exists() {
         return Err(Error::FileExist(output.clone()));
     }
@@ -140,7 +143,7 @@ pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()>
 }
 
 pub fn save_private(
-    private_key: &PrivateMasterKeyJson,
+    private_key: &SecretMasterKey,
     output: &PathBuf,
     encryption_key: Option<&StringEncoding>,
 ) -> Result<()> {
@@ -158,22 +161,24 @@ pub fn save_keys(
     datadir: &str,
     network: Network,
     key_name: &str,
-    key: PrivateMasterKeyJson,
+    key: SecretMasterKey,
     qr_version: i16,
     encryption_key: Option<&StringEncoding>,
+    custom_origin: Option<DerivationPath>,
 ) -> Result<MasterKeyOutput> {
     let option_name = Some(key_name.to_string());
     let path_builder = PathBuilder::new(datadir, network, Kind::Key, option_name.clone());
     let private_key_file = path_builder.file("PRIVATE.json")?;
     let public_key_file = path_builder.file("public.json")?;
     save_private(&key, &private_key_file, encryption_key)?;
-    let public_master_key = key.clone().into();
+    let public_master_key = key.as_desc_pub_key(&custom_origin)?;
     save_public(&public_master_key, &public_key_file)?;
 
     let path_for_qr = PathBuilder::new(datadir, network, Kind::Key, option_name).file("qr")?;
 
+    let qr_content = public_master_key.desc_pub_key.to_string().as_bytes().to_vec();
     let public_qr_files = qr::save_qrs(
-        public_master_key.xpub.to_string().as_bytes().to_vec(),
+        qr_content,
         path_for_qr,
         qr_version,
     )?;

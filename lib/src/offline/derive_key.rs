@@ -1,6 +1,6 @@
 use crate::file::save_keys;
-use crate::offline::sign::read_key;
-use crate::{MasterKeyOutput, PrivateMasterKeyJson, StringEncoding};
+use crate::offline::sign::read_secret;
+use crate::{MasterKeyOutput, SecretMasterKey, StringEncoding};
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::Network;
@@ -42,15 +42,16 @@ pub fn start(
         return Err("--to-key-name must have 1 or more characters".into());
     }
     let secp = Secp256k1::signing_only();
-    let from_key_json = read_key(&opt.from_key_file, opt.encryption_key.as_ref())?;
-    let mut child_key = from_key_json.xprv;
+    let from_key_json = read_secret(&opt.from_key_file, opt.encryption_key.as_ref())?;
+
+    let mut child_key = *from_key_json.secret.xprv();
     let bytes = opt.to_key_name.as_bytes();
     for byte in bytes {
         let path = [ChildNumber::from_hardened_idx(*byte as u32)?];
         child_key = child_key.derive_priv(&secp, &path)?;
     }
 
-    let child_key_json = PrivateMasterKeyJson::from_xprv(child_key, &opt.to_key_name);
+    let child_key_json = SecretMasterKey::from_xprv(child_key, &opt.to_key_name);
     let output = save_keys(
         datadir,
         network,
@@ -58,6 +59,7 @@ pub fn start(
         child_key_json,
         opt.qr_version,
         opt.encryption_key.as_ref(),
+        None,
     )?;
 
     Ok(output)
