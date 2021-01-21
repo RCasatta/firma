@@ -1,3 +1,4 @@
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
 use crate::offline::print::pretty_print;
 use crate::qr::save_qrs;
@@ -86,7 +87,7 @@ pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions)
     let mut psbts_dir: PathBuf = datadir.into();
     psbts_dir.push(format!("{}", network));
     psbts_dir.push("psbts");
-    save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
+    save_psbt(network, &mut psbt, &mut psbts_dir, opt.qr_version)?;
     Ok(())
 }
 
@@ -99,7 +100,7 @@ fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
         if let Ok(psbt_json) = read_psbt_json(&path) {
             if let Ok((_, psbt)) = psbt_from_base64(&psbt_json.psbt) {
                 if &psbt.global.unsigned_tx.txid() == txid {
-                    return Ok(psbt_json.name);
+                    return Ok(psbt_json.id.name);
                 }
             }
         }
@@ -120,6 +121,7 @@ fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
 /// psbts_dir is general psbts dir, name is extracted from PSBT
 /// if file exists a PSBT merge will be attempted
 pub fn save_psbt(
+    network: Network,
     psbt: &mut PSBT,
     psbts_dir: &mut PathBuf,
     qr_version: i16,
@@ -159,7 +161,7 @@ pub fn save_psbt(
     info!("save_psbt name {:?} dir {:?}", name, psbts_dir);
 
     let psbt_json = PsbtJson {
-        name,
+        id: Identifier::new(network, IdKind::PSBT, &name),
         psbt: psbt_base64,
     };
     psbts_dir.push("psbt.json");
@@ -412,8 +414,17 @@ impl PSBTSigner {
         Ok(())
     }
 
-    fn save_signed_psbt_file(&mut self, qr_version: i16) -> Result<(PathBuf, Vec<PathBuf>)> {
-        save_psbt(&mut self.psbt, &mut self.psbts_dir.clone(), qr_version)
+    fn save_signed_psbt_file(
+        &mut self,
+        network: Network,
+        qr_version: i16,
+    ) -> Result<(PathBuf, Vec<PathBuf>)> {
+        save_psbt(
+            network,
+            &mut self.psbt,
+            &mut self.psbts_dir.clone(),
+            qr_version,
+        )
     }
 
     fn pretty_print(&self, wallets: &[WalletJson]) -> Result<PsbtPrettyPrint> {
@@ -433,7 +444,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
         psbt_print.info.push("Added paths".to_string());
     }
     if sign_result.signed {
-        let (psbt_file, _) = psbt_signer.save_signed_psbt_file(opt.qr_version)?;
+        let (psbt_file, _) = psbt_signer.save_signed_psbt_file(network, opt.qr_version)?;
         psbt_print.psbt_file = psbt_file;
         psbt_print.info.push("Added signatures".to_string());
     } else {

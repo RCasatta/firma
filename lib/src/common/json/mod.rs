@@ -51,9 +51,16 @@ pub struct MasterSecretJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PublicMasterKey { //TODO make it DescriptorPublicKeyJson
+pub struct PublicMasterKey {
+    //TODO make it DescriptorPublicKeyJson
     pub id: Identifier,
     pub xpub: ExtendedPubKey,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PsbtJson {
+    pub id: Identifier,
+    pub psbt: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -70,12 +77,6 @@ pub struct MasterKeyOutput {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_file: Option<PathBuf>,
     pub public_qr_files: Vec<PathBuf>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PsbtJson {
-    pub name: String,
-    pub psbt: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -294,11 +295,15 @@ pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> crate::
     Ok(psbt_with_name)
 }
 
-impl From<&PSBT> for PsbtJson {
-    fn from(psbt: &PSBT) -> Self {
+impl From<(&PSBT, Network)> for PsbtJson {
+    fn from(psbt_and_network: (&PSBT, Network)) -> Self {
+        let (psbt, network) = psbt_and_network;
         let (_, base64) = psbt_to_base64(psbt);
         let name = get_psbt_name(psbt).expect("PSBT without name"); //TODO
-        PsbtJson { psbt: base64, name }
+        PsbtJson {
+            psbt: base64,
+            id: Identifier::new(network, IdKind::PSBT, &name),
+        }
     }
 }
 

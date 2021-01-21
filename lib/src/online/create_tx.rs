@@ -134,7 +134,12 @@ impl Wallet {
         let mut psbt = psbt_from_rpc(&funded_psbt, &opt.psbt_name)?;
 
         let mut psbts_dir = self.context.psbts_dir()?;
-        let (psbt_file, qr_files) = save_psbt(&mut psbt, &mut psbts_dir, opt.qr_version)?;
+        let (psbt_file, qr_files) = save_psbt(
+            self.context.network,
+            &mut psbt,
+            &mut psbts_dir,
+            opt.qr_version,
+        )?;
 
         // detect address reuse
         let transactions = self
@@ -153,7 +158,7 @@ impl Wallet {
         }
 
         let create_tx = CreateTxOutput {
-            funded_psbt: (&psbt).into(),
+            funded_psbt: ((&psbt, self.context.network)).into(),
             psbt_file,
             address_reused,
             qr_files,
