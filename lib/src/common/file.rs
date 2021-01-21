@@ -142,7 +142,7 @@ pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()>
 }
 
 pub fn save_private(
-    private_key: &PrivateMasterKeyJson,
+    private_key: &MasterSecretJson,
     output: &PathBuf,
     encryption_key: Option<&StringEncoding>,
 ) -> Result<()> {
@@ -160,7 +160,7 @@ pub fn save_keys(
     datadir: &str,
     network: Network,
     key_name: &str,
-    key: PrivateMasterKeyJson,
+    key: MasterSecretJson,
     qr_version: i16,
     encryption_key: Option<&StringEncoding>,
 ) -> Result<MasterKeyOutput> {

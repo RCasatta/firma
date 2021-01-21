@@ -1,6 +1,6 @@
 use crate::mnemonic::Mnemonic;
 use crate::{check_compatibility, Result, StringEncoding};
-use crate::{save_keys, MasterKeyOutput, PrivateMasterKeyJson};
+use crate::{save_keys, MasterKeyOutput, MasterSecretJson};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::Network;
 use serde::{Deserialize, Serialize};
@@ -59,11 +59,11 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
         Nature::Xprv => {
             let key = ExtendedPrivKey::from_str(&opt.value)?;
             check_compatibility(key.network, network)?;
-            PrivateMasterKeyJson::from_xprv(key, &opt.key_name)
+            MasterSecretJson::from_xprv(key, &opt.key_name)
         }
         Nature::Mnemonic => {
             let mnemonic = Mnemonic::from_str(&opt.value)?;
-            PrivateMasterKeyJson::new(network, &mnemonic, &opt.key_name)?
+            MasterSecretJson::new(network, &mnemonic, &opt.key_name)?
         }
     };
 

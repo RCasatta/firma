@@ -40,6 +40,14 @@ impl Identifier {
         }
     }
 
+    pub fn with_kind(&self, new_kind: IdKind) -> Self {
+        Identifier {
+            network: self.network,
+            kind: new_kind,
+            name: self.name.clone(),
+        }
+    }
+
     pub fn as_path_buf(&self, datadir: &str) -> Result<PathBuf> {
         let mut path = PathBuf::from_str(datadir).unwrap();
         path.push(self.network.to_string());

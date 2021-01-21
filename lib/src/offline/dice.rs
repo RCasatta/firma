@@ -123,13 +123,13 @@ fn calculate_key(
     faces: u32,
     network: Network,
     name: &str,
-) -> Result<PrivateMasterKeyJson> {
+) -> Result<MasterSecretJson> {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;
 
-    let mut key = PrivateMasterKeyJson::new(network, &mnemonic, name)?;
+    let mut key = MasterSecretJson::new(network, &mnemonic, name)?;
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),
@@ -209,7 +209,7 @@ impl<'de> Deserialize<'de> for Bits {
 #[cfg(test)]
 mod tests {
     use crate::offline::dice::*;
-    use crate::PrivateMasterKeyJson;
+    use crate::MasterSecretJson;
     use bitcoin::Network;
     use num_bigint::BigUint;
     use tempfile::TempDir;
@@ -316,7 +316,7 @@ mod tests {
         */
 
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: PrivateMasterKeyJson = serde_json::from_slice(bytes).unwrap();
+        let expected: MasterSecretJson = serde_json::from_slice(bytes).unwrap();
         let calculated =
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
         assert_eq!(

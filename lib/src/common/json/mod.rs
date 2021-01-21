@@ -39,7 +39,7 @@ pub struct WalletSignatureJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PrivateMasterKeyJson {
+pub struct MasterSecretJson {
     pub id: Identifier,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mnemonic: Option<Mnemonic>,
@@ -51,6 +51,12 @@ pub struct PrivateMasterKeyJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct PublicMasterKey { //TODO make it DescriptorPublicKeyJson
+    pub id: Identifier,
+    pub xpub: ExtendedPubKey,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Dice {
     pub launches: String,
     pub faces: u32,
@@ -59,16 +65,11 @@ pub struct Dice {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MasterKeyOutput {
-    pub key: PrivateMasterKeyJson,
+    pub key: MasterSecretJson,
     pub private_file: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_file: Option<PathBuf>,
     pub public_qr_files: Vec<PathBuf>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PublicMasterKey {
-    pub xpub: ExtendedPubKey,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -313,19 +314,19 @@ impl MasterKeyOutput {
     }
 }
 
-impl PrivateMasterKeyJson {
+impl MasterSecretJson {
     pub fn new(
         network: Network,
         mnemonic: &Mnemonic,
         name: &str,
-    ) -> crate::Result<PrivateMasterKeyJson> {
+    ) -> crate::Result<MasterSecretJson> {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let seed = mnemonic.to_seed(None);
 
         let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
 
-        Ok(PrivateMasterKeyJson {
+        Ok(MasterSecretJson {
             mnemonic: Some(mnemonic.clone()),
             xprv,
             xpub,
@@ -338,7 +339,7 @@ impl PrivateMasterKeyJson {
     pub fn from_xprv(xprv: ExtendedPrivKey, name: &str) -> Self {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-        PrivateMasterKeyJson {
+        MasterSecretJson {
             xprv,
             xpub,
             mnemonic: None,

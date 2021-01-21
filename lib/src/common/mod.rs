@@ -1,3 +1,4 @@
+use crate::common::json::identifier::IdKind;
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
@@ -54,9 +55,13 @@ pub fn init_logger() {
         .expect("cannot initialize logging");
 }
 
-impl From<PrivateMasterKeyJson> for PublicMasterKey {
-    fn from(private: PrivateMasterKeyJson) -> Self {
-        PublicMasterKey { xpub: private.xpub }
+impl From<MasterSecretJson> for PublicMasterKey {
+    fn from(private: MasterSecretJson) -> Self {
+        let id = private.id.with_kind(IdKind::DescriptorPublicKey);
+        PublicMasterKey {
+            xpub: private.xpub,
+            id,
+        }
     }
 }
 
