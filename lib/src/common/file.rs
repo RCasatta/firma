@@ -1,4 +1,3 @@
-use crate::offline::decrypt::MaybeEncrypted;
 use crate::*;
 use bitcoin::Network;
 use log::info;
@@ -144,16 +143,17 @@ pub fn save_public(public_key: &PublicMasterKey, output: &PathBuf) -> Result<()>
 pub fn save_private(
     private_key: &MasterSecretJson,
     output: &PathBuf,
-    encryption_key: Option<&StringEncoding>,
+    _encryption_key: Option<&StringEncoding>,
 ) -> Result<()> {
     if output.exists() {
         return Err(Error::FileExist(output.clone()));
     }
-    let mut maybe_encrypted = MaybeEncrypted::plain(private_key.clone());
+    /*let mut maybe_encrypted = MaybeEncrypted::plain(private_key.clone());
     if let Some(encryption_key) = encryption_key {
         maybe_encrypted = maybe_encrypted.encrypt(&encryption_key.get_exactly_32()?)?;
     }
-    save(serde_json::to_string_pretty(&maybe_encrypted)?, output)
+    save(serde_json::to_string_pretty(&maybe_encrypted)?, output)*/
+    save(serde_json::to_string_pretty(private_key)?, output)
 }
 
 pub fn save_keys(
@@ -161,7 +161,6 @@ pub fn save_keys(
     network: Network,
     key_name: &str,
     key: MasterSecretJson,
-    qr_version: i16,
     encryption_key: Option<&StringEncoding>,
 ) -> Result<MasterKeyOutput> {
     let option_name = Some(key_name.to_string());
@@ -172,19 +171,10 @@ pub fn save_keys(
     let public_master_key = key.clone().into();
     save_public(&public_master_key, &public_key_file)?;
 
-    let path_for_qr = PathBuilder::new(datadir, network, Kind::Key, option_name).file("qr")?;
-
-    let public_qr_files = qr::save_qrs(
-        public_master_key.xpub.to_string().as_bytes().to_vec(),
-        path_for_qr,
-        qr_version,
-    )?;
-
     Ok(MasterKeyOutput {
         key,
         public_file: Some(public_key_file),
         private_file: private_key_file,
-        public_qr_files,
     })
 }
 

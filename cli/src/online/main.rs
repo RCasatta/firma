@@ -1,5 +1,6 @@
 use firma::bitcoin::Network;
-use firma::bitcoincore_rpc::{Auth, RpcApi};
+use firma::bitcoincore_rpc::bitcoincore_rpc_json::bitcoin::blockdata::constants::genesis_block;
+use firma::bitcoincore_rpc::RpcApi;
 use firma::log::debug;
 use firma::serde_json::Value;
 use firma::*;
@@ -23,6 +24,9 @@ struct FirmaOnlineCommands {
 
 #[derive(StructOpt, Debug)]
 enum FirmaOnlineSubcommands {
+    /// Connect a bitcoin node
+    Connect(ConnectOptions),
+
     /// Create a new watch-only wallet
     CreateWallet(firma::online::create_wallet::CreateWalletOptions),
 
@@ -45,6 +49,15 @@ enum FirmaOnlineSubcommands {
     ListCoins,
 }
 
+#[derive(StructOpt, Debug)]
+pub struct ConnectOptions {
+    #[structopt(flatten)]
+    pub context: NewContext,
+
+    #[structopt(flatten)]
+    pub daemon_opts: DaemonOpts,
+}
+
 fn main() -> Result<()> {
     let output = match start() {
         Ok(output) => output,
@@ -60,17 +73,30 @@ fn start() -> Result<Value> {
     debug!("firma-online start");
     let cmd = FirmaOnlineCommands::from_args();
 
-    let daemon_opts = match &cmd.subcommand {
-        CreateWallet(ref opt) => opt.daemon_opts.clone(),
-        _ => cmd.context.load_wallet_index_daemon()?.2,
-    };
+    if let Connect(ref opt) = &cmd.subcommand {
+        let client = opt.daemon_opts.make_client(None)?;
+        let genesis = client.get_block_hash(0)?;
+        if genesis != genesis_block(opt.context.network).block_hash() {
+            return Err(Error::IncompatibleNetworks);
+        }
+        let value = serde_json::to_value(&opt.daemon_opts)?;
+        let vec = serde_json::to_vec_pretty(&opt.daemon_opts)?;
+        let mut path = expand_tilde(&opt.context.firma_datadir)?;
+        path.push(opt.context.network.to_string());
+        std::fs::create_dir(&path)?;
+        path.push("daemon_opts.json");
+        debug!("writing daemon_opts.json in {:?}", path);
+        std::fs::write(&path, vec)
+            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
+        return Ok(value);
+    }
 
-    let url_with_wallet = format!("{}/wallet/{}", daemon_opts.url, cmd.context.wallet_name);
+    let daemon_opts = cmd.context.load_daemon_opts()?;
+
     let wallet = Wallet::new(
-        url_with_wallet,
-        Auth::CookieFile(daemon_opts.cookie_file.clone()),
+        daemon_opts.make_client(Some(cmd.context.wallet_name.to_string()))?,
         cmd.context.clone(),
-    )?;
+    );
 
     if let CreateWallet(_) = cmd.subcommand {
         // do nothing, I need the else branch (!matches!() require too recent rust version)
@@ -95,12 +121,13 @@ fn start() -> Result<Value> {
     }
 
     match cmd.subcommand {
-        CreateWallet(ref opt) => wallet.create(&daemon_opts, opt, result.blocks)?.try_into(),
+        CreateWallet(ref opt) => wallet.create(&opt, result.blocks)?.try_into(),
         GetAddress(ref opt) => wallet.get_address(opt)?.try_into(),
         CreateTx(ref opt) => wallet.create_tx(opt)?.try_into(),
         SendTx(ref opt) => wallet.send_tx(opt)?.try_into(),
         Balance => wallet.balance()?.try_into(),
         Rescan(ref opt) => Ok(wallet.rescan(opt)?),
         ListCoins => wallet.list_coins()?.try_into(),
+        Connect(_) => unreachable!(),
     }
 }

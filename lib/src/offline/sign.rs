@@ -1,7 +1,6 @@
 use crate::common::json::identifier::{IdKind, Identifier};
-use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
+//use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
 use crate::offline::print::pretty_print;
-use crate::qr::save_qrs;
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
@@ -15,7 +14,6 @@ use bitcoin::{Network, Script, SigHashType, Txid};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -23,24 +21,28 @@ use structopt::StructOpt;
 /// Sign a Partially Signed Bitcoin Transaction (PSBT) with a key.
 #[derive(StructOpt, Debug, Serialize, Deserialize)]
 pub struct SignOptions {
-    /// File containing the master key (xpriv...)
-    #[structopt(short, long, parse(from_os_str))]
-    pub key: PathBuf,
+    /// Name of the key to use
+    #[structopt(short, long)]
+    pub key_name: String,
 
-    /// derivations to consider if psbt doesn't contain HD paths
-    #[structopt(short, long, default_value = "1000")]
-    pub total_derivations: u32,
+    /// Name of the wallet used, show if outputs are mine.
+    #[structopt(short, long)]
+    pub wallet_name: String,
 
-    /// File containing the wallet descriptor, show if outputs are mine.
-    #[structopt(short, long, parse(from_os_str))]
-    pub wallet_descriptor_file: PathBuf, //TODO remove and read all the available wallets?
+    /// PSBT name to sign
+    #[structopt(short, long)]
+    pub psbt_name: String,
+
+    #[structopt(flatten)]
+    pub context: NewContext,
 
     /// QR code max version to use (max size)
     #[structopt(long, default_value = "14")]
     pub qr_version: i16,
 
-    /// PSBT json file
-    pub psbt_file: PathBuf,
+    /// derivations to consider if psbt doesn't contain HD paths
+    #[structopt(short, long, default_value = "1000")]
+    pub total_derivations: u32,
 
     /// Allow any derivations (to avoid ramson attacks, by default only 2 levels are allowed, and the first level must be 0 or 1)
     #[structopt(long)]
@@ -60,7 +62,6 @@ pub struct SignResult {
 #[derive(Debug)]
 struct PSBTSigner {
     pub psbt: PSBT,
-    psbts_dir: PathBuf,
     xprv: ExtendedPrivKey,
     secp: Secp256k1<SignOnly>,
     network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
@@ -84,10 +85,8 @@ pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions)
         .as_bytes()
         .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
     let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
-    let mut psbts_dir: PathBuf = datadir.into();
-    psbts_dir.push(format!("{}", network));
-    psbts_dir.push("psbts");
-    save_psbt(network, &mut psbt, &mut psbts_dir, opt.qr_version)?;
+
+    save_psbt(network, &mut psbt, &datadir)?;
     Ok(())
 }
 
@@ -120,13 +119,13 @@ fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
 
 /// psbts_dir is general psbts dir, name is extracted from PSBT
 /// if file exists a PSBT merge will be attempted
-pub fn save_psbt(
-    network: Network,
-    psbt: &mut PSBT,
-    psbts_dir: &mut PathBuf,
-    qr_version: i16,
-) -> Result<(PathBuf, Vec<PathBuf>)> {
+pub fn save_psbt(network: Network, psbt: &mut PSBT, datadir: &str) -> Result<String> {
+    debug!("save_psbt");
+
     let name = get_psbt_name(psbt).unwrap_or_else(|| {
+        let fake_id = Identifier::new(network, IdKind::PSBT, "");
+        let psbts_dir = fake_id.as_path_buf(datadir, false).unwrap(); // TODO remove unwrap
+        debug!("psbts_dir {:?}", psbts_dir);
         let new_name = get_name(&psbts_dir, &psbt.global.unsigned_tx.txid()).unwrap(); // TODO remove unwrap
         info!("PSBT without name, giving one: {}", new_name);
         let pair = raw::Pair {
@@ -137,42 +136,16 @@ pub fn save_psbt(
         new_name
     });
 
-    psbts_dir.push(&name);
-    if psbts_dir.exists() {
-        let mut old_psbt = psbts_dir.clone();
-        old_psbt.push("psbt.json");
-        if let Ok(mut old_psbt) = read_psbt(&old_psbt) {
-            info!("old psbt exist, merging together");
-            let before_psbt = psbt.clone();
-            psbt.merge(old_psbt.clone())?;
-
-            info!("checking if new psbt make changes to old one");
-            let before_old_psbt = old_psbt.clone();
-            old_psbt.merge(before_psbt)?;
-            if old_psbt == before_old_psbt {
-                return Err(Error::PSBTNotChangedAfterMerge);
-            }
-        }
-    } else {
-        fs::create_dir_all(&psbts_dir)?;
-    }
-
-    let (psbt_bytes, psbt_base64) = psbt_to_base64(psbt);
-    info!("save_psbt name {:?} dir {:?}", name, psbts_dir);
-
+    debug!("psbt_name: {}", name);
+    let id = Identifier::new(network, IdKind::PSBT, &name);
+    let psbt = psbt_to_base64(&psbt).1;
     let psbt_json = PsbtJson {
-        id: Identifier::new(network, IdKind::PSBT, &name),
-        psbt: psbt_base64,
+        id: id.clone(),
+        psbt,
     };
-    psbts_dir.push("psbt.json");
-    let psbt_file = psbts_dir.clone();
-    let contents = serde_json::to_string_pretty(&psbt_json)?;
-    fs::write(&psbts_dir, contents.as_bytes())?;
-
-    psbts_dir.set_file_name("qr");
-    let qrs = save_qrs(psbt_bytes, psbts_dir.clone(), qr_version)?;
-
-    Ok((psbt_file, qrs))
+    id.write(datadir, &psbt_json)?;
+    debug!("finish");
+    Ok(name)
 }
 
 impl PSBTSigner {
@@ -181,7 +154,6 @@ impl PSBTSigner {
         xprv: &ExtendedPrivKey,
         network: Network,
         derivations: u32,
-        psbts_dir: PathBuf,
         allow_any_derivations: bool,
     ) -> Result<Self> {
         check_compatibility(network, xprv.network)?;
@@ -190,31 +162,12 @@ impl PSBTSigner {
 
         Ok(PSBTSigner {
             psbt: psbt.clone(),
-            psbts_dir,
             xprv: *xprv,
             secp,
             derivations,
             network,
             allow_any_derivations,
         })
-    }
-
-    fn from_opt(opt: &SignOptions, network: Network) -> Result<Self> {
-        let psbt = read_psbt(&opt.psbt_file)?;
-        let psbt_file = opt.psbt_file.clone();
-        let psbts_dir = psbt_file.parent().unwrap().parent().unwrap().to_path_buf(); //TODO remove unwrap
-
-        let xprv_json = read_key(&opt.key, opt.encryption_key.as_ref())?;
-
-        let signer = PSBTSigner::new(
-            &psbt,
-            &xprv_json.xprv,
-            network,
-            opt.total_derivations,
-            psbts_dir,
-            opt.allow_any_derivations,
-        )?;
-        Ok(signer)
     }
 
     pub fn sign(&mut self) -> Result<SignResult> {
@@ -414,27 +367,27 @@ impl PSBTSigner {
         Ok(())
     }
 
-    fn save_signed_psbt_file(
-        &mut self,
-        network: Network,
-        qr_version: i16,
-    ) -> Result<(PathBuf, Vec<PathBuf>)> {
-        save_psbt(
-            network,
-            &mut self.psbt,
-            &mut self.psbts_dir.clone(),
-            qr_version,
-        )
-    }
-
     fn pretty_print(&self, wallets: &[WalletJson]) -> Result<PsbtPrettyPrint> {
         pretty_print(&self.psbt, self.network, wallets)
     }
 }
 
-pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
-    let wallet = read_wallet(&opt.wallet_descriptor_file)?;
-    let mut psbt_signer = PSBTSigner::from_opt(opt, network)?;
+pub fn start(opt: &SignOptions) -> Result<PsbtPrettyPrint> {
+    debug!("sign::start");
+    let master_secret: MasterSecretJson = opt.context.read(IdKind::MasterSecret, &opt.key_name)?;
+    debug!("read key {}", master_secret.id.name);
+    let wallet: WalletJson = opt.context.read(IdKind::Wallet, &opt.wallet_name)?;
+    debug!("read wallet {}", wallet.id.name);
+    let mut psbt: PsbtJson = opt.context.read(IdKind::PSBT, &opt.psbt_name)?;
+    debug!("read psbt {}", wallet.id.name);
+    let mut psbt_signer = PSBTSigner::new(
+        &psbt.psbt()?,
+        &master_secret.xprv,
+        opt.context.network,
+        opt.total_derivations,
+        opt.allow_any_derivations,
+    )?;
+
     debug!("{:?}", psbt_signer);
     //TODO refuse to sign if my address has first level different from 0/1 and more than one level?
     let sign_result = psbt_signer.sign()?;
@@ -444,8 +397,8 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
         psbt_print.info.push("Added paths".to_string());
     }
     if sign_result.signed {
-        let (psbt_file, _) = psbt_signer.save_signed_psbt_file(network, opt.qr_version)?;
-        psbt_print.psbt_file = psbt_file;
+        psbt.set_psbt(&psbt_signer.psbt);
+        psbt.id.write(&opt.context.firma_datadir, &psbt)?; //TODO add write in context?
         psbt_print.info.push("Added signatures".to_string());
     } else {
         psbt_print.info.push("No signature added".to_string());
@@ -456,7 +409,7 @@ pub fn start(opt: &SignOptions, network: Network) -> Result<PsbtPrettyPrint> {
 
 pub fn read_key(
     path: &PathBuf,
-    encryption_key: Option<&StringEncoding>,
+    _encryption_key: Option<&StringEncoding>,
 ) -> Result<MasterSecretJson> {
     let is_key = path
         .file_name()
@@ -467,6 +420,7 @@ pub fn read_key(
     if !is_key {
         return Err(Error::WrongKeyFileName);
     }
+    /*
     let decrypted = match encryption_key {
         encryption_key @ Some(_) => {
             MaybeEncrypted::Plain(decrypt(&DecryptOptions::new(path, encryption_key))?)
@@ -477,6 +431,10 @@ pub fn read_key(
         MaybeEncrypted::Plain(value) => Ok(value),
         MaybeEncrypted::Encrypted(_) => Err(Error::MaybeEncryptedWrongState),
     }
+
+     */
+    let key = std::fs::read(path)?;
+    Ok(serde_json::from_slice(&key)?)
 }
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
@@ -498,16 +456,13 @@ mod tests {
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
     use std::io::Write;
-    use tempfile::TempDir;
 
     fn test_sign(
         psbt_to_sign: &mut PSBT,
         psbt_signed: &PSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let temp_dir = TempDir::new().unwrap().into_path();
-        let mut psbt_signer =
-            PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, temp_dir, true)?;
+        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, true)?;
         psbt_signer.sign()?;
 
         assert_eq!(

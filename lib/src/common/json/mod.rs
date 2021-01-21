@@ -15,6 +15,8 @@ use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 
+//TODO remove json suffix, use it with json namespace
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct WalletJson {
     pub id: Identifier,
@@ -76,7 +78,6 @@ pub struct MasterKeyOutput {
     pub private_file: PathBuf,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_file: Option<PathBuf>,
-    pub public_qr_files: Vec<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -118,15 +119,13 @@ pub struct SendTxOutput {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct CreateTxOutput {
-    pub psbt_file: PathBuf,
+    pub psbt_name: String,
     pub funded_psbt: PsbtJson,
     pub address_reused: HashSet<Address>,
-    pub qr_files: Vec<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct CreateWalletOutput {
-    pub qr_files: Vec<PathBuf>,
     pub wallet_file: PathBuf,
     pub wallet: WalletJson,
     pub signature: Option<WalletSignatureJson>,
@@ -304,6 +303,16 @@ impl From<(&PSBT, Network)> for PsbtJson {
             psbt: base64,
             id: Identifier::new(network, IdKind::PSBT, &name),
         }
+    }
+}
+
+impl PsbtJson {
+    pub fn psbt(&self) -> crate::Result<PSBT> {
+        Ok(psbt_from_base64(&self.psbt)?.1)
+    }
+
+    pub fn set_psbt(&mut self, psbt: &PSBT) {
+        self.psbt = psbt_to_base64(psbt).1;
     }
 }
 

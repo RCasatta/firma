@@ -72,7 +72,6 @@ pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<Ma
         network,
         &opt.key_name,
         master_key,
-        opt.qr_version,
         opt.encryption_key.as_ref(),
     )?;
     Ok(output)

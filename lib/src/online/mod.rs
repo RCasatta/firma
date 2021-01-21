@@ -1,9 +1,8 @@
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
-use bitcoincore_rpc::{Auth, Client, RpcApi};
+use bitcoincore_rpc::{Client, RpcApi};
 use log::{debug, info};
-use std::fs;
-use std::path::PathBuf;
 
 pub mod balance;
 pub mod create_tx;
@@ -19,22 +18,20 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new(url: String, auth: Auth, context: Context) -> Result<Self> {
-        Ok(Wallet {
-            client: Client::new(url, auth)?,
-            context,
-        })
+    pub fn new(client: Client, context: Context) -> Self {
+        Wallet { client, context }
     }
 }
 
-fn read_xpubs_files(paths: &[PathBuf]) -> Result<Vec<ExtendedPubKey>> {
-    let mut xpubs = vec![];
-    for xpub_path in paths.iter() {
-        let content = fs::read(xpub_path)?;
-        let json: PublicMasterKey = serde_json::from_slice(&content)?;
-        xpubs.push(json.xpub);
+fn read_xpubs_names(names: &[String], context: &Context) -> Result<Vec<ExtendedPubKey>> {
+    let mut result = vec![];
+    for name in names {
+        let k: PublicMasterKey =
+            Identifier::new(context.network, IdKind::DescriptorPublicKey, name)
+                .read(&context.firma_datadir)?;
+        result.push(k.xpub);
     }
-    Ok(xpubs)
+    Ok(result)
 }
 
 impl Wallet {

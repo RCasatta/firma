@@ -1,6 +1,10 @@
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::*;
+use bitcoincore_rpc::{Auth, Client};
 use log::{debug, info};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 use std::fs;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -16,6 +20,19 @@ pub struct DaemonOpts {
     pub cookie_file: PathBuf,
 }
 
+impl DaemonOpts {
+    pub fn make_client(&self, wallet: Option<String>) -> Result<Client> {
+        let url = match wallet {
+            Some(wallet) => format!("{}/wallet/{}", self.url, wallet),
+            None => self.url.to_string(),
+        };
+        Ok(Client::new(
+            url,
+            Auth::CookieFile(self.cookie_file.clone()),
+        )?)
+    }
+}
+
 #[derive(StructOpt, Debug, Clone)]
 pub struct Context {
     /// Network (bitcoin, testnet, regtest)
@@ -24,11 +41,31 @@ pub struct Context {
 
     /// Name of the wallet
     #[structopt(short, long)]
-    pub wallet_name: String,
+    pub wallet_name: String, //TOTO remove, use NewContext
 
     /// Directory where wallet info are saved
     #[structopt(short, long, default_value = "~/.firma/")]
     pub firma_datadir: String,
+}
+
+#[derive(StructOpt, Debug, Clone, Serialize, Deserialize)]
+pub struct NewContext {
+    /// Network (bitcoin, testnet, regtest)
+    #[structopt(short, long, default_value = "testnet")]
+    pub network: bitcoin::Network,
+
+    /// Directory where wallet info are saved
+    #[structopt(short, long, default_value = "~/.firma/")]
+    pub firma_datadir: String,
+}
+
+impl NewContext {
+    pub fn read<T>(&self, kind: IdKind, name: &str) -> Result<T>
+    where
+        T: Serialize + DeserializeOwned + Debug,
+    {
+        Ok(Identifier::new(self.network, kind, name).read(&self.firma_datadir)?)
+    }
 }
 
 impl Context {
@@ -88,15 +125,25 @@ impl Context {
     }
 
     pub fn decrease_index(&self) -> Result<()> {
-        let (_, mut indexes, _) = self.load_wallet_index_daemon()?;
+        let (_, mut indexes) = self.load_wallet_and_index()?;
         indexes.main -= 1;
         self.save_index(&indexes)?;
         Ok(())
     }
 
+    pub fn load_daemon_opts(&self) -> Result<DaemonOpts> {
+        let mut path = expand_tilde(&self.firma_datadir)?;
+        path.push(self.network.to_string());
+        path.push("daemon_opts.json");
+        let daemon_opts_bytes = std::fs::read(&path)
+            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
+        let daemon_opts: DaemonOpts = serde_json::from_slice(&daemon_opts_bytes)?;
+        Ok(daemon_opts)
+    }
+
     // TODO many times called only for one file, split?
     /// load the wallet and related indexes and daemon opts
-    pub fn load_wallet_index_daemon(&self) -> Result<(WalletJson, IndexesJson, DaemonOpts)> {
+    pub fn load_wallet_and_index(&self) -> Result<(WalletJson, IndexesJson)> {
         let wallet_path = self.filename_for_wallet("descriptor.json")?;
         debug!("load wallet: {:?}", wallet_path);
         let wallet = read_wallet(&wallet_path)
@@ -107,11 +154,6 @@ impl Context {
         let indexes = read_indexes(&indexes_path)
             .map_err(|e| Error::FileNotFoundOrCorrupt(wallet_path.clone(), e.to_string()))?;
 
-        let daemon_opts_path = self.filename_for_wallet("daemon_opts.json")?;
-        debug!("load daemon_opts: {:?}", daemon_opts_path);
-        let daemon_opts = read_daemon_opts(&daemon_opts_path)
-            .map_err(|e| Error::FileNotFoundOrCorrupt(daemon_opts_path.clone(), e.to_string()))?;
-
-        Ok((wallet, indexes, daemon_opts))
+        Ok((wallet, indexes))
     }
 }

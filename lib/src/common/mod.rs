@@ -32,7 +32,7 @@ impl log::Log for SimpleLogger {
             let file = OpenOptions::new()
                 .create(true)
                 .append(true)
-                .open("firma.log")
+                .open("/tmp/firma.log")
                 .expect("can't open log");
             let mut stream = BufWriter::new(file);
             stream

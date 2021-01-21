@@ -41,10 +41,9 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                     debug!("try to read wallet {:?}", path);
                     match read_wallet(&path) {
                         Ok(wallet) => {
+                            debug!("read {:?}", wallet.id.name);
                             let wallet_path = path.clone();
-                            let qr_files = read_qrs(&path)?;
                             let mut wallet_output = CreateWalletOutput {
-                                qr_files, //TODO check if file exist?
                                 wallet,
                                 wallet_file: path.clone(),
                                 signature: None,
@@ -104,12 +103,10 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                         debug!("using encryption_key {:?}", encryption_key);
                         match read_key(&path, encryption_key) {
                             Ok(key) => {
-                                let public_qr_files = read_qrs(&path)?;
                                 let key = MasterKeyOutput {
                                     key,
                                     private_file: path.clone(),
                                     public_file: None,
-                                    public_qr_files, //TODO populate if they exists
                                 };
                                 list.keys.push(key);
                                 debug!("key decrypted");
@@ -138,17 +135,8 @@ fn signatures_needed(inputs: &[TxIn]) -> String {
     }
 }
 
-fn read_qrs(path: &PathBuf) -> Result<Vec<PathBuf>> {
-    let mut path = path.parent().expect("root has no parent").to_path_buf();
-    path.push("qr");
-    let mut vec = vec![];
-    if path.is_dir() {
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            vec.push(entry.path());
-        }
-    }
-    Ok(vec)
+fn read_qrs(_path: &PathBuf) -> Result<Vec<PathBuf>> {
+    Ok(vec![])
 }
 
 #[cfg(test)]

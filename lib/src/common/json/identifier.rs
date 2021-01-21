@@ -1,8 +1,10 @@
 use crate::{expand_tilde, Result};
 use bitcoin::Network;
+use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
@@ -26,11 +28,11 @@ impl IdKind {
 
     fn name(&self) -> &str {
         match self {
-            IdKind::Wallet => "wallet.json",
-            IdKind::WalletIndexes => "wallet_indexes.json",
-            IdKind::WalletSignature => "wallet_signature.json",
-            IdKind::MasterSecret => "master_secret.json",
-            IdKind::DescriptorPublicKey => "descriptor_public_key.json",
+            IdKind::Wallet => "descriptor.json",          // "wallet.json",
+            IdKind::WalletIndexes => "indexes.json",      //"wallet_indexes.json",
+            IdKind::WalletSignature => "signature.json",  //"wallet_signature.json",
+            IdKind::MasterSecret => "PRIVATE.json",       //"master_secret.json",
+            IdKind::DescriptorPublicKey => "public.json", //"descriptor_public_key.json",
             IdKind::PSBT => "psbt.json",
         }
     }
@@ -60,11 +62,19 @@ impl Identifier {
         }
     }
 
-    pub fn as_path_buf<P: AsRef<Path>>(&self, datadir: P) -> Result<PathBuf> {
+    pub fn as_path_buf<P: AsRef<Path>>(
+        &self,
+        datadir: P,
+        create_if_missing: bool,
+    ) -> Result<PathBuf> {
         let mut path = expand_tilde(datadir)?;
         path.push(self.network.to_string());
         path.push(self.kind.dir());
         path.push(self.name.to_string());
+        if create_if_missing && !path.exists() {
+            fs::create_dir_all(&path)?;
+            debug!("created {:?}", path);
+        }
         path.push(self.kind.name());
         Ok(path)
     }
@@ -74,10 +84,24 @@ impl Identifier {
         T: Serialize + DeserializeOwned + Debug,
         P: AsRef<Path>,
     {
-        let path = self.as_path_buf(datadir)?;
-        let file_content = std::fs::read(&path)?;
+        let path = self.as_path_buf(datadir, false)?;
+        debug!("reading {:?}", path);
+        let file_content = std::fs::read(&path)
+            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
         let data: T = serde_json::from_slice(&file_content)?;
         Ok(data)
+    }
+
+    pub fn write<T, P>(&self, datadir: P, value: &T) -> Result<()>
+    where
+        T: Serialize + DeserializeOwned + Debug,
+        P: AsRef<Path>,
+    {
+        debug!("Identifier::write");
+        let path = self.as_path_buf(datadir, true)?;
+        let content = serde_json::to_vec_pretty(value)?;
+        std::fs::write(&path, &content)?;
+        Ok(())
     }
 }
 
@@ -93,8 +117,8 @@ mod tests {
             kind: IdKind::MasterSecret,
             name: "a1".to_string(),
         };
-        let expected = "\"/bitcoin/keys/a1/master_secret.json\"";
-        let result = format!("{:?}", id.as_path_buf("/").unwrap());
+        let expected = "\"/bitcoin/keys/a1/PRIVATE.json\""; //TODO master_secret
+        let result = format!("{:?}", id.as_path_buf("/", false).unwrap());
         assert_eq!(expected, result);
 
         let expected = r#"{"kind":"MasterSecret","name":"a1","network":"bitcoin"}"#;

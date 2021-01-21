@@ -43,7 +43,6 @@ pub fn create_key(datadir: &str, network: Network, opt: &RandomOptions) -> Resul
         network,
         &opt.key_name,
         master_key,
-        opt.qr_version,
         opt.encryption_key.as_ref(),
     )?;
 

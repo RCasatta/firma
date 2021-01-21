@@ -89,7 +89,6 @@ pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<Master
         network,
         &opt.key_name,
         master_key,
-        opt.qr_version,
         opt.encryption_key.as_ref(),
     )?;
 

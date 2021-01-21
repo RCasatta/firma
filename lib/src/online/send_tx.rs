@@ -3,13 +3,14 @@ use bitcoin::consensus::deserialize;
 use bitcoin::Transaction;
 use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
-use std::path::PathBuf;
+//use std::path::PathBuf;
+use crate::common::json::identifier::{IdKind, Identifier};
 
 #[derive(structopt::StructOpt, Debug)]
 pub struct SendTxOptions {
-    /// filename containing the PSBTs
-    #[structopt(long = "psbt-file")]
-    pub psbts_file: Vec<PathBuf>,
+    /// names containing the PSBTs
+    #[structopt(long = "psbt-name")]
+    pub psbts_name: Vec<String>,
 
     /// the PSBTs content as base64
     #[structopt(long = "psbt")]
@@ -22,7 +23,7 @@ pub struct SendTxOptions {
 
 impl SendTxOptions {
     fn validate(&self) -> Result<()> {
-        if self.psbts.is_empty() && self.psbts_file.is_empty() {
+        if self.psbts.is_empty() && self.psbts_name.is_empty() {
             return Err("At least one psbt is mandatory".into());
         }
         Ok(())
@@ -33,8 +34,9 @@ impl Wallet {
     pub fn send_tx(&self, opt: &SendTxOptions) -> Result<SendTxOutput> {
         opt.validate()?;
         let mut psbts = vec![];
-        for psbt_file in opt.psbts_file.iter() {
-            let json = read_psbt_json(psbt_file)?;
+        for psbt_name in opt.psbts_name.iter() {
+            let json: PsbtJson = Identifier::new(self.context.network, IdKind::PSBT, &psbt_name)
+                .read(&self.context.firma_datadir)?;
             psbts.push(json.psbt);
         }
         psbts.extend(opt.psbts.clone());

@@ -1,5 +1,7 @@
 use bitcoin::{Address, Amount, Txid};
 use bitcoincore_rpc::{Client, RpcApi};
+use firma::bitcoin::Network;
+use firma::common::json::identifier::{IdKind, Identifier};
 use firma::*;
 use rand::distributions::Alphanumeric;
 use rand::{self, thread_rng, Rng};
@@ -17,6 +19,7 @@ fn rnd_string() -> String {
 
 #[test]
 fn integration_test() {
+    init_logger();
     let mut rng = rand::thread_rng();
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
 
@@ -31,6 +34,10 @@ fn integration_test() {
     // create firma 2of2 wallet
     let name_2of2 = "n2of2".to_string();
     let firma_2of2 = FirmaCommand::new(&firma_exe_dir, &name_2of2).unwrap();
+    let cookie_file_str = format!("{}", bitcoind.cookie_file.display());
+    firma_2of2
+        .online_connect(&bitcoind.url, &cookie_file_str)
+        .unwrap();
     let r1 = firma_2of2.offline_random("r1", None).unwrap();
     let r2 = firma_2of2.offline_dice("r2", vec![2u32; 59], 20).unwrap();
     let r_err = firma_2of2.offline_dice("r3", vec![0u32; 59], 20);
@@ -42,43 +49,27 @@ fn integration_test() {
         .offline_restore("r4", "xprv", &r1.key.xprv.to_string())
         .unwrap();
     assert_eq!(r3.key.xpub, r1.key.xpub);
-    let xpubs = vec![
-        r1.public_file
-            .as_ref()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string(),
-        r2.public_file
-            .as_ref()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string(),
-    ];
-    let cookie_file_str = format!("{}", bitcoind.cookie_file.display());
-    let created_2of2_wallet = firma_2of2
-        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs)
-        .unwrap();
+    let key_names = vec![r1.key.id.name.to_string(), r2.key.id.name.to_string()];
+
+    let created_2of2_wallet = firma_2of2.online_create_wallet(2, &key_names).unwrap();
     assert_eq!(&created_2of2_wallet.wallet.id.name, &name_2of2);
 
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
     let firma_2of3 = FirmaCommand::new(&firma_exe_dir, &name_2of3).unwrap();
+    firma_2of3
+        .online_connect(&bitcoind.url, &cookie_file_str)
+        .unwrap();
     let mut vec = vec![];
     for i in 0..3 {
         vec.push(firma_2of3.offline_random(&format!("p{}", i), None).unwrap());
     }
-    let xpubs_2of3: Vec<String> = vec.iter().map(|e| e.public_file_str().unwrap()).collect();
-    let xprvs_2of3: Vec<String> = vec.iter().map(|e| e.private_file_str().unwrap()).collect();
-    let created_2of3_wallet = firma_2of3
-        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
-        .unwrap();
+
+    let names_2of3: Vec<String> = vec.iter().map(|e| e.key.id.name.to_string()).collect();
+    let created_2of3_wallet = firma_2of3.online_create_wallet(2, &names_2of3).unwrap();
     assert_eq!(&created_2of3_wallet.wallet.id.name, &name_2of3);
 
-    let created_2of3_wallet_err = firma_2of3
-        .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
-        .unwrap_err();
+    let created_2of3_wallet_err = firma_2of3.online_create_wallet(2, &names_2of3).unwrap_err();
     assert!(created_2of3_wallet_err
         .to_string()
         .contains("already exist")); // error from bitcoin rpc
@@ -109,18 +100,19 @@ fn integration_test() {
     let recipients = vec![(address_2of2.clone(), value_sent)];
     let psbt_name = rnd_string();
     let create_tx = firma_2of2.online_create_tx(recipients, &psbt_name).unwrap();
-    let psbt_file_str = create_tx.psbt_file.to_str().unwrap();
-    let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
-    assert_eq!(
-        sign_a_wrong.unwrap_err().to_string(),
-        Error::WrongKeyFileName.to_string()
-    );
+    let buf = Identifier::new(Network::Regtest, IdKind::PSBT, &create_tx.psbt_name)
+        .as_path_buf(&firma_2of2.work_dir, false)
+        .unwrap();
+    let psbt_file_str = buf.to_str().unwrap();
+
+    //let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
+    //assert_eq!(sign_a_wrong.unwrap_err().to_string(),Error::WrongKeyFileName.to_string());
 
     let print_a = firma_2of2.offline_print(psbt_file_str).unwrap();
     let print_a_by_name = firma_2of2.offline_print_by_name(&psbt_name).unwrap();
     assert_eq!(print_a, print_a_by_name);
     let sign_a = firma_2of2
-        .offline_sign(psbt_file_str, &r1.private_file.to_str().unwrap())
+        .offline_sign(&psbt_name, &r1.key.id.name)
         .unwrap(); //TODO test passing public key
     assert_ne!(print_a, sign_a);
     assert_ne!(print_a.inputs, sign_a.inputs);
@@ -130,16 +122,11 @@ fn integration_test() {
     assert_ne!(print_a.info, sign_a.info);
     assert!(sign_a.info.iter().any(|msg| msg.contains("#Address_reuse")));
     let sign_b = firma_2of2
-        .offline_sign(psbt_file_str, &r2.private_file.to_str().unwrap())
+        .offline_sign(&psbt_name, &r2.key.id.name)
         .unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
 
-    let sent_tx = firma_2of2
-        .online_send_tx(vec![
-            &sign_a.psbt_file.to_str().unwrap(),
-            &sign_b.psbt_file.to_str().unwrap(),
-        ])
-        .unwrap();
+    let sent_tx = firma_2of2.online_send_tx(vec![&psbt_name]).unwrap();
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of2 = firma_2of2.online_balance().unwrap();
@@ -149,14 +136,12 @@ fn integration_test() {
     // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysis
     let value_sent = 1_000_000;
     let recipients = vec![(address_2of2.clone(), value_sent)];
-    let create_tx = firma_2of2
-        .online_create_tx(recipients, &rnd_string())
-        .unwrap();
-    let pstb_file_str = create_tx.psbt_file.to_str().unwrap();
+    let psbt_name = rnd_string();
+    let create_tx = firma_2of2.online_create_tx(recipients, &psbt_name).unwrap();
     assert!(create_tx.address_reused.contains(&address_2of2));
 
     let sign_a = firma_2of2
-        .offline_sign(pstb_file_str, &r1.private_file.to_str().unwrap())
+        .offline_sign(&psbt_name, &r1.key.id.name)
         .unwrap();
     assert!(sign_a.info.iter().any(|msg| msg.contains("#Round_numbers")));
     assert!(!sign_a
@@ -169,27 +154,17 @@ fn integration_test() {
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 1
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
-    let create_tx = firma_2of3
-        .online_create_tx(recipients, &rnd_string())
-        .unwrap();
-    let pstb_file_str = create_tx.psbt_file.to_str().unwrap();
-    let sign_a = firma_2of3
-        .offline_sign(pstb_file_str, &xprvs_2of3[0])
-        .unwrap(); //TODO passing xpub file gives misleading error
+    let psbt_name = rnd_string();
+    let _create_tx = firma_2of3.online_create_tx(recipients, &psbt_name).unwrap();
+
+    let sign_a = firma_2of3.offline_sign(&psbt_name, &names_2of3[0]).unwrap(); //TODO passing xpub file gives misleading error
     assert!(sign_a
         .info
         .iter()
         .any(|msg| msg.contains("#Sending_to_a_different_script_type"))); // core generates a different address type
-    let sign_b = firma_2of3
-        .offline_sign(pstb_file_str, &xprvs_2of3[1])
-        .unwrap();
+    let sign_b = firma_2of3.offline_sign(&psbt_name, &names_2of3[1]).unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
-    let sent_tx = firma_2of3
-        .online_send_tx(vec![
-            &sign_a.psbt_file.to_str().unwrap(),
-            &sign_b.psbt_file.to_str().unwrap(),
-        ])
-        .unwrap();
+    let sent_tx = firma_2of3.online_send_tx(vec![&psbt_name]).unwrap();
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3 = firma_2of3.online_balance().unwrap();
@@ -199,23 +174,12 @@ fn integration_test() {
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 1 and 2
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
-    let create_tx = firma_2of3
-        .online_create_tx(recipients, &rnd_string())
-        .unwrap();
-    let pstb_file_str = create_tx.psbt_file.to_str().unwrap();
-    let sign_a = firma_2of3
-        .offline_sign(pstb_file_str, &xprvs_2of3[1])
-        .unwrap();
-    let sign_b = firma_2of3
-        .offline_sign(pstb_file_str, &xprvs_2of3[2])
-        .unwrap();
+    let psbt_name = rnd_string();
+    let _create_tx = firma_2of3.online_create_tx(recipients, &psbt_name).unwrap();
+    let sign_a = firma_2of3.offline_sign(&psbt_name, &names_2of3[1]).unwrap();
+    let sign_b = firma_2of3.offline_sign(&psbt_name, &names_2of3[2]).unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
-    let sent_tx = firma_2of3
-        .online_send_tx(vec![
-            &sign_a.psbt_file.to_str().unwrap(),
-            &sign_b.psbt_file.to_str().unwrap(),
-        ])
-        .unwrap();
+    let sent_tx = firma_2of3.online_send_tx(vec![&psbt_name]).unwrap();
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_2 = firma_2of3.online_balance().unwrap();
@@ -226,21 +190,13 @@ fn integration_test() {
     // sending in serial psbt->signer_a->signer_b->broadcast
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address.clone(), value_sent)];
-    let create_tx = firma_2of3
-        .online_create_tx(recipients, &rnd_string())
-        .unwrap();
-    let pstb_file_str = create_tx.psbt_file.to_str().unwrap();
+    let psbt_name = rnd_string();
+    let _create_tx = firma_2of3.online_create_tx(recipients, &psbt_name).unwrap();
 
-    let sign_a = firma_2of3
-        .offline_sign(pstb_file_str, &xprvs_2of3[0])
-        .unwrap();
-    let sign_b = firma_2of3
-        .offline_sign(sign_a.psbt_file.to_str().unwrap(), &xprvs_2of3[2])
-        .unwrap();
+    let sign_a = firma_2of3.offline_sign(&psbt_name, &names_2of3[0]).unwrap();
+    let sign_b = firma_2of3.offline_sign(&psbt_name, &names_2of3[2]).unwrap();
     assert_eq!(sign_a.fee.absolute, sign_b.fee.absolute);
-    let sent_tx = firma_2of3
-        .online_send_tx(vec![&sign_b.psbt_file.to_str().unwrap()])
-        .unwrap();
+    let sent_tx = firma_2of3.online_send_tx(vec![&psbt_name]).unwrap();
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_3 = firma_2of3.online_balance().unwrap();
@@ -270,7 +226,8 @@ fn integration_test() {
     assert!(result.is_ok());
 
     // test key encryption
-    let encryption_key = Some(&[0u8; 32][..]);
+    //let encryption_key = Some(&[0u8; 32][..]);
+    /*let encryption_key = None;
     let e1 = firma_2of2
         .offline_random("key_encrypted", encryption_key)
         .unwrap();
@@ -297,6 +254,7 @@ fn integration_test() {
         .offline_decrypt(e1.private_file.to_str().unwrap(), encryption_key)
         .unwrap();
     assert_eq!(d1.xprv, e1.key.xprv);
+    */
 
     // stop bitcoind
     bitcoind.client.stop().unwrap();
@@ -318,14 +276,6 @@ impl FirmaCommand {
             wallet_name: wallet_name.to_string(),
             work_dir,
         })
-    }
-
-    fn wallet_file(&self) -> String {
-        format!(
-            "{}/regtest/wallets/{}/descriptor.json",
-            self.work_dir.path().display(),
-            self.wallet_name
-        )
     }
 
     pub fn online(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
@@ -352,25 +302,34 @@ impl FirmaCommand {
         Ok(value)
     }
 
-    pub fn online_create_wallet(
-        &self,
-        node_url: &str,
-        cookie_file: &str,
-        required_sig: u8,
-        xpubs: &Vec<String>,
-    ) -> Result<CreateWalletOutput> {
-        let required_sig = format!("{}", required_sig);
-        let mut args = vec![
+    pub fn online_connect(&self, node_url: &str, cookie_file: &str) -> Result<DaemonOpts> {
+        let datadir = format!("{}", self.work_dir.path().display());
+        let args = vec![
             "--url",
             node_url,
             "--cookie-file",
             cookie_file,
-            "-r",
-            &required_sig,
+            "--network",
+            "regtest",
+            "--firma-datadir",
+            &datadir,
         ];
-        for xpub in xpubs {
-            args.push("--xpub-file");
-            args.push(xpub);
+        let result = self.online("connect", args);
+        let value = map_json_error(result)?;
+        let output = from_value(value).unwrap();
+        Ok(output)
+    }
+
+    pub fn online_create_wallet(
+        &self,
+        required_sig: u8,
+        names: &Vec<String>,
+    ) -> Result<CreateWalletOutput> {
+        let required_sig = format!("{}", required_sig);
+        let mut args = vec!["-r", &required_sig];
+        for name in names {
+            args.push("--key-name");
+            args.push(name);
         }
         let result = self.online("create-wallet", args);
         let value = map_json_error(result)?;
@@ -415,11 +374,11 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    fn online_send_tx(&self, psbts: Vec<&str>) -> Result<SendTxOutput> {
+    fn online_send_tx(&self, names: Vec<&str>) -> Result<SendTxOutput> {
         let mut args = vec!["--broadcast"];
-        for psbt in psbts {
-            args.push("--psbt-file");
-            args.push(psbt);
+        for name in names {
+            args.push("--psbt-name");
+            args.push(name);
         }
         let value = self.online("send-tx", args).unwrap();
         Ok(from_value(value)?)
@@ -481,7 +440,7 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    pub fn offline_decrypt(
+    pub fn _offline_decrypt(
         &self,
         file_name: &str,
         encryption_key: Option<&[u8]>,
@@ -527,17 +486,23 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    pub fn offline_sign(&self, psbt_file: &str, key_file: &str) -> Result<PsbtPrettyPrint> {
+    pub fn offline_sign(&self, psbt_name: &str, key_name: &str) -> Result<PsbtPrettyPrint> {
+        let datadir = format!("{}", self.work_dir.path().display());
         let result = self.offline(
             "sign",
             vec![
-                psbt_file,
-                "--key",
-                key_file,
+                "--psbt-name",
+                psbt_name,
+                "--key-name",
+                key_name,
                 "--total-derivations",
                 "20",
-                "--wallet-descriptor-file",
-                &self.wallet_file(),
+                "--wallet-name",
+                &self.wallet_name,
+                "--network",
+                "regtest",
+                "--firma-datadir",
+                &datadir,
             ],
             None,
         );
