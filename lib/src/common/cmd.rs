@@ -63,7 +63,7 @@ impl Context {
         Ok(path)
     }
 
-    pub fn save_signature(&self, wallet: &WalletSignature) -> Result<PathBuf> {
+    pub fn save_signature(&self, wallet: &WalletSignatureJson) -> Result<PathBuf> {
         let path = self.filename_for_wallet("signature.json")?;
         if path.exists() {
             return Err(Error::FileExist(path));

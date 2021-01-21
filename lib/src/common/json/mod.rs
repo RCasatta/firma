@@ -31,6 +31,14 @@ pub struct IndexesJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct WalletSignatureJson {
+    pub id: Identifier,
+    pub xpub: ExtendedPubKey,
+    pub address: Address,
+    pub signature: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PrivateMasterKeyJson {
     pub id: Identifier,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -79,13 +87,6 @@ pub struct PsbtJsonOutput {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct WalletSignature {
-    pub xpub: ExtendedPubKey,
-    pub address: Address,
-    pub signature: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct BalanceSatBtc {
     pub satoshi: u64,
     pub btc: String,
@@ -126,7 +127,7 @@ pub struct CreateWalletOutput {
     pub qr_files: Vec<PathBuf>,
     pub wallet_file: PathBuf,
     pub wallet: WalletJson,
-    pub signature: Option<WalletSignature>,
+    pub signature: Option<WalletSignatureJson>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
@@ -210,7 +211,7 @@ pub struct SavePSBTOptions {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct VerifyWalletResult {
     pub descriptor: String,
-    pub signature: WalletSignature,
+    pub signature: WalletSignatureJson,
     pub verified: bool,
 }
 
@@ -368,7 +369,7 @@ impl_try_into!(BalanceOutput);
 impl_try_into!(ListCoinsOutput);
 impl_try_into!(GetAddressOutput);
 impl_try_into!(ListOutput);
-impl_try_into!(WalletSignature);
+impl_try_into!(WalletSignatureJson);
 impl_try_into!(VerifyWalletResult);
 
 #[cfg(test)]

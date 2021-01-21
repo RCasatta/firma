@@ -1,3 +1,4 @@
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::common::list::ListOptions;
 use crate::offline::descriptor::extract_xpubs;
 use crate::*;
@@ -53,7 +54,7 @@ pub fn sign_wallet(
     datadir: &str,
     network: Network,
     opt: &SignWalletOptions,
-) -> Result<WalletSignature> {
+) -> Result<WalletSignatureJson> {
     let secp = Secp256k1::signing_only();
 
     let wallet_file = PathBuilder::new(
@@ -90,17 +91,20 @@ pub fn sign_wallet(
     xpubs
         .iter()
         .try_for_each(|xpub| check_compatibility(network, xpub.network))?;
+
+    let wallet_signature = WalletSignatureJson {
+        xpub: master_public_key,
+        address,
+        signature,
+        id: Identifier::new(network, IdKind::WalletSignature, &wallet.id.name),
+    };
+
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,
         wallet_name: wallet.id.name,
     };
 
-    let wallet_signature = WalletSignature {
-        xpub: master_public_key,
-        address,
-        signature,
-    };
     context.save_signature(&wallet_signature)?;
     Ok(wallet_signature)
 }
