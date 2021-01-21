@@ -49,9 +49,6 @@ enum FirmaOfflineSubcommands {
     /// List wallets and keys
     List(common::list::ListOptions),
 
-    /// Hard derive a master key from a master^2 key
-    DeriveKey(offline::derive_key::DeriveKeyOptions),
-
     /// Decrypt an encrypted file
     Decrypt(offline::decrypt::DecryptOptions),
 
@@ -77,7 +74,6 @@ fn main() -> Result<()> {
             Decrypt(opt) => opt.encryption_key = Some(encoded),
             Dice(opt) => opt.encryption_key = Some(encoded),
             Restore(opt) => opt.encryption_key = Some(encoded),
-            DeriveKey(opt) => opt.encryption_key = Some(encoded),
             SignWallet(opt) => opt.encryption_key = Some(encoded),
             List(opt) => opt.encryption_keys = vec![encoded],
             _ => {
@@ -107,7 +103,6 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         Random(opt) => offline::random::create_key(datadir, net, &opt)?.try_into(),
         Print(opt) => offline::print::start(datadir, net, &opt)?.try_into(),
         Restore(opt) => offline::restore::start(datadir, net, &opt)?.try_into(),
-        DeriveKey(opt) => offline::derive_key::start(datadir, net, &opt)?.try_into(),
         List(opt) => common::list::list(datadir, net, &opt)?.try_into(),
         SignWallet(opt) => offline::sign_wallet::sign_wallet(datadir, net, &opt)?.try_into(),
         VerifyWallet(opt) => offline::sign_wallet::verify_wallet(datadir, net, &opt)?.try_into(),

@@ -1,5 +1,4 @@
 pub mod decrypt;
-pub mod derive_key;
 pub mod descriptor;
 pub mod dice;
 pub mod import_wallet;
