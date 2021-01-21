@@ -237,7 +237,7 @@ fn wallet_with_path(
                         };
                         if let Ok(derived) = derive_address(address.network, &opts) {
                             if &derived.address == address {
-                                return Some((wallet.name.clone(), path.clone()));
+                                return Some((wallet.id.name.clone(), path.clone()));
                             }
                         }
                     }

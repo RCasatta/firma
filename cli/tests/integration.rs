@@ -60,7 +60,7 @@ fn integration_test() {
     let created_2of2_wallet = firma_2of2
         .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs)
         .unwrap();
-    assert_eq!(&created_2of2_wallet.wallet.name, &name_2of2);
+    assert_eq!(&created_2of2_wallet.wallet.id.name, &name_2of2);
 
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
@@ -74,7 +74,7 @@ fn integration_test() {
     let created_2of3_wallet = firma_2of3
         .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
         .unwrap();
-    assert_eq!(&created_2of3_wallet.wallet.name, &name_2of3);
+    assert_eq!(&created_2of3_wallet.wallet.id.name, &name_2of3);
 
     let created_2of3_wallet_err = firma_2of3
         .online_create_wallet(&bitcoind.url, &cookie_file_str, 2, &xpubs_2of3)
@@ -262,7 +262,7 @@ fn integration_test() {
     assert!(list_wallets
         .wallets
         .iter()
-        .any(|w| w.wallet.name == name_2of2));
+        .any(|w| w.wallet.id.name == name_2of2));
     let list_psbt = firma_2of2.offline_list(Kind::PSBT, None).unwrap();
     assert_eq!(list_psbt.psbts.len(), 2);
     let result = firma_2of3.online_rescan(); // TODO test restore a wallet, find funds with rescan

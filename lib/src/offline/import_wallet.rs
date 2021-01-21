@@ -11,7 +11,7 @@ pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Re
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,
-        wallet_name: wallet.name.clone(),
+        wallet_name: wallet.id.name.clone(),
     };
     context.save_wallet(&wallet)?;
     let qr_bytes = serde_json::to_vec(&wallet)?;

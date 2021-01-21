@@ -1,3 +1,4 @@
+use crate::common::json::identifier::Identifier;
 use crate::online::{read_xpubs_files, Wallet};
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
@@ -112,7 +113,7 @@ impl Wallet {
         let fingerprints = xpubs.iter().map(|x| x.fingerprint()).collect();
 
         let wallet = WalletJson {
-            name: self.context.wallet_name.to_string(),
+            id: Identifier::new_wallet(self.context.network, &self.context.wallet_name),
             descriptor,
             fingerprints,
             required_sig: opt.r,

@@ -93,7 +93,7 @@ pub fn sign_wallet(
     let context = Context {
         firma_datadir: datadir.to_string(),
         network,
-        wallet_name: wallet.name,
+        wallet_name: wallet.id.name,
     };
 
     let wallet_signature = WalletSignature {

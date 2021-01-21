@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
-pub enum IdKind {
+enum IdKind {
     Wallet,
     Key,
     PSBT,
@@ -25,13 +25,22 @@ impl Display for IdKind {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Identifier {
-    pub network: Network,
-    pub kind: IdKind,
+    network: Network,
+    kind: IdKind,
     pub name: String,
 }
 
 impl Identifier {
-    pub fn new(network: Network, kind: IdKind, name: &str) -> Self {
+    pub fn new_key(network: Network, name: &str) -> Self {
+        Self::new(network, IdKind::Key, name)
+    }
+    pub fn new_psbt(network: Network, name: &str) -> Self {
+        Self::new(network, IdKind::PSBT, name)
+    }
+    pub fn new_wallet(network: Network, name: &str) -> Self {
+        Self::new(network, IdKind::Wallet, name)
+    }
+    fn new(network: Network, kind: IdKind, name: &str) -> Self {
         Identifier {
             network,
             kind,
