@@ -73,7 +73,7 @@ impl Context {
         Ok(path)
     }
 
-    pub fn save_index(&self, indexes: &WalletIndexes) -> Result<()> {
+    pub fn save_index(&self, indexes: &IndexesJson) -> Result<()> {
         let path = self.filename_for_wallet("indexes.json")?;
         info!("Saving index data in {:?}", path);
         fs::write(path, serde_json::to_string_pretty(indexes)?)?;
@@ -96,7 +96,7 @@ impl Context {
 
     // TODO many times called only for one file, split?
     /// load the wallet and related indexes and daemon opts
-    pub fn load_wallet_index_daemon(&self) -> Result<(WalletJson, WalletIndexes, DaemonOpts)> {
+    pub fn load_wallet_index_daemon(&self) -> Result<(WalletJson, IndexesJson, DaemonOpts)> {
         let wallet_path = self.filename_for_wallet("descriptor.json")?;
         debug!("load wallet: {:?}", wallet_path);
         let wallet = read_wallet(&wallet_path)

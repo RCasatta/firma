@@ -203,7 +203,7 @@ pub fn read_wallet(path: &PathBuf) -> Result<WalletJson> {
     Ok(serde_json::from_slice(&wallet)?)
 }
 
-pub fn read_indexes(path: &PathBuf) -> Result<WalletIndexes> {
+pub fn read_indexes(path: &PathBuf) -> Result<IndexesJson> {
     let indexes = fs::read(path)?;
     Ok(serde_json::from_slice(&indexes)?)
 }

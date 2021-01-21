@@ -1,6 +1,6 @@
 pub mod identifier;
 
-use crate::common::json::identifier::Identifier;
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, PSBT};
@@ -22,6 +22,12 @@ pub struct WalletJson {
     pub fingerprints: BTreeSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
     pub required_sig: usize,                 // TODO derive from descriptor?
     pub created_at_height: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct IndexesJson {
+    pub id: Identifier,
+    pub main: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -77,11 +83,6 @@ pub struct WalletSignature {
     pub xpub: ExtendedPubKey,
     pub address: Address,
     pub signature: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct WalletIndexes {
-    pub main: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -329,7 +330,7 @@ impl PrivateMasterKeyJson {
             xpub,
             dice: None,
             fingerprint: xpub.fingerprint(),
-            id: Identifier::new_key(network, name),
+            id: Identifier::new(network, IdKind::MasterSecret, name),
         })
     }
 
@@ -342,7 +343,7 @@ impl PrivateMasterKeyJson {
             mnemonic: None,
             dice: None,
             fingerprint: xpub.fingerprint(),
-            id: Identifier::new_key(xprv.network, name),
+            id: Identifier::new(xprv.network, IdKind::MasterSecret, name),
         }
     }
 }
