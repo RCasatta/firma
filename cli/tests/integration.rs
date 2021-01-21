@@ -107,9 +107,8 @@ fn integration_test() {
     // create a tx from firma 2of2 wallet and send back to myself (detecting script reuse)
     let value_sent = rng.gen_range(1_000, 1_000_000);
     let recipients = vec![(address_2of2.clone(), value_sent)];
-    let create_tx = firma_2of2
-        .online_create_tx(recipients, &rnd_string())
-        .unwrap();
+    let psbt_name = rnd_string();
+    let create_tx = firma_2of2.online_create_tx(recipients, &psbt_name).unwrap();
     let psbt_file_str = create_tx.psbt_file.to_str().unwrap();
     let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
     assert_eq!(
@@ -118,6 +117,8 @@ fn integration_test() {
     );
 
     let print_a = firma_2of2.offline_print(psbt_file_str).unwrap();
+    let print_a_by_name = firma_2of2.offline_print_by_name(&psbt_name).unwrap();
+    assert_eq!(print_a, print_a_by_name);
     let sign_a = firma_2of2
         .offline_sign(psbt_file_str, &r1.private_file.to_str().unwrap())
         .unwrap(); //TODO test passing public key
@@ -554,6 +555,13 @@ impl FirmaCommand {
 
     pub fn offline_print(&self, psbt_file: &str) -> Result<PsbtPrettyPrint> {
         let result = self.offline("print", vec!["--psbt-file", psbt_file], None);
+        let value = map_json_error(result)?;
+        let output = from_value(value)?;
+        Ok(output)
+    }
+
+    pub fn offline_print_by_name(&self, psbt_name: &str) -> Result<PsbtPrettyPrint> {
+        let result = self.offline("print", vec!["--psbt-name", psbt_name], None);
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)

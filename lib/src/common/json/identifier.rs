@@ -1,8 +1,9 @@
-use crate::Result;
+use crate::{expand_tilde, Result};
 use bitcoin::Network;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
-use std::str::FromStr;
+use std::fmt::Debug;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub enum IdKind {
@@ -20,6 +21,17 @@ impl IdKind {
             IdKind::Wallet | IdKind::WalletIndexes | IdKind::WalletSignature => "wallets",
             IdKind::MasterSecret | IdKind::DescriptorPublicKey => "keys",
             IdKind::PSBT => "psbts",
+        }
+    }
+
+    fn name(&self) -> &str {
+        match self {
+            IdKind::Wallet => "wallet.json",
+            IdKind::WalletIndexes => "wallet_indexes.json",
+            IdKind::WalletSignature => "wallet_signature.json",
+            IdKind::MasterSecret => "master_secret.json",
+            IdKind::DescriptorPublicKey => "descriptor_public_key.json",
+            IdKind::PSBT => "psbt.json",
         }
     }
 }
@@ -48,12 +60,24 @@ impl Identifier {
         }
     }
 
-    pub fn as_path_buf(&self, datadir: &str) -> Result<PathBuf> {
-        let mut path = PathBuf::from_str(datadir).unwrap();
+    pub fn as_path_buf<P: AsRef<Path>>(&self, datadir: P) -> Result<PathBuf> {
+        let mut path = expand_tilde(datadir)?;
         path.push(self.network.to_string());
         path.push(self.kind.dir());
         path.push(self.name.to_string());
+        path.push(self.kind.name());
         Ok(path)
+    }
+
+    pub fn read<T, P>(&self, datadir: P) -> Result<T>
+    where
+        T: Serialize + DeserializeOwned + Debug,
+        P: AsRef<Path>,
+    {
+        let path = self.as_path_buf(datadir)?;
+        let file_content = std::fs::read(&path)?;
+        let data: T = serde_json::from_slice(&file_content)?;
+        Ok(data)
     }
 }
 
@@ -69,7 +93,7 @@ mod tests {
             kind: IdKind::MasterSecret,
             name: "a1".to_string(),
         };
-        let expected = "\"/bitcoin/keys/a1\"";
+        let expected = "\"/bitcoin/keys/a1/master_secret.json\"";
         let result = format!("{:?}", id.as_path_buf("/").unwrap());
         assert_eq!(expected, result);
 

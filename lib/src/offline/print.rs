@@ -1,3 +1,4 @@
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::list::ListOptions;
 use crate::offline::descriptor::{derive_address, DeriveAddressOpts};
 use crate::*;
@@ -25,18 +26,32 @@ pub struct PrintOptions {
     #[structopt(long)]
     pub psbt_base64: Option<String>,
 
+    /// PSBT name contained in firma datadir
+    #[structopt(long)]
+    pub psbt_name: Option<String>,
+
     /// Return wallets only if wallet signature file is present and signature verifies
     #[structopt(long)]
     pub verify_wallets_signatures: bool,
 }
 
 pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
-    let psbt = match (&opt.psbt_file, &opt.psbt_base64) {
-        (Some(path), None) => read_psbt(path)?,
-        (None, Some(base64)) => psbt_from_base64(base64)?.1,
-        (None, None) => return Err("`psbt_file` or `psbt_base64` must be set".into()),
-        (Some(_), Some(_)) => {
-            return Err("`psbt_file` and `psbt_base64` cannot be both specified".into())
+    let psbt = match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
+        (Some(path), None, None) => read_psbt(path)?,
+        (None, Some(base64), None) => psbt_from_base64(base64)?.1,
+        (None, None, Some(name)) => {
+            let id = Identifier::new(network, IdKind::PSBT, name);
+            let psbt_json: PsbtJson = id.read(datadir)?;
+            psbt_from_base64(&psbt_json.psbt)?.1
+        }
+        (None, None, None) => {
+            return Err("`psbt_file` or `psbt_base64` or `psbt_name` must be set".into())
+        }
+        _ => {
+            return Err(
+                "exactly one between `psbt_file`, `psbt_base64`, `psbt_name` must be specified"
+                    .into(),
+            )
         }
     };
     let kind = Kind::Wallet;
