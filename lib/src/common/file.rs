@@ -9,6 +9,8 @@ use std::str::FromStr;
 use std::string::ToString;
 use std::{fs, io};
 
+// https://dreampuf.github.io/GraphvizOnline/#digraph%20G%20%7B%0A%20%20%22.firma%22%20-%3E%20%22%5Bnetwork%5D%22%0A%20%20%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20wallets%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20keys%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20psbts%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20%22daemon_opts.json%22%20%0A%20%20%0A%20%20keys%20-%3E%20%22%5Bkey%20name%5D%22%0A%20%20%22MASTER_SECRET.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22descriptor_public_key.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22MASTER_SECRET.json%22%20%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22descriptor_public_key.json%22%20%0A%20%20%0A%20%20wallets%20-%3E%20%22%5Bwallet%20name%5D%22%0A%20%20%22descriptor.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22indexes.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22daemon_opts.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22signature.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22descriptor.json%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22indexes.json%22%20%0A%20%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22signature.json%22%20%0A%20%20%0A%20%20psbts%20-%3E%20%22%5Bpsbt%20name%5D%22%0A%20%20%22psbt.json%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bpsbt%20name%5D%22%20-%3E%20%22psbt.json%22%20%0A%7D
+
 pub struct PathBuilder {
     datadir: String,
     network: Network,

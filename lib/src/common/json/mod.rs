@@ -1,3 +1,6 @@
+pub mod identifier;
+
+use crate::common::json::identifier::{IdKind, Identifier};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, PSBT};
@@ -20,8 +23,8 @@ pub struct PrivateMasterKeyJson {
     pub xprv: ExtendedPrivKey,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dice: Option<Dice>,
-    pub name: String,
     pub fingerprint: Fingerprint,
+    pub id: Identifier,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -325,8 +328,8 @@ impl PrivateMasterKeyJson {
             xprv,
             xpub,
             dice: None,
-            name: name.to_string(),
             fingerprint: xpub.fingerprint(),
+            id: Identifier::new(network, IdKind::Key, name),
         })
     }
 
@@ -338,8 +341,8 @@ impl PrivateMasterKeyJson {
             xpub,
             mnemonic: None,
             dice: None,
-            name: name.to_string(),
             fingerprint: xpub.fingerprint(),
+            id: Identifier::new(xprv.network, IdKind::Key, name),
         }
     }
 }

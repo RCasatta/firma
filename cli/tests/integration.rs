@@ -250,8 +250,14 @@ fn integration_test() {
     assert!(!coins_output.coins.is_empty());
 
     let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
-    assert!(list_keys.keys.iter().any(|k| k.key.name == r1.key.name));
-    assert!(list_keys.keys.iter().any(|k| k.key.name == r2.key.name));
+    assert!(list_keys
+        .keys
+        .iter()
+        .any(|k| k.key.id.name == r1.key.id.name));
+    assert!(list_keys
+        .keys
+        .iter()
+        .any(|k| k.key.id.name == r2.key.id.name));
     let list_wallets = firma_2of2.offline_list(Kind::Wallet, None).unwrap();
     assert!(list_wallets
         .wallets
@@ -269,12 +275,18 @@ fn integration_test() {
         .unwrap();
     let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
     assert!(
-        !list_keys.keys.iter().any(|k| k.key.name == e1.key.name),
+        !list_keys
+            .keys
+            .iter()
+            .any(|k| k.key.id.name == e1.key.id.name),
         "can see private key without encryption_key"
     );
     let list_keys = firma_2of2.offline_list(Kind::Key, encryption_key).unwrap();
     assert!(
-        list_keys.keys.iter().any(|k| k.key.name == e1.key.name),
+        list_keys
+            .keys
+            .iter()
+            .any(|k| k.key.id.name == e1.key.id.name),
         "can't see private key with encryption_key"
     );
     assert!(firma_2of2

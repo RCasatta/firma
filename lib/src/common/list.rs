@@ -181,6 +181,6 @@ mod tests {
         assert!(list
             .keys
             .iter()
-            .any(|key| key.key.name == rand_opts.key_name));
+            .any(|key| key.key.id.name == rand_opts.key_name));
     }
 }
