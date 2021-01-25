@@ -8,6 +8,26 @@ use std::fmt::Debug;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+/*let mut maybe_encrypted = MaybeEncrypted::plain(private_key.clone());
+if let Some(encryption_key) = encryption_key {
+    maybe_encrypted = maybe_encrypted.encrypt(&encryption_key.get_exactly_32()?)?;
+}
+save(serde_json::to_string_pretty(&maybe_encrypted)?, output)*/
+
+/*
+let decrypted = match encryption_key {
+    encryption_key @ Some(_) => {
+        MaybeEncrypted::Plain(decrypt(&DecryptOptions::new(path, encryption_key))?)
+    }
+    None => serde_json::from_slice(&std::fs::read(path)?)?,
+};
+match decrypted {
+    MaybeEncrypted::Plain(value) => Ok(value),
+    MaybeEncrypted::Encrypted(_) => Err(Error::MaybeEncryptedWrongState),
+}
+
+ */
+
 #[derive(StructOpt, Debug, Serialize, Deserialize)]
 pub struct DecryptOptions {
     /// File containing the encrypted data

@@ -1,4 +1,4 @@
-use crate::common::json::identifier::{IdKind, Identifier};
+use crate::common::json::identifier::{Identifier, Kind};
 use crate::common::list::ListOptions;
 use crate::offline::descriptor::extract_xpubs;
 use crate::*;
@@ -6,10 +6,9 @@ use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, SignOnly, VerifyOnly};
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::misc::signed_msg_hash;
-use bitcoin::{Address, Network, PrivateKey, PublicKey};
+use bitcoin::{Address, PrivateKey, PublicKey};
 use log::debug;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -32,81 +31,56 @@ pub struct VerifyWalletOptions {
     pub wallet_name: String,
 }
 
-pub fn verify_wallet(
-    datadir: &str,
-    network: Network,
-    opt: &VerifyWalletOptions,
-) -> Result<VerifyWalletResult> {
-    let wallet_path = PathBuilder::new(
-        datadir,
-        network,
-        Kind::Wallet,
-        Some(opt.wallet_name.to_string()),
-    );
-    let wallet_file = wallet_path.file("descriptor.json")?;
-    let signature_file = wallet_path.file("signature.json")?;
-    let secp = Secp256k1::verification_only();
+impl Context {
+    pub fn verify_wallet(&self, opt: &VerifyWalletOptions) -> Result<VerifyWalletResult> {
+        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
+        let secp = Secp256k1::verification_only();
 
-    verify_wallet_internal(&wallet_file, &signature_file, &secp)
+        verify_wallet_internal(&wallet, &signature, &secp)
+    }
 }
 
-pub fn sign_wallet(
-    datadir: &str,
-    network: Network,
-    opt: &SignWalletOptions,
-) -> Result<WalletSignatureJson> {
-    let secp = Secp256k1::signing_only();
+impl Context {
+    pub fn sign_wallet(&self, opt: &SignWalletOptions) -> Result<WalletSignatureJson> {
+        let secp = Secp256k1::signing_only();
+        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        let message = &wallet.descriptor;
+        let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
+        let encryption_keys = match opt.encryption_key.as_ref() {
+            Some(key) => vec![key.clone()],
+            None => vec![],
+        };
 
-    let wallet_file = PathBuilder::new(
-        datadir,
-        network,
-        Kind::Wallet,
-        Some(opt.wallet_name.to_string()),
-    )
-    .file("descriptor.json")?;
-    debug!("wallet_file {:?}", wallet_file);
-    let wallet = read_wallet(&wallet_file)?; // read the json
-    let message = &wallet.descriptor;
-    let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
-    let encryption_keys = match opt.encryption_key.as_ref() {
-        Some(key) => vec![key.clone()],
-        None => vec![],
-    };
+        // search a key that is in the wallet descriptor
+        let kind = Kind::MasterSecret;
+        let list_opt = ListOptions {
+            kind,
+            verify_wallets_signatures: false,
+            encryption_keys,
+        };
+        debug!("list_opt {:?}", list_opt);
+        let available_keys = self.list(&list_opt)?;
+        let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
+        let master_public_key = ExtendedPubKey::from_private(&secp, &master_private_key);
 
-    // search a key that is in the wallet descriptor
-    let kind = Kind::Key;
-    let list_opt = ListOptions {
-        kind,
-        verify_wallets_signatures: false,
-        encryption_keys,
-    };
-    debug!("list_opt {:?}", list_opt);
-    let available_keys = common::list::list(datadir, network, &list_opt)?;
-    let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
-    let master_public_key = ExtendedPubKey::from_private(&secp, &master_private_key);
+        let signature = sign_message_with_key(&master_private_key.private_key, message, &secp)?;
+        let address = Address::p2pkh(&master_public_key.public_key, master_public_key.network);
 
-    let signature = sign_message_with_key(&master_private_key.private_key, message, &secp)?;
-    let address = Address::p2pkh(&master_public_key.public_key, master_public_key.network);
+        xpubs
+            .iter()
+            .try_for_each(|xpub| check_compatibility(self.network, xpub.network))?;
 
-    xpubs
-        .iter()
-        .try_for_each(|xpub| check_compatibility(network, xpub.network))?;
+        let wallet_signature = WalletSignatureJson {
+            xpub: master_public_key,
+            address,
+            signature,
+            id: Identifier::new(self.network, Kind::WalletSignature, &wallet.id.name),
+        };
 
-    let wallet_signature = WalletSignatureJson {
-        xpub: master_public_key,
-        address,
-        signature,
-        id: Identifier::new(network, IdKind::WalletSignature, &wallet.id.name),
-    };
-
-    let context = Context {
-        firma_datadir: datadir.to_string(),
-        network,
-        wallet_name: wallet.id.name,
-    };
-
-    context.save_signature(&wallet_signature)?;
-    Ok(wallet_signature)
+        self.write(&wallet_signature)?;
+        Ok(wallet_signature)
+    }
 }
 
 fn find_key<'a>(
@@ -134,12 +108,10 @@ fn check_xpub_in_descriptor(
 }
 
 pub fn verify_wallet_internal(
-    wallet_path: &PathBuf,
-    signature_path: &PathBuf,
+    wallet: &WalletJson,
+    signature: &WalletSignatureJson,
     secp: &Secp256k1<VerifyOnly>,
 ) -> Result<VerifyWalletResult> {
-    let wallet = read_wallet(&wallet_path)?;
-    let signature = read_signature(&signature_path)?;
     let xpubs = extract_xpubs(&wallet.descriptor)?;
     let message = &wallet.descriptor;
     let master_address = Address::p2pkh(&signature.xpub.public_key, signature.xpub.network);
@@ -154,8 +126,8 @@ pub fn verify_wallet_internal(
         verify_message_with_address(&signature.address, &signature.signature, message, secp)?;
     debug!("verified {}", verified);
     let result = VerifyWalletResult {
-        descriptor: wallet.descriptor,
-        signature,
+        descriptor: wallet.descriptor.to_string(),
+        signature: signature.clone(),
         verified,
     };
     Ok(result)

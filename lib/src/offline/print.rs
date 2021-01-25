@@ -1,4 +1,3 @@
-use crate::common::json::identifier::{IdKind, Identifier};
 use crate::list::ListOptions;
 use crate::offline::descriptor::{derive_address, DeriveAddressOpts};
 use crate::*;
@@ -35,35 +34,39 @@ pub struct PrintOptions {
     pub verify_wallets_signatures: bool,
 }
 
-pub fn start(datadir: &str, network: Network, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
-    let psbt = match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
-        (Some(path), None, None) => read_psbt(path)?,
-        (None, Some(base64), None) => psbt_from_base64(base64)?.1,
-        (None, None, Some(name)) => {
-            let id = Identifier::new(network, IdKind::PSBT, name);
-            let psbt_json: PsbtJson = id.read(datadir)?;
-            psbt_from_base64(&psbt_json.psbt)?.1
-        }
-        (None, None, None) => {
-            return Err("`psbt_file` or `psbt_base64` or `psbt_name` must be set".into())
-        }
-        _ => {
-            return Err(
-                "exactly one between `psbt_file`, `psbt_base64`, `psbt_name` must be specified"
-                    .into(),
-            )
-        }
-    };
-    let kind = Kind::Wallet;
-    let opt = ListOptions {
-        kind,
-        verify_wallets_signatures: opt.verify_wallets_signatures,
-        encryption_keys: vec![],
-    };
-    let result = common::list::list(datadir, network, &opt)?;
-    let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();
-    let output = pretty_print(&psbt, network, &wallets)?;
-    Ok(output)
+impl Context {
+    pub fn print(&self, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
+        let psbt =
+            match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
+                (Some(path), None, None) => {
+                    let vec = std::fs::read(path)?;
+                    let psbt_json: PsbtJson = serde_json::from_slice(&vec)?;
+                    psbt_json.psbt()?
+                }
+                (None, Some(base64), None) => psbt_from_base64(base64)?.1,
+                (None, None, Some(name)) => {
+                    let psbt_json: PsbtJson = self.read(name)?;
+                    psbt_json.psbt()?
+                }
+                (None, None, None) => {
+                    return Err("`psbt_file` or `psbt_base64` or `psbt_name` must be set".into())
+                }
+                _ => return Err(
+                    "exactly one between `psbt_file`, `psbt_base64`, `psbt_name` must be specified"
+                        .into(),
+                ),
+            };
+        let kind = Kind::Wallet;
+        let opt = ListOptions {
+            kind,
+            verify_wallets_signatures: opt.verify_wallets_signatures,
+            encryption_keys: vec![],
+        };
+        let result = self.list(&opt)?;
+        let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();
+        let output = pretty_print(&psbt, self.network, &wallets)?;
+        Ok(output)
+    }
 }
 
 pub fn pretty_print(

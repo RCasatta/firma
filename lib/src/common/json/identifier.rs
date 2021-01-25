@@ -1,14 +1,16 @@
-use crate::{expand_tilde, Result};
+use crate::{expand_tilde, Error, Result};
+use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::Network;
 use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
-use std::fs;
+use std::fmt::{Debug, Display};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::{fs, io};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
-pub enum IdKind {
+pub enum Kind {
     Wallet,
     WalletIndexes,
     WalletSignature,
@@ -17,36 +19,75 @@ pub enum IdKind {
     PSBT,
 }
 
-impl IdKind {
-    fn dir(&self) -> &str {
+impl Kind {
+    pub fn dir(&self) -> &str {
         match self {
-            IdKind::Wallet | IdKind::WalletIndexes | IdKind::WalletSignature => "wallets",
-            IdKind::MasterSecret | IdKind::DescriptorPublicKey => "keys",
-            IdKind::PSBT => "psbts",
+            Kind::Wallet | Kind::WalletIndexes | Kind::WalletSignature => "wallets",
+            Kind::MasterSecret | Kind::DescriptorPublicKey => "keys",
+            Kind::PSBT => "psbts",
         }
     }
 
     fn name(&self) -> &str {
         match self {
-            IdKind::Wallet => "descriptor.json",          // "wallet.json",
-            IdKind::WalletIndexes => "indexes.json",      //"wallet_indexes.json",
-            IdKind::WalletSignature => "signature.json",  //"wallet_signature.json",
-            IdKind::MasterSecret => "PRIVATE.json",       //"master_secret.json",
-            IdKind::DescriptorPublicKey => "public.json", //"descriptor_public_key.json",
-            IdKind::PSBT => "psbt.json",
+            Kind::Wallet => "descriptor.json",          // "wallet.json",
+            Kind::WalletIndexes => "indexes.json",      //"wallet_indexes.json",
+            Kind::WalletSignature => "signature.json",  //"wallet_signature.json",
+            Kind::MasterSecret => "PRIVATE.json",       //"master_secret.json",
+            Kind::DescriptorPublicKey => "public.json", //"descriptor_public_key.json",
+            Kind::PSBT => "psbt.json",
+        }
+    }
+}
+
+impl Display for Kind {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Kind::Wallet => write!(f, "wallets"),
+            Kind::MasterSecret => write!(f, "keys"),
+            Kind::PSBT => write!(f, "psbts"),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl FromStr for Kind {
+    type Err = io::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "wallets" => Ok(Kind::Wallet),
+            "keys" => Ok(Kind::MasterSecret),
+            "psbts" => Ok(Kind::PSBT),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                format!("({}) valid values are: wallets, keys, psbts", s),
+            )),
         }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Identifier {
-    network: Network,
-    kind: IdKind,
+    kind: Kind,
     pub name: String,
+    pub network: Network,
+}
+
+pub trait Identifiable {
+    fn id(&self) -> &Identifier;
+}
+
+pub trait Overwriteable {
+    fn can_overwrite() -> bool;
+}
+
+pub trait WhichKind {
+    fn kind() -> Kind;
 }
 
 impl Identifier {
-    pub fn new(network: Network, kind: IdKind, name: &str) -> Self {
+    pub fn new(network: Network, kind: Kind, name: &str) -> Self {
         Identifier {
             network,
             kind,
@@ -54,7 +95,7 @@ impl Identifier {
         }
     }
 
-    pub fn with_kind(&self, new_kind: IdKind) -> Self {
+    pub fn with_kind(&self, new_kind: Kind) -> Self {
         Identifier {
             network: self.network,
             kind: new_kind,
@@ -92,13 +133,19 @@ impl Identifier {
         Ok(data)
     }
 
-    pub fn write<T, P>(&self, datadir: P, value: &T) -> Result<()>
+    pub fn write<T, P>(&self, datadir: P, value: &T, can_overwrite: bool) -> Result<()>
     where
         T: Serialize + DeserializeOwned + Debug,
         P: AsRef<Path>,
     {
-        debug!("Identifier::write");
         let path = self.as_path_buf(datadir, true)?;
+        debug!(
+            "Identifier::write {:?} can_overwrite:{}",
+            path, can_overwrite
+        );
+        if path.exists() && !can_overwrite {
+            return Err(Error::CannotOverwrite(path));
+        }
         let content = serde_json::to_vec_pretty(value)?;
         std::fs::write(&path, &content)?;
         Ok(())
@@ -107,14 +154,14 @@ impl Identifier {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::json::identifier::{IdKind, Identifier};
+    use crate::common::json::identifier::{Identifier, Kind};
     use bitcoin::Network;
 
     #[test]
     fn test_identifier() {
         let id = Identifier {
             network: Network::Bitcoin,
-            kind: IdKind::MasterSecret,
+            kind: Kind::MasterSecret,
             name: "a1".to_string(),
         };
         let expected = "\"/bitcoin/keys/a1/PRIVATE.json\""; //TODO master_secret

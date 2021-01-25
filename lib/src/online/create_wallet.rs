@@ -1,5 +1,5 @@
-use crate::common::json::identifier::{IdKind, Identifier};
-use crate::online::{read_xpubs_names, Wallet};
+use crate::common::json::identifier::{Identifier, Kind};
+use crate::online::read_xpubs_names;
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
@@ -13,6 +13,10 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct CreateWalletOptions {
+    /// The name of the wallet to be created
+    #[structopt(long = "wallet-name")]
+    pub wallet_name: String,
+
     /// number of signatures required
     #[structopt(short)]
     pub r: usize,
@@ -24,10 +28,6 @@ pub struct CreateWalletOptions {
     /// Key name that are composing the wallet, must be found in firma datadir
     #[structopt(long = "key-name")]
     pub key_names: Vec<String>,
-
-    /// QR code max version to use (max size)
-    #[structopt(long, default_value = "14")]
-    pub qr_version: i16,
 }
 
 impl CreateWalletOptions {
@@ -67,20 +67,20 @@ impl CreateWalletOptions {
     }
 }
 
-impl Wallet {
-    pub fn create(&self, opt: &CreateWalletOptions, height: u64) -> Result<CreateWalletOutput> {
-        opt.validate(&self.context)?;
+impl Context {
+    pub fn create(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
+        opt.validate(self)?;
+        let client = self.make_client(&opt.wallet_name)?;
         debug!("create");
 
-        let mut xpubs = read_xpubs_names(&opt.key_names, &self.context)?;
+        let mut xpubs = read_xpubs_names(&opt.key_names, self)?;
         xpubs.extend(&opt.xpubs);
 
         let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
         let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
-        let descriptor = self.client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
+        let descriptor = client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
-        self.client
-            .create_wallet(&self.context.wallet_name, Some(true), None, None, None)?;
+        client.create_wallet(&opt.wallet_name, Some(true), None, None, None)?;
 
         let multi_request = ImportMultiRequest {
             range: Some((0, 1000)), //TODO should be a parameter
@@ -96,42 +96,27 @@ impl Wallet {
             rescan: Some(false),
         };
 
-        let import_multi_result = self
-            .client
-            .import_multi(&[multi_request], Some(&multi_options));
+        let import_multi_result = client.import_multi(&[multi_request], Some(&multi_options));
         info!("import_multi_result {:?}", import_multi_result);
 
         let fingerprints = xpubs.iter().map(|x| x.fingerprint()).collect();
+        let height = client.get_blockchain_info()?.blocks;
 
         let wallet = WalletJson {
-            id: Identifier::new(
-                self.context.network,
-                IdKind::Wallet,
-                &self.context.wallet_name,
-            ),
+            id: Identifier::new(self.network, Kind::Wallet, &opt.wallet_name),
             descriptor,
             fingerprints,
             required_sig: opt.r,
             created_at_height: height,
         };
         let indexes = IndexesJson {
-            id: Identifier::new(
-                self.context.network,
-                IdKind::WalletIndexes,
-                &self.context.wallet_name,
-            ),
+            id: Identifier::new(self.network, Kind::WalletIndexes, &opt.wallet_name),
             main: 0u32,
         };
 
-        let wallet_file = self.context.save_wallet(&wallet)?;
-        self.context.save_index(&indexes)?;
+        self.write(&wallet)?;
+        self.write(&indexes)?;
 
-        let create_wallet = CreateWalletOutput {
-            wallet_file,
-            wallet,
-            signature: None,
-        };
-
-        Ok(create_wallet)
+        Ok(wallet)
     }
 }

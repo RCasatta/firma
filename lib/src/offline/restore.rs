@@ -1,8 +1,7 @@
 use crate::mnemonic::Mnemonic;
-use crate::{check_compatibility, Result, StringEncoding};
-use crate::{save_keys, MasterKeyOutput, MasterSecretJson};
+use crate::MasterSecretJson;
+use crate::{check_compatibility, Context, Result, StringEncoding};
 use bitcoin::util::bip32::ExtendedPrivKey;
-use bitcoin::Network;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::str::FromStr;
@@ -19,10 +18,6 @@ pub struct RestoreOptions {
     /// Kind of the secret material
     #[structopt(short, long)]
     pub nature: Nature,
-
-    /// QR code max version to use (max size)
-    #[structopt(long, default_value = "14")]
-    pub qr_version: i16,
 
     /// Optional encryption key for saving the key file encrypted
     /// in CLI it is populated from standard input
@@ -54,75 +49,67 @@ impl FromStr for Nature {
     }
 }
 
-pub fn start(datadir: &str, network: Network, opt: &RestoreOptions) -> Result<MasterKeyOutput> {
+pub fn start(context: &Context, opt: &RestoreOptions) -> Result<MasterSecretJson> {
     let master_key = match opt.nature {
         Nature::Xprv => {
             let key = ExtendedPrivKey::from_str(&opt.value)?;
-            check_compatibility(key.network, network)?;
+            check_compatibility(key.network, context.network)?;
             MasterSecretJson::from_xprv(key, &opt.key_name)
         }
         Nature::Mnemonic => {
             let mnemonic = Mnemonic::from_str(&opt.value)?;
-            MasterSecretJson::new(network, &mnemonic, &opt.key_name)?
+            MasterSecretJson::new(context.network, &mnemonic, &opt.key_name)?
         }
     };
+    context.write_keys(&master_key)?;
 
-    let output = save_keys(
-        datadir,
-        network,
-        &opt.key_name,
-        master_key,
-        opt.encryption_key.as_ref(),
-    )?;
-    Ok(output)
+    Ok(master_key)
 }
 
 #[cfg(test)]
 mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
+    use crate::Context;
     use bitcoin::Network;
     use tempfile::TempDir;
 
     #[test]
     fn test_restore() {
         let temp_dir = TempDir::new().unwrap();
-        let temp_dir_str = format!("{}/", temp_dir.path().display());
+        let context = Context {
+            firma_datadir: format!("{}/", temp_dir.path().display()),
+            network: Network::Testnet,
+        };
         let key_name_random = "test_restore_random".to_string();
         let rand_opts = RandomOptions::new(key_name_random);
         let name_counter = 0;
 
-        let key_orig =
-            crate::offline::random::create_key(&temp_dir_str, Network::Testnet, &rand_opts)
-                .unwrap();
+        let key_orig = context.create_key(&rand_opts).unwrap();
 
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
             key_name,
             nature: Nature::Xprv,
-            value: key_orig.key.xprv.to_string(),
-            qr_version: 14,
+            value: key_orig.xprv.to_string(),
             encryption_key: None,
         };
-        let key_restored =
-            crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
-        assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
-        assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
-        assert_ne!(key_orig.key.mnemonic, key_restored.key.mnemonic);
+        let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
+        assert_eq!(key_orig.xprv, key_restored.xprv);
+        assert_eq!(key_orig.xpub, key_restored.xpub);
+        assert_ne!(key_orig.mnemonic, key_restored.mnemonic);
 
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
             key_name,
             nature: Nature::Mnemonic,
-            value: key_orig.key.mnemonic.as_ref().unwrap().to_string(),
-            qr_version: 14,
+            value: key_orig.mnemonic.as_ref().unwrap().to_string(),
             encryption_key: None,
         };
-        let key_restored =
-            crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts).unwrap();
-        assert_eq!(key_orig.key.xprv, key_restored.key.xprv);
-        assert_eq!(key_orig.key.xpub, key_restored.key.xpub);
-        assert_eq!(&key_orig.key.mnemonic, &key_restored.key.mnemonic);
+        let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
+        assert_eq!(key_orig.xprv, key_restored.xprv);
+        assert_eq!(key_orig.xpub, key_restored.xpub);
+        assert_eq!(&key_orig.mnemonic, &key_restored.mnemonic);
 
         // TODO add restore mnemonic
 
@@ -131,21 +118,19 @@ mod tests {
             key_name,
             nature: Nature::Xprv,
             value: "X".to_string(),
-            qr_version: 14,
             encryption_key: None,
         };
-        let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
+        let result = crate::offline::restore::start(&context, &restore_opts);
         assert!(result.is_err());
 
         let (key_name, _name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
             key_name,
             nature: Nature::Xprv,
-            value: key_orig.key.xpub.to_string(),
-            qr_version: 14,
+            value: key_orig.xpub.to_string(),
             encryption_key: None,
         };
-        let result = crate::offline::restore::start(&temp_dir_str, Network::Testnet, &restore_opts);
+        let result = crate::offline::restore::start(&context, &restore_opts);
         assert!(result.is_err());
     }
 }

@@ -1,22 +1,14 @@
 use crate::offline::descriptor::extract_xpubs;
 use crate::*;
-use bitcoin::Network;
 
 /// Import a json wallet, used in firma-offline to import existing wallet json descriptor
 //TODO android-only at the moment, add support also from command line
-pub fn import_wallet(datadir: &str, network: Network, wallet: &WalletJson) -> Result<()> {
+//TODO should be generic import
+pub fn import_wallet(context: Context, wallet: &WalletJson) -> Result<()> {
     extract_xpubs(&wallet.descriptor)?
         .iter()
-        .try_for_each(|xpub| check_compatibility(network, xpub.network))?;
-    let context = Context {
-        firma_datadir: datadir.to_string(),
-        network,
-        wallet_name: wallet.id.name.clone(),
-    };
-    context.save_wallet(&wallet)?;
-    let qr_bytes = serde_json::to_vec(&wallet)?;
+        .try_for_each(|xpub| check_compatibility(context.network, xpub.network))?;
 
-    let wallet_qr_path = context.path_for_wallet_qr()?;
-    common::qr::save_qrs(qr_bytes, wallet_qr_path, 14)?;
+    context.write(wallet)?;
     Ok(())
 }

@@ -1,7 +1,5 @@
-use firma::bitcoin::Network;
-use firma::bitcoincore_rpc::bitcoincore_rpc_json::bitcoin::blockdata::constants::genesis_block;
-use firma::bitcoincore_rpc::RpcApi;
 use firma::log::debug;
+use firma::online::{ConnectOptions, WalletNameOptions};
 use firma::serde_json::Value;
 use firma::*;
 use std::convert::TryInto;
@@ -20,6 +18,7 @@ struct FirmaOnlineCommands {
 
     #[structopt(subcommand)]
     subcommand: FirmaOnlineSubcommands,
+    //TODO add read_std or renamed encryption_key flag
 }
 
 #[derive(StructOpt, Debug)]
@@ -43,19 +42,10 @@ enum FirmaOnlineSubcommands {
     SendTx(firma::online::send_tx::SendTxOptions),
 
     /// View wallet balance
-    Balance,
+    Balance(WalletNameOptions),
 
     /// View wallet coins
-    ListCoins,
-}
-
-#[derive(StructOpt, Debug)]
-pub struct ConnectOptions {
-    #[structopt(flatten)]
-    pub context: NewContext,
-
-    #[structopt(flatten)]
-    pub daemon_opts: DaemonOpts,
+    ListCoins(WalletNameOptions),
 }
 
 fn main() -> Result<()> {
@@ -71,63 +61,22 @@ fn main() -> Result<()> {
 fn start() -> Result<Value> {
     init_logger();
     debug!("firma-online start");
-    let cmd = FirmaOnlineCommands::from_args();
+    let FirmaOnlineCommands {
+        context,
+        subcommand,
+    } = FirmaOnlineCommands::from_args();
 
-    if let Connect(ref opt) = &cmd.subcommand {
-        let client = opt.daemon_opts.make_client(None)?;
-        let genesis = client.get_block_hash(0)?;
-        if genesis != genesis_block(opt.context.network).block_hash() {
-            return Err(Error::IncompatibleNetworks);
+    match subcommand {
+        Connect(opt) => {
+            let _ = opt.daemon_opts.make_client(None, opt.context.network)?;
+            opt.context.write_daemon_opts(opt.daemon_opts)?.try_into()
         }
-        let value = serde_json::to_value(&opt.daemon_opts)?;
-        let vec = serde_json::to_vec_pretty(&opt.daemon_opts)?;
-        let mut path = expand_tilde(&opt.context.firma_datadir)?;
-        path.push(opt.context.network.to_string());
-        std::fs::create_dir(&path)?;
-        path.push("daemon_opts.json");
-        debug!("writing daemon_opts.json in {:?}", path);
-        std::fs::write(&path, vec)
-            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
-        return Ok(value);
-    }
-
-    let daemon_opts = cmd.context.load_daemon_opts()?;
-
-    let wallet = Wallet::new(
-        daemon_opts.make_client(Some(cmd.context.wallet_name.to_string()))?,
-        cmd.context.clone(),
-    );
-
-    if let CreateWallet(_) = cmd.subcommand {
-        // do nothing, I need the else branch (!matches!() require too recent rust version)
-    } else {
-        wallet.load_if_unloaded(&cmd.context.wallet_name)?;
-    }
-
-    let result = wallet.client.get_blockchain_info()?;
-
-    let node_network = match result.chain.as_ref() {
-        "main" => Network::Bitcoin,
-        "test" => Network::Testnet,
-        "regtest" => Network::Regtest,
-        _ => return Err("Unrecognized network".into()),
-    };
-    if node_network != cmd.context.network {
-        return Err(format!(
-            "network of the bitcoin node {} does not match used one {}",
-            node_network, cmd.context.network
-        )
-        .into());
-    }
-
-    match cmd.subcommand {
-        CreateWallet(ref opt) => wallet.create(&opt, result.blocks)?.try_into(),
-        GetAddress(ref opt) => wallet.get_address(opt)?.try_into(),
-        CreateTx(ref opt) => wallet.create_tx(opt)?.try_into(),
-        SendTx(ref opt) => wallet.send_tx(opt)?.try_into(),
-        Balance => wallet.balance()?.try_into(),
-        Rescan(ref opt) => Ok(wallet.rescan(opt)?),
-        ListCoins => wallet.list_coins()?.try_into(),
-        Connect(_) => unreachable!(),
+        CreateWallet(opt) => context.create(&opt)?.try_into(),
+        GetAddress(opt) => context.get_address(&opt)?.try_into(),
+        CreateTx(opt) => context.create_tx(&opt)?.try_into(),
+        SendTx(opt) => context.send_tx(&opt)?.try_into(),
+        Balance(opt) => context.balance(&opt)?.try_into(),
+        Rescan(opt) => Ok(context.rescan(&opt)?),
+        ListCoins(opt) => context.list_coins(&opt)?.try_into(),
     }
 }

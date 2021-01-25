@@ -1,12 +1,7 @@
 use crate::offline::print::pretty_print;
-use crate::offline::sign::read_key;
-use crate::offline::sign_wallet::verify_wallet_internal;
 use crate::*;
-use bitcoin::secp256k1::Secp256k1;
-use bitcoin::Network;
 use log::{debug, warn};
 use serde::{Deserialize, Serialize};
-use std::iter::once;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -25,83 +20,83 @@ pub struct ListOptions {
     pub encryption_keys: Vec<StringEncoding>,
 }
 
-pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOutput> {
-    let path = PathBuilder::new(datadir, network, opt.kind, None).type_path()?;
-    let mut list = ListOutput::default();
+impl Context {
+    pub fn list(&self, opt: &ListOptions) -> Result<ListOutput> {
+        let mut path = self.base()?;
+        path.push(opt.kind.dir());
+        let mut list = ListOutput::default();
 
-    if path.is_dir() {
-        debug!("listing {:?}", path);
-        for entry in std::fs::read_dir(path)? {
-            let entry = entry?;
-            let mut path = entry.path();
-            match opt.kind {
-                Kind::Wallet => {
-                    let secp = Secp256k1::verification_only();
-                    path.push("descriptor.json");
-                    debug!("try to read wallet {:?}", path);
-                    match read_wallet(&path) {
-                        Ok(wallet) => {
-                            debug!("read {:?}", wallet.id.name);
-                            let wallet_path = path.clone();
-                            let mut wallet_output = CreateWalletOutput {
-                                wallet,
-                                wallet_file: path.clone(),
-                                signature: None,
-                            };
-
-                            path.set_file_name("signature.json");
-                            let signature_path = path.clone();
-
-                            if !opt.verify_wallets_signatures {
+        if path.is_dir() {
+            debug!("listing {:?}", path);
+            for entry in std::fs::read_dir(path)? {
+                let entry = entry?;
+                let path = entry.path();
+                let name = path.file_name().unwrap().to_str().unwrap();
+                match opt.kind {
+                    Kind::Wallet => {
+                        //let secp = Secp256k1::verification_only();
+                        let wallet: Result<WalletJson> = self.read(name);
+                        match wallet {
+                            Ok(wallet) => {
+                                debug!("read {:?}", wallet.id.name);
+                                let _wallet_path = path.clone();
+                                let wallet_output = CreateWalletOutput {
+                                    wallet,
+                                    wallet_file: path.clone(),
+                                    signature: None,
+                                };
                                 list.wallets.push(wallet_output);
-                            } else {
-                                match verify_wallet_internal(&wallet_path, &signature_path, &secp) {
-                                    Ok(result) => {
-                                        if result.verified {
-                                            wallet_output.signature = Some(result.signature);
-                                            list.wallets.push(wallet_output)
-                                        } else {
-                                            warn!("signature doesn't match")
+                                /*
+                                path.set_file_name("signature.json");
+                                let signature_path = path.clone();
+
+                                if !opt.verify_wallets_signatures {
+                                    list.wallets.push(wallet_output);
+                                } else {
+                                    match verify_wallet_internal(&wallet_path, &signature_path, &secp) {
+                                        Ok(result) => {
+                                            if result.verified {
+                                                wallet_output.signature = Some(result.signature);
+                                                list.wallets.push(wallet_output)
+                                            } else {
+                                                warn!("signature doesn't match")
+                                            }
                                         }
+                                        Err(e) => warn!("wallet not added because {:?}", e),
                                     }
-                                    Err(e) => warn!("wallet not added because {:?}", e),
                                 }
+
+                                 */
+                            }
+                            Err(e) => {
+                                warn!("Can't read wallet {:?}", e);
                             }
                         }
-                        Err(e) => {
-                            warn!("Can't read wallet {:?}", e);
+                    }
+                    Kind::PSBT => {
+                        let psbt_json: Result<PsbtJson> = self.read(name);
+                        match psbt_json {
+                            Ok(psbt_json) => {
+                                let (_, psbt) = psbt_from_base64(&psbt_json.psbt)?;
+                                let pretty = pretty_print(&psbt, self.network, &[])?;
+                                let qr_files = read_qrs(&path)?;
+                                let psbt_out = PsbtJsonOutput {
+                                    psbt: psbt_json,
+                                    signatures: signatures_needed(&pretty.inputs),
+                                    unsigned_txid: psbt.global.unsigned_tx.txid(),
+                                    file: path.clone(),
+                                    qr_files,
+                                };
+                                list.psbts.push(psbt_out);
+                            }
+                            Err(e) => {
+                                warn!("Can't read psbt {:?}", e);
+                            }
                         }
                     }
-                }
-                Kind::PSBT => {
-                    path.push("psbt.json");
-                    debug!("try to read psbt {:?}", path);
-                    match read_psbt_json(&path) {
-                        Ok(psbt_json) => {
-                            let (_, psbt) = psbt_from_base64(&psbt_json.psbt)?;
-                            let pretty = pretty_print(&psbt, network, &[])?;
-                            let qr_files = read_qrs(&path)?;
-                            let psbt_out = PsbtJsonOutput {
-                                psbt: psbt_json,
-                                signatures: signatures_needed(&pretty.inputs),
-                                unsigned_txid: psbt.global.unsigned_tx.txid(),
-                                file: path.clone(),
-                                qr_files,
-                            };
-                            list.psbts.push(psbt_out);
-                        }
-                        Err(e) => {
-                            warn!("Can't read psbt {:?}", e);
-                        }
-                    }
-                }
-                Kind::Key => {
-                    path.push("PRIVATE.json");
-                    debug!("try to read key {:?}", path);
-                    let keys_iter = opt.encryption_keys.iter().map(Option::Some);
-                    for encryption_key in keys_iter.chain(once(None)) {
-                        debug!("using encryption_key {:?}", encryption_key);
-                        match read_key(&path, encryption_key) {
+                    Kind::MasterSecret => {
+                        let key: Result<MasterSecretJson> = self.read(name);
+                        match key {
                             Ok(key) => {
                                 let key = MasterKeyOutput {
                                     key,
@@ -116,13 +111,37 @@ pub fn list(datadir: &str, network: Network, opt: &ListOptions) -> Result<ListOu
                                 debug!("Can't read key {:?} because {:?}", &path, e);
                             }
                         }
+                        /*path.push("PRIVATE.json");
+                        debug!("try to read key {:?}", path);
+                        let keys_iter = opt.encryption_keys.iter().map(Option::Some);
+                        for encryption_key in keys_iter.chain(once(None)) {
+                            debug!("using encryption_key {:?}", encryption_key);
+                            match read_key(&path, encryption_key) {
+                                Ok(key) => {
+                                    let key = MasterKeyOutput {
+                                        key,
+                                        private_file: path.clone(),
+                                        public_file: None,
+                                    };
+                                    list.keys.push(key);
+                                    debug!("key decrypted");
+                                    break;
+                                }
+                                Err(e) => {
+                                    debug!("Can't read key {:?} because {:?}", &path, e);
+                                }
+                            }
+                        }
+
+                         */
                     }
+                    _ => unimplemented!(),
                 }
             }
         }
-    }
 
-    Ok(list)
+        Ok(list)
+    }
 }
 
 fn signatures_needed(inputs: &[TxIn]) -> String {
@@ -141,9 +160,10 @@ fn read_qrs(_path: &PathBuf) -> Result<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::list::{list, ListOptions};
+    use crate::common::json::identifier::Kind;
+    use crate::common::list::ListOptions;
     use crate::offline::random::RandomOptions;
-    use crate::Kind;
+    use crate::Context;
     use bitcoin::Network;
     use tempfile::TempDir;
 
@@ -154,16 +174,19 @@ mod tests {
 
         let key_name = "list".to_string();
         let rand_opts = RandomOptions::new(key_name);
-        let _key = crate::offline::random::create_key(&temp_dir_str, Network::Testnet, &rand_opts)
-            .unwrap();
+        let context = Context {
+            network: Network::Testnet,
+            firma_datadir: temp_dir_str,
+        };
+        let _key = context.create_key(&rand_opts).unwrap();
 
-        let kind = Kind::Key;
+        let kind = Kind::MasterSecret;
         let opt = ListOptions {
             kind,
             encryption_keys: vec![],
             verify_wallets_signatures: false,
         };
-        let result = list(&temp_dir_str, Network::Testnet, &opt);
+        let result = context.list(&opt);
         assert!(result.is_ok());
         let list = result.unwrap();
         assert!(list

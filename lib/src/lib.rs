@@ -7,12 +7,10 @@ pub mod online;
 #[cfg(target_os = "android")]
 mod android;
 
-pub use common::cmd::*;
+pub use common::context::*;
 pub use common::error::*;
-pub use common::file::*;
 pub use common::json::*;
 pub use common::*;
-pub use online::Wallet;
 
 // Re-exports
 pub use bitcoin;

@@ -12,6 +12,10 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug, Default)]
 pub struct GetAddressOptions {
+    /// The name of the wallet to be created
+    #[structopt(long = "wallet-name")]
+    pub wallet_name: String,
+
     /// Explicitly specify address derivation index (by default taken from .firma and incremented)
     #[structopt(long)]
     pub index: Option<u32>,
@@ -22,37 +26,37 @@ pub struct GetAddressOptions {
     pub qr_mode: QrMode,
 }
 
-impl Wallet {
-    pub fn get_address(&self, opts: &GetAddressOptions) -> Result<GetAddressOutput> {
-        let (wallet, mut indexes) = self.context.load_wallet_and_index()?;
+impl Context {
+    pub fn get_address(&self, opt: &GetAddressOptions) -> Result<GetAddressOutput> {
+        let client = self.make_client(&opt.wallet_name)?;
+        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        let mut indexes: IndexesJson = self.read(&opt.wallet_name)?;
 
-        let index = opts.index.unwrap_or(indexes.main);
+        let index = opt.index.unwrap_or(indexes.main);
         let descriptor = wallet.descriptor;
 
         info!("Creating address at index {} for {}", index, &descriptor);
 
-        let addresses = self
-            .client
-            .derive_addresses(&descriptor, Some([index, index]))?;
+        let addresses = client.derive_addresses(&descriptor, Some([index, index]))?;
 
         let address = addresses.first().ok_or(Error::MissingAddress)?.clone();
-        if address.network != self.context.network {
+        if address.network != self.network {
             return Err("address returned is not on the same network as given".into());
         }
         info!("{}", address);
 
         let derive_opts = DeriveAddressOpts { descriptor, index };
         let mut derive_address =
-            crate::offline::descriptor::derive_address(self.context.network, &derive_opts)?;
+            crate::offline::descriptor::derive_address(self.network, &derive_opts)?;
         assert_eq!(
             derive_address.address, address,
             "address generated from the node differs from the one generated from miniscript"
         );
 
         indexes.main += 1;
-        self.context.save_index(&indexes)?;
+        self.write(&indexes)?;
 
-        match opts.qr_mode {
+        match opt.qr_mode {
             QrMode::Text { inverted } => {
                 let qr = addr_to_qr(&derive_address.address)?;
                 let (mut output_file, name) = addr_to_file(&derive_address.address, "txt")?;
@@ -74,7 +78,6 @@ impl Wallet {
         Ok(derive_address)
     }
 }
-
 fn addr_to_file(address: &Address, ext: &str) -> Result<(File, String)> {
     let name = format!("{}.{}", address.to_string(), ext);
     Ok((File::create(&name)?, name))

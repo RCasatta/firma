@@ -27,6 +27,7 @@ pub enum Error {
     MissingRescanUpTo,
     MissingHex,
     FileNotFoundOrCorrupt(PathBuf, String),
+    CannotOverwrite(PathBuf),
     MissingName,
     NeedAtLeastOne,
     CannotRetrieveHomeDir,
@@ -151,6 +152,7 @@ impl fmt::Display for Error {
             }
             Error::MissingEncryptionKey => write!(f, "MissingEncryptionKey"),
             Error::InvalidMessageSignature => write!(f, "Invalid message signature"),
+            Error::CannotOverwrite(p) => write!(f, "Cannot overwrite {:?}", p),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

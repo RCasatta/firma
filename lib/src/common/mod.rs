@@ -1,4 +1,3 @@
-use crate::common::json::identifier::IdKind;
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Instruction::PushBytes;
@@ -10,9 +9,8 @@ use std::fs::OpenOptions;
 use std::io::BufWriter;
 use std::io::Write;
 
-pub mod cmd;
+pub mod context;
 pub mod error;
-pub mod file;
 pub mod json;
 pub mod list;
 pub mod mnemonic;
@@ -57,7 +55,7 @@ pub fn init_logger() {
 
 impl From<MasterSecretJson> for PublicMasterKey {
     fn from(private: MasterSecretJson) -> Self {
-        let id = private.id.with_kind(IdKind::DescriptorPublicKey);
+        let id = private.id.with_kind(Kind::DescriptorPublicKey);
         PublicMasterKey {
             xpub: private.xpub,
             id,

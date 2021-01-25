@@ -1,10 +1,12 @@
+use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::OutPoint;
 use bitcoincore_rpc::RpcApi;
 
-impl Wallet {
-    pub fn list_coins(&self) -> Result<ListCoinsOutput> {
-        let mut list_coins = self.client.list_unspent(Some(0), None, None, None, None)?;
+impl Context {
+    pub fn list_coins(&self, opt: &WalletNameOptions) -> Result<ListCoinsOutput> {
+        let client = self.make_client(&opt.wallet_name)?;
+        let mut list_coins = client.list_unspent(Some(0), None, None, None, None)?;
         list_coins.sort_by(|a, b| a.amount.cmp(&b.amount));
         let mut coins = vec![];
         for utxo in list_coins.iter() {

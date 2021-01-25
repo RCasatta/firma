@@ -1,4 +1,4 @@
-use crate::common::json::identifier::{IdKind, Identifier};
+use crate::common::json::identifier::{Identifier, Kind};
 //use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
 use crate::offline::print::pretty_print;
 use crate::*;
@@ -32,13 +32,6 @@ pub struct SignOptions {
     /// PSBT name to sign
     #[structopt(short, long)]
     pub psbt_name: String,
-
-    #[structopt(flatten)]
-    pub context: NewContext,
-
-    /// QR code max version to use (max size)
-    #[structopt(long, default_value = "14")]
-    pub qr_version: i16,
 
     /// derivations to consider if psbt doesn't contain HD paths
     #[structopt(short, long, default_value = "1000")]
@@ -78,7 +71,7 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions) -> Result<()> {
+pub fn save_psbt_options(context: &Context, opt: &SavePSBTOptions) -> Result<()> {
     info!("save_psbt_options {:?}", opt);
     let bytes = opt
         .psbt
@@ -86,8 +79,12 @@ pub fn save_psbt_options(datadir: &str, network: Network, opt: &SavePSBTOptions)
         .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
     let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
 
-    save_psbt(network, &mut psbt, &datadir)?;
+    save_psbt(context, &mut psbt)?;
     Ok(())
+}
+
+fn read_psbt_json(_p: &PathBuf) -> Result<PsbtJson> {
+    unimplemented!();
 }
 
 /// Search existing psbt, if one matches the txid, return that name, otherwise it gives a new unused name
@@ -96,6 +93,7 @@ fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
         let entry = entry?;
         let mut path = entry.path();
         path.push("psbt.json");
+        //TODO use list
         if let Ok(psbt_json) = read_psbt_json(&path) {
             if let Ok((_, psbt)) = psbt_from_base64(&psbt_json.psbt) {
                 if &psbt.global.unsigned_tx.txid() == txid {
@@ -119,12 +117,12 @@ fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
 
 /// psbts_dir is general psbts dir, name is extracted from PSBT
 /// if file exists a PSBT merge will be attempted
-pub fn save_psbt(network: Network, psbt: &mut PSBT, datadir: &str) -> Result<String> {
+pub fn save_psbt(context: &Context, psbt: &mut PSBT) -> Result<String> {
     debug!("save_psbt");
 
     let name = get_psbt_name(psbt).unwrap_or_else(|| {
-        let fake_id = Identifier::new(network, IdKind::PSBT, "");
-        let psbts_dir = fake_id.as_path_buf(datadir, false).unwrap(); // TODO remove unwrap
+        let fake_id = Identifier::new(context.network, Kind::PSBT, "");
+        let psbts_dir = fake_id.as_path_buf(&context.firma_datadir, false).unwrap(); // TODO remove unwrap
         debug!("psbts_dir {:?}", psbts_dir);
         let new_name = get_name(&psbts_dir, &psbt.global.unsigned_tx.txid()).unwrap(); // TODO remove unwrap
         info!("PSBT without name, giving one: {}", new_name);
@@ -137,13 +135,13 @@ pub fn save_psbt(network: Network, psbt: &mut PSBT, datadir: &str) -> Result<Str
     });
 
     debug!("psbt_name: {}", name);
-    let id = Identifier::new(network, IdKind::PSBT, &name);
+    let id = Identifier::new(context.network, Kind::PSBT, &name);
     let psbt = psbt_to_base64(&psbt).1;
     let psbt_json = PsbtJson {
         id: id.clone(),
         psbt,
     };
-    id.write(datadir, &psbt_json)?;
+    context.write(&psbt_json)?;
     debug!("finish");
     Ok(name)
 }
@@ -372,41 +370,42 @@ impl PSBTSigner {
     }
 }
 
-pub fn start(opt: &SignOptions) -> Result<PsbtPrettyPrint> {
-    debug!("sign::start");
-    let master_secret: MasterSecretJson = opt.context.read(IdKind::MasterSecret, &opt.key_name)?;
-    debug!("read key {}", master_secret.id.name);
-    let wallet: WalletJson = opt.context.read(IdKind::Wallet, &opt.wallet_name)?;
-    debug!("read wallet {}", wallet.id.name);
-    let mut psbt: PsbtJson = opt.context.read(IdKind::PSBT, &opt.psbt_name)?;
-    debug!("read psbt {}", wallet.id.name);
-    let mut psbt_signer = PSBTSigner::new(
-        &psbt.psbt()?,
-        &master_secret.xprv,
-        opt.context.network,
-        opt.total_derivations,
-        opt.allow_any_derivations,
-    )?;
+impl Context {
+    pub fn sign(&self, opt: &SignOptions) -> Result<PsbtPrettyPrint> {
+        debug!("sign::start");
+        let master_secret: MasterSecretJson = self.read(&opt.key_name)?;
+        debug!("read key {}", master_secret.id.name);
+        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        debug!("read wallet {}", wallet.id.name);
+        let mut psbt: PsbtJson = self.read(&opt.psbt_name)?;
+        debug!("read psbt {}", wallet.id.name);
+        let mut psbt_signer = PSBTSigner::new(
+            &psbt.psbt()?,
+            &master_secret.xprv,
+            self.network,
+            opt.total_derivations,
+            opt.allow_any_derivations,
+        )?;
 
-    debug!("{:?}", psbt_signer);
-    //TODO refuse to sign if my address has first level different from 0/1 and more than one level?
-    let sign_result = psbt_signer.sign()?;
-    let mut psbt_print = psbt_signer.pretty_print(&[wallet])?;
+        debug!("{:?}", psbt_signer);
+        //TODO refuse to sign if my address has first level different from 0/1 and more than one level?
+        let sign_result = psbt_signer.sign()?;
+        let mut psbt_print = psbt_signer.pretty_print(&[wallet])?;
 
-    if sign_result.added_paths {
-        psbt_print.info.push("Added paths".to_string());
+        if sign_result.added_paths {
+            psbt_print.info.push("Added paths".to_string());
+        }
+        if sign_result.signed {
+            psbt.set_psbt(&psbt_signer.psbt);
+            self.write(&psbt)?;
+            psbt_print.info.push("Added signatures".to_string());
+        } else {
+            psbt_print.info.push("No signature added".to_string());
+        }
+
+        Ok(psbt_print)
     }
-    if sign_result.signed {
-        psbt.set_psbt(&psbt_signer.psbt);
-        psbt.id.write(&opt.context.firma_datadir, &psbt)?; //TODO add write in context?
-        psbt_print.info.push("Added signatures".to_string());
-    } else {
-        psbt_print.info.push("No signature added".to_string());
-    }
-
-    Ok(psbt_print)
 }
-
 pub fn read_key(
     path: &PathBuf,
     _encryption_key: Option<&StringEncoding>,

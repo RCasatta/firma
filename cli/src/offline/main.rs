@@ -1,6 +1,5 @@
-use firma::bitcoin::Network;
 use firma::serde_json::{self, Value};
-use firma::{common, init_logger, offline, Error, Result, StringEncoding, ToJson};
+use firma::{common, init_logger, offline, Context, Error, Result, StringEncoding, ToJson};
 use std::convert::TryInto;
 use std::io;
 use std::io::Read;
@@ -11,22 +10,16 @@ use FirmaOfflineSubcommands::*;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "firma-offline")]
 struct FirmaOfflineCommands {
-    /// Network (bitcoin, testnet, regtest)
-    #[structopt(short, long, default_value = "testnet")]
-    network: Network,
+    #[structopt(flatten)]
+    context: Context,
 
-    /// Directory where wallet info are saved
-    #[structopt(short, long, default_value = "~/.firma/")]
-    firma_datadir: String,
+    #[structopt(subcommand)]
+    subcommand: FirmaOfflineSubcommands,
 
     /// Flag to indicate that input is expected in standard input.
     /// Since reading stdin is locking, we need this flag to have it optionally
     #[structopt(long)]
     pub read_stdin: bool,
-
-    //TODO ContextOffline with network, json, firma_datadir
-    #[structopt(subcommand)] // Note that we mark a field as a subcommand
-    subcommand: FirmaOfflineSubcommands,
 }
 
 #[derive(StructOpt, Debug)]
@@ -95,17 +88,20 @@ fn main() -> Result<()> {
 }
 
 fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
-    let net = cmd.network;
-    let datadir = &cmd.firma_datadir;
-    match &cmd.subcommand {
-        Dice(opt) => offline::dice::roll(datadir, net, &opt)?.try_into(),
-        Sign(opt) => offline::sign::start(&opt)?.try_into(),
-        Random(opt) => offline::random::create_key(datadir, net, &opt)?.try_into(),
-        Print(opt) => offline::print::start(datadir, net, &opt)?.try_into(),
-        Restore(opt) => offline::restore::start(datadir, net, &opt)?.try_into(),
-        List(opt) => common::list::list(datadir, net, &opt)?.try_into(),
-        SignWallet(opt) => offline::sign_wallet::sign_wallet(datadir, net, &opt)?.try_into(),
-        VerifyWallet(opt) => offline::sign_wallet::verify_wallet(datadir, net, &opt)?.try_into(),
-        Decrypt(opt) => offline::decrypt::decrypt::<Value>(&opt),
+    let FirmaOfflineCommands {
+        context,
+        subcommand,
+        read_stdin: _,
+    } = cmd;
+    match &subcommand {
+        Dice(opt) => context.roll(opt)?.try_into(),
+        Sign(opt) => context.sign(opt)?.try_into(),
+        Random(opt) => context.create_key(opt)?.try_into(),
+        Print(opt) => context.print(opt)?.try_into(),
+        Restore(opt) => offline::restore::start(context, opt)?.try_into(),
+        List(opt) => context.list(opt)?.try_into(),
+        SignWallet(opt) => context.sign_wallet(opt)?.try_into(),
+        VerifyWallet(opt) => context.verify_wallet(opt)?.try_into(),
+        Decrypt(opt) => offline::decrypt::decrypt::<Value>(opt),
     }
 }

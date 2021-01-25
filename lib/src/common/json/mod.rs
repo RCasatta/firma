@@ -1,9 +1,9 @@
 pub mod identifier;
 
-use crate::common::json::identifier::{IdKind, Identifier};
+use crate::common::json::identifier::{Identifiable, Identifier, Overwriteable, WhichKind};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
-use crate::{psbt_from_base64, psbt_to_base64, PSBT};
+use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
@@ -15,7 +15,11 @@ use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 
+pub use crate::common::json::identifier::Kind;
+
 //TODO remove json suffix, use it with json namespace
+
+// https://dreampuf.github.io/GraphvizOnline/#digraph%20G%20%7B%0A%20%20%22.firma%22%20-%3E%20%22%5Bnetwork%5D%22%0A%20%20%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20wallets%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20keys%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20psbts%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20%22daemon_opts%22%20%0A%20%20%0A%20%20keys%20-%3E%20%22%5Bkey%20name%5D%22%0A%20%20%22master_secret%22%20%5Bshape%3DSquare%5D%0A%20%20%22descriptor_public_key%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22master_secret%22%20%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22descriptor_public_key%22%20%0A%20%20%0A%20%20wallets%20-%3E%20%22%5Bwallet%20name%5D%22%0A%20%20%22wallet%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_indexes%22%20%5Bshape%3DSquare%5D%0A%20%20%22daemon_opts%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_signature%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_indexes%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_signature%22%20%0A%20%20%0A%20%20psbts%20-%3E%20%22%5Bpsbt%20name%5D%22%0A%20%20%22psbt%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bpsbt%20name%5D%22%20-%3E%20%22psbt%22%20%0A%7D
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct WalletJson {
@@ -126,6 +130,7 @@ pub struct CreateTxOutput {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct CreateWalletOutput {
+    // TODO remove all *Output?
     pub wallet_file: PathBuf,
     pub wallet: WalletJson,
     pub signature: Option<WalletSignatureJson>,
@@ -206,7 +211,6 @@ pub struct Size {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SavePSBTOptions {
     pub psbt: StringEncoding,
-    pub qr_version: i16,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -301,7 +305,7 @@ impl From<(&PSBT, Network)> for PsbtJson {
         let name = get_psbt_name(psbt).expect("PSBT without name"); //TODO
         PsbtJson {
             psbt: base64,
-            id: Identifier::new(network, IdKind::PSBT, &name),
+            id: Identifier::new(network, Kind::PSBT, &name),
         }
     }
 }
@@ -346,7 +350,7 @@ impl MasterSecretJson {
             xpub,
             dice: None,
             fingerprint: xpub.fingerprint(),
-            id: Identifier::new(network, IdKind::MasterSecret, name),
+            id: Identifier::new(network, Kind::MasterSecret, name),
         })
     }
 
@@ -359,7 +363,7 @@ impl MasterSecretJson {
             mnemonic: None,
             dice: None,
             fingerprint: xpub.fingerprint(),
-            id: Identifier::new(xprv.network, IdKind::MasterSecret, name),
+            id: Identifier::new(xprv.network, Kind::MasterSecret, name),
         }
     }
 }
@@ -376,7 +380,6 @@ macro_rules! impl_try_into {
     };
 }
 impl_try_into!(MasterKeyOutput);
-impl_try_into!(PsbtPrettyPrint);
 impl_try_into!(CreateWalletOutput);
 impl_try_into!(CreateTxOutput);
 impl_try_into!(SendTxOutput);
@@ -384,8 +387,41 @@ impl_try_into!(BalanceOutput);
 impl_try_into!(ListCoinsOutput);
 impl_try_into!(GetAddressOutput);
 impl_try_into!(ListOutput);
-impl_try_into!(WalletSignatureJson);
+
+impl_try_into!(PsbtPrettyPrint);
 impl_try_into!(VerifyWalletResult);
+impl_try_into!(DaemonOpts);
+
+impl_try_into!(WalletSignatureJson);
+impl_try_into!(MasterSecretJson);
+impl_try_into!(WalletJson);
+
+macro_rules! impl_traits {
+    ( $for:ty, $val:expr, $k:expr  ) => {
+        impl Identifiable for $for {
+            fn id(&self) -> &Identifier {
+                &self.id
+            }
+        }
+        impl Overwriteable for $for {
+            fn can_overwrite() -> bool {
+                $val
+            }
+        }
+        impl WhichKind for $for {
+            fn kind() -> Kind {
+                $k
+            }
+        }
+    };
+}
+
+impl_traits!(WalletSignatureJson, false, Kind::WalletSignature);
+impl_traits!(MasterSecretJson, false, Kind::MasterSecret);
+impl_traits!(WalletJson, false, Kind::Wallet);
+impl_traits!(IndexesJson, true, Kind::WalletIndexes);
+impl_traits!(PublicMasterKey, false, Kind::DescriptorPublicKey);
+impl_traits!(PsbtJson, true, Kind::PSBT);
 
 #[cfg(test)]
 mod tests {

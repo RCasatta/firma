@@ -27,10 +27,6 @@ pub struct DiceOptions {
     #[structopt(short, required = true)]
     pub launches: Vec<u32>,
 
-    /// QR code max version to use (max size)
-    #[structopt(long, default_value = "14")]
-    pub qr_version: i16,
-
     /// in CLI it is populated from standard input
     #[structopt(skip)]
     pub encryption_key: Option<StringEncoding>,
@@ -80,19 +76,17 @@ impl DiceOptions {
     }
 }
 
-pub fn roll(datadir: &str, network: Network, opt: &DiceOptions) -> Result<MasterKeyOutput> {
-    opt.validate()?;
+impl Context {
+    pub fn roll(&self, opt: &DiceOptions) -> Result<MasterSecretJson> {
+        opt.validate()?;
 
-    let master_key = calculate_key(&opt.launches, opt.faces as u32, network, &opt.key_name)?;
-    let output = save_keys(
-        datadir,
-        network,
-        &opt.key_name,
-        master_key,
-        opt.encryption_key.as_ref(),
-    )?;
+        let master_key =
+            calculate_key(&opt.launches, opt.faces as u32, self.network, &opt.key_name)?;
 
-    Ok(output)
+        self.write_keys(&master_key)?;
+
+        Ok(master_key)
+    }
 }
 
 fn multiply_dice_launches(launches: &[u32], base: u32) -> BigUint {
@@ -216,22 +210,25 @@ mod tests {
     #[test]
     fn test_roll() {
         let temp_dir = TempDir::new().unwrap();
-        let temp_dir_str = format!("{}/", temp_dir.path().display());
+
         let launches = vec![2u32; 29];
         let mut opt = DiceOptions {
             faces: Base::_20,
             bits: Bits::_128,
             key_name: "a".to_string(),
             launches,
-            qr_version: 14,
             encryption_key: None,
         };
+        let context = Context {
+            network: Network::Testnet,
+            firma_datadir: format!("{}/", temp_dir.path().display()),
+        };
 
-        roll(&temp_dir_str, Network::Testnet, &opt).unwrap();
+        context.roll(&opt).unwrap();
 
         opt.launches = vec![1u32; 28];
         opt.key_name = "b".to_string();
-        let result = roll(&temp_dir_str, Network::Testnet, &opt);
+        let result = context.roll(&opt);
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -240,7 +237,7 @@ mod tests {
 
         opt.launches = vec![21u32; 29];
         opt.key_name = "c".to_string();
-        let result = roll(&temp_dir_str, Network::Testnet, &opt);
+        let result = context.roll(&opt);
         assert_eq!(
             result.unwrap_err().to_string(),
             "Got 21 but must be from 1 to 20 included"
@@ -249,12 +246,12 @@ mod tests {
         let launches = vec![2u32; 29];
         opt.launches = launches;
         opt.key_name = "d".to_string();
-        let master_key = roll(&temp_dir_str, Network::Bitcoin, &opt).unwrap();
+        let master_key = context.roll(&opt).unwrap();
         assert_eq!(
-            master_key.key.dice.unwrap().value,
+            master_key.dice.unwrap().value,
             "2825636378947368421052631578947368421"
         );
-        assert_eq!("xprv9s21ZrQH143K3yGb6gtghzHH4MPaEHGPN48sxoyYd4EdrQcaSVP2dxZS2vRwoKny1KRS5xMMyGunA3WkToah7ZmJ2fFtGK8vBBBiBkVFmTM", master_key.key.xprv.to_string());
+        assert_eq!("tprv8ZgxMBicQKsPenW7mFkBsduGNUonToJPhc3zqEQ172j7e1MfRrin9hvsx6bbohBHNkxD63y88dVacu4Vb1vdvd2tZJUBvfry6Gw8dTyM21S", master_key.xprv.to_string());
     }
 
     #[test]
