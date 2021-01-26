@@ -25,8 +25,5 @@ pub struct PathOptions {
 #[derive(StructOpt, Debug)]
 pub struct ConnectOptions {
     #[structopt(flatten)]
-    pub context: Context,
-
-    #[structopt(flatten)]
     pub daemon_opts: DaemonOpts,
 }

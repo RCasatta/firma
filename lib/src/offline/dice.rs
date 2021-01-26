@@ -26,10 +26,6 @@ pub struct DiceOptions {
     /// Value of the die launch, to be repeated multiple times
     #[structopt(short, required = true)]
     pub launches: Vec<u32>,
-
-    /// in CLI it is populated from standard input
-    #[structopt(skip)]
-    pub encryption_key: Option<StringEncoding>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -201,28 +197,22 @@ impl<'de> Deserialize<'de> for Bits {
 
 #[cfg(test)]
 mod tests {
+    use crate::common::context::tests::TestContext;
     use crate::offline::dice::*;
     use crate::MasterSecretJson;
     use bitcoin::Network;
     use num_bigint::BigUint;
-    use tempfile::TempDir;
 
     #[test]
     fn test_roll() {
-        let temp_dir = TempDir::new().unwrap();
-
         let launches = vec![2u32; 29];
         let mut opt = DiceOptions {
             faces: Base::_20,
             bits: Bits::_128,
             key_name: "a".to_string(),
             launches,
-            encryption_key: None,
         };
-        let context = Context {
-            network: Network::Testnet,
-            firma_datadir: format!("{}/", temp_dir.path().display()),
-        };
+        let context = TestContext::new();
 
         context.roll(&opt).unwrap();
 

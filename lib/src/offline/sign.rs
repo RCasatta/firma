@@ -40,11 +40,6 @@ pub struct SignOptions {
     /// Allow any derivations (to avoid ramson attacks, by default only 2 levels are allowed, and the first level must be 0 or 1)
     #[structopt(long)]
     pub allow_any_derivations: bool,
-
-    /// Optional encryption key for saving the key file encrypted
-    /// in CLI it is populated from standard input
-    #[structopt(skip)]
-    pub encryption_key: Option<StringEncoding>,
 }
 
 pub struct SignResult {
@@ -122,7 +117,7 @@ pub fn save_psbt(context: &Context, psbt: &mut PSBT) -> Result<String> {
 
     let name = get_psbt_name(psbt).unwrap_or_else(|| {
         let fake_id = Identifier::new(context.network, Kind::PSBT, "");
-        let psbts_dir = fake_id.as_path_buf(&context.firma_datadir, false).unwrap(); // TODO remove unwrap
+        let psbts_dir = fake_id.as_path_buf(&context.datadir, false).unwrap(); // TODO remove unwrap
         debug!("psbts_dir {:?}", psbts_dir);
         let new_name = get_name(&psbts_dir, &psbt.global.unsigned_tx.txid()).unwrap(); // TODO remove unwrap
         info!("PSBT without name, giving one: {}", new_name);

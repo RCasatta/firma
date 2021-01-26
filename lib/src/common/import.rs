@@ -1,12 +1,12 @@
 use crate::common::json::identifier::Identifier;
+use crate::offline::decrypt::decrypt;
 use crate::online::PathOptions;
 use crate::*;
 use serde_json::{from_value, Value};
 
 impl Context {
     pub fn import(&self, opt: &PathOptions) -> Result<Value> {
-        let bytes = std::fs::read(&opt.path)?;
-        let value = serde_json::from_slice(&bytes)?;
+        let value: Value = decrypt(opt, &self.encryption_key)?;
         self.import_json(value)
     }
 
@@ -40,7 +40,7 @@ mod tests {
             main: 0,
         };
         context.write(&i).unwrap();
-        let path = i.id.as_path_buf(&context.firma_datadir, false).unwrap();
+        let path = i.id.as_path_buf(&context.datadir, false).unwrap();
         let second_context = TestContext::new();
         assert!(second_context.read::<IndexesJson>(&i.id.name).is_err());
         second_context.import(&PathOptions { path }).unwrap();

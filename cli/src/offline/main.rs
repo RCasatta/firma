@@ -1,9 +1,8 @@
+use firma::log::debug;
 use firma::online::PathOptions;
 use firma::serde_json::{self, Value};
-use firma::{common, init_logger, offline, Context, Error, Result, StringEncoding, ToJson};
+use firma::{common, init_logger, offline, Context, Result, ToJson};
 use std::convert::TryInto;
-use std::io;
-use std::io::Read;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
 
@@ -17,10 +16,10 @@ struct FirmaOfflineCommands {
     #[structopt(subcommand)]
     subcommand: FirmaOfflineSubcommands,
 
-    /// Flag to indicate that input is expected in standard input.
-    /// Since reading stdin is locking, we need this flag to have it optionally
-    #[structopt(long)]
-    pub read_stdin: bool,
+    /// Flag to indicate usage of encryption/decryption when using CLI
+    /// when true, reading from stdin is expected and blocking
+    #[structopt(short, long)]
+    encrypt: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -44,7 +43,7 @@ enum FirmaOfflineSubcommands {
     List(common::list::ListOptions),
 
     /// Decrypt an encrypted file
-    Decrypt(offline::decrypt::DecryptOptions),
+    Decrypt(PathOptions),
 
     /// Sign a wallet json containing the descriptor to avoid tampering
     SignWallet(offline::sign_wallet::SignWalletOptions),
@@ -58,30 +57,24 @@ enum FirmaOfflineSubcommands {
 
 fn main() -> Result<()> {
     init_logger();
-    let mut cmd = FirmaOfflineCommands::from_args();
+    debug!("firma-offline start");
+    let cmd = FirmaOfflineCommands::from_args();
+    let FirmaOfflineCommands {
+        mut context,
+        subcommand,
+        encrypt,
+    } = cmd;
 
-    if cmd.read_stdin {
-        // read encryption key from stdin and initialize encryption_key field
-        let mut buffer = vec![];
-        io::stdin().read_to_end(&mut buffer)?;
-        let encoded = StringEncoding::new_base64(&buffer);
-        match &mut cmd.subcommand {
-            Random(opt) => opt.encryption_key = Some(encoded),
-            Sign(opt) => opt.encryption_key = Some(encoded),
-            Decrypt(opt) => opt.encryption_key = Some(encoded),
-            Dice(opt) => opt.encryption_key = Some(encoded),
-            Restore(opt) => opt.encryption_key = Some(encoded),
-            SignWallet(opt) => opt.encryption_key = Some(encoded),
-            List(opt) => opt.encryption_keys = vec![encoded],
-            _ => {
-                let err = Error::Generic("Subcommand doesn't need encryption key".to_string());
-                println!("{}", serde_json::to_string_pretty(&err.to_json())?);
-                return Ok(());
-            }
-        }
+    if encrypt {
+        context.read_encryption_key()?;
     }
 
-    let value = match launch_subcommand(&cmd) {
+    debug!(
+        "firma-offline context:{:?} encrypt:{} subcommand:{:?}",
+        context, encrypt, subcommand
+    );
+
+    let value = match launch_subcommand(&context, subcommand) {
         Ok(value) => value,
         Err(e) => e.to_json(),
     };
@@ -91,12 +84,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
-    let FirmaOfflineCommands {
-        context,
-        subcommand,
-        read_stdin: _,
-    } = cmd;
+fn launch_subcommand(context: &Context, subcommand: FirmaOfflineSubcommands) -> Result<Value> {
     match &subcommand {
         Dice(opt) => context.roll(opt)?.try_into(),
         Sign(opt) => context.sign(opt)?.try_into(),
@@ -107,6 +95,6 @@ fn launch_subcommand(cmd: &FirmaOfflineCommands) -> Result<Value> {
         SignWallet(opt) => context.sign_wallet(opt)?.try_into(),
         VerifyWallet(opt) => context.verify_wallet(opt)?.try_into(),
         Import(opt) => context.import(opt),
-        Decrypt(opt) => offline::decrypt::decrypt::<Value>(opt),
+        Decrypt(opt) => offline::decrypt::decrypt::<Value>(opt, &context.encryption_key),
     }
 }

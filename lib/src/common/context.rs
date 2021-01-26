@@ -1,4 +1,5 @@
 use crate::common::json::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
+use crate::offline::decrypt::EncryptionKey;
 use crate::*;
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::util::bip32::ExtendedPubKey;
@@ -8,6 +9,7 @@ use log::{debug, info};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -19,10 +21,11 @@ pub struct Context {
 
     /// Directory where wallet info are saved
     #[structopt(short, long, default_value = "~/.firma/")]
-    pub firma_datadir: String, //TODO rename datadir
+    pub datadir: String,
 
-                               //TODO phantom data for offline and online
-                               //TODO maybe encryption key should belong here
+    #[structopt(skip)]
+    pub encryption_key: Option<StringEncoding>,
+    //TODO phantom data for offline and online, is it doable when parsed from json/structopt?
 }
 
 #[derive(StructOpt, Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -46,9 +49,13 @@ impl DaemonOpts {
         };
         debug!("creating client with url {}", url);
         let client = Client::new(url, Auth::CookieFile(self.cookie_file.clone()))?;
-        let genesis = client.get_block_hash(0)?;
-        if genesis != genesis_block(network).block_hash() {
-            return Err(Error::IncompatibleNetworks);
+        let node_genesis = client.get_block_hash(0)?;
+        let firma_genesis = genesis_block(network).block_hash();
+        if node_genesis != firma_genesis {
+            return Err(Error::IncompatibleGenesis {
+                node: node_genesis,
+                firma: firma_genesis,
+            });
         }
         Ok(client)
     }
@@ -56,7 +63,7 @@ impl DaemonOpts {
 
 impl Context {
     pub fn base(&self) -> Result<PathBuf> {
-        let mut path = expand_tilde(&self.firma_datadir)?;
+        let mut path = expand_tilde(&self.datadir)?;
         path.push(self.network.to_string());
         if !path.exists() {
             std::fs::create_dir_all(&path)?;
@@ -64,20 +71,30 @@ impl Context {
         Ok(path)
     }
 
+    pub fn encryption_key(&self) -> Option<EncryptionKey> {
+        self.encryption_key
+            .as_ref()
+            .map(|k| k.get_exactly_32().unwrap())
+    }
+
     pub fn read<T>(&self, name: &str) -> Result<T>
     where
         T: Serialize + DeserializeOwned + Debug + WhichKind,
     {
-        Ok(Identifier::new(self.network, T::kind(), name).read(&self.firma_datadir)?)
+        Ok(Identifier::new(self.network, T::kind(), name)
+            .read(&self.datadir, &self.encryption_key)?)
     }
 
     pub fn write<T>(&self, value: &T) -> Result<()>
     where
-        T: Serialize + DeserializeOwned + Debug + Identifiable + Overwritable,
+        T: Serialize + DeserializeOwned + Debug + Clone + Identifiable + Overwritable,
     {
-        value
-            .id()
-            .write(&self.firma_datadir, value, T::can_overwrite())
+        value.id().write(
+            &self.datadir,
+            value,
+            T::can_overwrite(),
+            &self.encryption_key(),
+        )
     }
 
     pub fn write_keys(&self, master_key: &MasterSecretJson) -> Result<()> {
@@ -120,10 +137,19 @@ impl Context {
         let mut result = vec![];
         for name in names {
             let k: PublicMasterKey = Identifier::new(self.network, Kind::DescriptorPublicKey, name)
-                .read(&self.firma_datadir)?;
+                .read(&self.datadir, &self.encryption_key)?;
             result.push(k.xpub);
         }
         Ok(result)
+    }
+
+    pub fn read_encryption_key(&mut self) -> Result<()> {
+        // read encryption key from stdin and initialize encryption_key field
+        let mut buffer = vec![];
+        std::io::stdin().read_to_end(&mut buffer)?;
+        let encoded = StringEncoding::new_base64(&buffer);
+        self.encryption_key = Some(encoded);
+        Ok(())
     }
 }
 
@@ -183,7 +209,8 @@ pub mod tests {
             TestContext {
                 context: Context {
                     network,
-                    firma_datadir,
+                    datadir: firma_datadir,
+                    encryption_key: None,
                 },
                 datadir,
             }
@@ -205,7 +232,6 @@ pub mod tests {
         let key = context
             .create_key(&RandomOptions {
                 key_name: key_name.to_string(),
-                encryption_key: None,
             })
             .unwrap();
         assert!(

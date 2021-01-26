@@ -1,6 +1,6 @@
 use crate::mnemonic::Mnemonic;
 use crate::MasterSecretJson;
-use crate::{check_compatibility, Context, Result, StringEncoding};
+use crate::{check_compatibility, Context, Result};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -18,11 +18,6 @@ pub struct RestoreOptions {
     /// Kind of the secret material
     #[structopt(short, long)]
     pub nature: Nature,
-
-    /// Optional encryption key for saving the key file encrypted
-    /// in CLI it is populated from standard input
-    #[structopt(skip)]
-    pub encryption_key: Option<StringEncoding>,
 
     /// value of the secret component, could be xprv or seed in hex or bech32
     pub value: String,
@@ -68,21 +63,17 @@ pub fn start(context: &Context, opt: &RestoreOptions) -> Result<MasterSecretJson
 
 #[cfg(test)]
 mod tests {
+    use crate::common::context::tests::TestContext;
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
-    use crate::Context;
-    use bitcoin::Network;
-    use tempfile::TempDir;
 
     #[test]
     fn test_restore() {
-        let temp_dir = TempDir::new().unwrap();
-        let context = Context {
-            firma_datadir: format!("{}/", temp_dir.path().display()),
-            network: Network::Testnet,
-        };
+        let context = TestContext::new();
         let key_name_random = "test_restore_random".to_string();
-        let rand_opts = RandomOptions::new(key_name_random);
+        let rand_opts = RandomOptions {
+            key_name: key_name_random,
+        };
         let name_counter = 0;
 
         let key_orig = context.create_key(&rand_opts).unwrap();
@@ -92,7 +83,6 @@ mod tests {
             key_name,
             nature: Nature::Xprv,
             value: key_orig.xprv.to_string(),
-            encryption_key: None,
         };
         let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
         assert_eq!(key_orig.xprv, key_restored.xprv);
@@ -104,7 +94,6 @@ mod tests {
             key_name,
             nature: Nature::Mnemonic,
             value: key_orig.mnemonic.as_ref().unwrap().to_string(),
-            encryption_key: None,
         };
         let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
         assert_eq!(key_orig.xprv, key_restored.xprv);
@@ -118,7 +107,6 @@ mod tests {
             key_name,
             nature: Nature::Xprv,
             value: "X".to_string(),
-            encryption_key: None,
         };
         let result = crate::offline::restore::start(&context, &restore_opts);
         assert!(result.is_err());
@@ -128,7 +116,6 @@ mod tests {
             key_name,
             nature: Nature::Xprv,
             value: key_orig.xpub.to_string(),
-            encryption_key: None,
         };
         let result = crate::offline::restore::start(&context, &restore_opts);
         assert!(result.is_err());

@@ -18,7 +18,11 @@ struct FirmaOnlineCommands {
 
     #[structopt(subcommand)]
     subcommand: FirmaOnlineSubcommands,
-    //TODO add read_std or renamed encryption_key flag
+
+    /// Flag to indicate usage of encryption/decryption when using CLI
+    /// when true, reading from stdin is expected and blocking
+    #[structopt(short, long)]
+    encrypt: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -65,14 +69,24 @@ fn start() -> Result<Value> {
     init_logger();
     debug!("firma-online start");
     let FirmaOnlineCommands {
-        context,
+        mut context,
         subcommand,
+        encrypt,
     } = FirmaOnlineCommands::from_args();
+
+    if encrypt {
+        context.read_encryption_key()?;
+    }
+
+    debug!(
+        "firma-online context:{:?} encrypt:{} subcommand:{:?}",
+        context, encrypt, subcommand
+    );
 
     match subcommand {
         Connect(opt) => {
-            let _ = opt.daemon_opts.make_client(None, opt.context.network)?;
-            opt.context.write_daemon_opts(opt.daemon_opts)?.try_into()
+            let _ = opt.daemon_opts.make_client(None, context.network)?;
+            context.write_daemon_opts(opt.daemon_opts)?.try_into()
         }
         CreateWallet(opt) => context.create(&opt)?.try_into(),
         GetAddress(opt) => context.get_address(&opt)?.try_into(),

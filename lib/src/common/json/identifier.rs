@@ -1,4 +1,6 @@
-use crate::{expand_tilde, Error, Result};
+use crate::offline::decrypt::{decrypt, EncryptionKey, MaybeEncrypted};
+use crate::online::PathOptions;
+use crate::{expand_tilde, Error, Result, StringEncoding};
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::Network;
 use log::debug;
@@ -120,22 +122,28 @@ impl Identifier {
         Ok(path)
     }
 
-    pub fn read<T, P>(&self, datadir: P) -> Result<T>
+    pub fn read<T, P>(&self, datadir: P, encryption_key: &Option<StringEncoding>) -> Result<T>
     where
         T: Serialize + DeserializeOwned + Debug,
         P: AsRef<Path>,
     {
         let path = self.as_path_buf(datadir, false)?;
         debug!("reading {:?}", path);
-        let file_content = std::fs::read(&path)
-            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
-        let data: T = serde_json::from_slice(&file_content)?;
+
+        let data = decrypt(&PathOptions { path }, encryption_key)?;
+
         Ok(data)
     }
 
-    pub fn write<T, P>(&self, datadir: P, value: &T, can_overwrite: bool) -> Result<()>
+    pub fn write<T, P>(
+        &self,
+        datadir: P,
+        value: &T,
+        can_overwrite: bool,
+        encryption_key: &Option<EncryptionKey>,
+    ) -> Result<()>
     where
-        T: Serialize + DeserializeOwned + Debug,
+        T: Serialize + DeserializeOwned + Debug + Clone,
         P: AsRef<Path>,
     {
         let path = self.as_path_buf(datadir, true)?;
@@ -146,7 +154,13 @@ impl Identifier {
         if path.exists() && !can_overwrite {
             return Err(Error::CannotOverwrite(path));
         }
-        let content = serde_json::to_vec_pretty(value)?;
+
+        let plain = MaybeEncrypted::plain(value.clone());
+        let data = match encryption_key.as_ref() {
+            None => plain,
+            Some(encryption_key) => plain.encrypt(encryption_key)?,
+        };
+        let content = serde_json::to_vec_pretty(&data)?;
         std::fs::write(&path, &content)?;
         Ok(())
     }

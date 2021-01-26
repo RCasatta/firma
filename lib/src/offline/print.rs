@@ -1,5 +1,7 @@
 use crate::list::ListOptions;
+use crate::offline::decrypt::decrypt;
 use crate::offline::descriptor::{derive_address, DeriveAddressOpts};
+use crate::online::PathOptions;
 use crate::*;
 use bitcoin::consensus::serialize;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
@@ -39,8 +41,8 @@ impl Context {
         let psbt =
             match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
                 (Some(path), None, None) => {
-                    let vec = std::fs::read(path)?;
-                    let psbt_json: PsbtJson = serde_json::from_slice(&vec)?;
+                    let psbt_json: PsbtJson =
+                        decrypt(&PathOptions { path: path.clone() }, &self.encryption_key)?;
                     psbt_json.psbt()?
                 }
                 (None, Some(base64), None) => psbt_from_base64(base64)?.1,
@@ -60,7 +62,6 @@ impl Context {
         let opt = ListOptions {
             kind,
             verify_wallets_signatures: opt.verify_wallets_signatures,
-            encryption_keys: vec![],
         };
         let result = self.list(&opt)?;
         let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();

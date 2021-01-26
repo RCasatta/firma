@@ -17,11 +17,6 @@ pub struct SignWalletOptions {
     /// Wallet name to be signed
     #[structopt(long)]
     pub wallet_name: String,
-
-    /// in CLI it is populated from standard input
-    /// It is an Option so that structopt could skip,
-    #[structopt(skip)]
-    pub encryption_key: Option<StringEncoding>,
 }
 
 #[derive(Serialize, Deserialize, StructOpt, Debug)]
@@ -47,17 +42,12 @@ impl Context {
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let message = &wallet.descriptor;
         let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
-        let encryption_keys = match opt.encryption_key.as_ref() {
-            Some(key) => vec![key.clone()],
-            None => vec![],
-        };
 
         // search a key that is in the wallet descriptor
         let kind = Kind::MasterSecret;
         let list_opt = ListOptions {
             kind,
             verify_wallets_signatures: false,
-            encryption_keys,
         };
         debug!("list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;

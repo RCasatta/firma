@@ -1,5 +1,6 @@
 use crate::ErrorJson;
 use bitcoin::hashes::core::fmt::Formatter;
+use bitcoin::BlockHash;
 use qr_code::types::QrError;
 use serde_json::Value;
 use std::fmt;
@@ -36,6 +37,7 @@ pub enum Error {
     NonDefaultScript,
     ScriptEmpty,
     IncompatibleNetworks,
+    IncompatibleGenesis { node: BlockHash, firma: BlockHash },
     Mnemonic(crate::common::mnemonic::Error),
     PSBTNotChangedAfterMerge,
     PSBTBadStringEncoding(String),
@@ -141,6 +143,11 @@ impl fmt::Display for Error {
             Error::MissingRescanUpTo => write!(f, "Missing RescanUpTo"),
             Error::MissingHex => write!(f, "Missing hex"),
             Error::IncompatibleNetworks => write!(f, "Incompatible networks"),
+            Error::IncompatibleGenesis { node, firma } => write!(
+                f,
+                "Incompatible genesis block node:{} firma:{}",
+                node, firma
+            ),
             Error::PSBTNotChangedAfterMerge => write!(f, "PSBT did not change after merge"),
             Error::PSBTBadStringEncoding(kind) => {
                 write!(f, "PSBT has bad {} string encoding", kind)

@@ -14,10 +14,6 @@ pub struct ListOptions {
     /// Return wallets only if wallet signature file is present and signature verifies
     #[structopt(long)]
     pub verify_wallets_signatures: bool,
-
-    /// Optional encryption keys to read encrypted [PrivateMasterKey]
-    #[structopt(skip)]
-    pub encryption_keys: Vec<StringEncoding>,
 }
 
 impl Context {
@@ -160,30 +156,21 @@ fn read_qrs(_path: &PathBuf) -> Result<Vec<PathBuf>> {
 
 #[cfg(test)]
 mod tests {
+    use crate::common::context::tests::TestContext;
     use crate::common::json::identifier::Kind;
     use crate::common::list::ListOptions;
     use crate::offline::random::RandomOptions;
-    use crate::Context;
-    use bitcoin::Network;
-    use tempfile::TempDir;
 
     #[test]
     fn test_list() {
-        let temp_dir = TempDir::new().unwrap();
-        let temp_dir_str = format!("{}/", temp_dir.path().display());
-
         let key_name = "list".to_string();
-        let rand_opts = RandomOptions::new(key_name);
-        let context = Context {
-            network: Network::Testnet,
-            firma_datadir: temp_dir_str,
-        };
+        let rand_opts = RandomOptions { key_name };
+        let context = TestContext::new();
         let _key = context.create_key(&rand_opts).unwrap();
 
         let kind = Kind::MasterSecret;
         let opt = ListOptions {
             kind,
-            encryption_keys: vec![],
             verify_wallets_signatures: false,
         };
         let result = context.list(&opt);

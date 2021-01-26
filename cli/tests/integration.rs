@@ -310,7 +310,7 @@ impl FirmaCommand {
 
     pub fn online(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
         let output = Command::new(format!("{}/firma-online", self.exe_dir))
-            .arg("--firma-datadir")
+            .arg("--datadir")
             .arg(format!("{}", self.work_dir.path().display()))
             .arg("--network")
             .arg("regtest")
@@ -331,17 +331,7 @@ impl FirmaCommand {
     }
 
     pub fn online_connect(&self, node_url: &str, cookie_file: &str) -> Result<DaemonOpts> {
-        let datadir = format!("{}", self.work_dir.path().display());
-        let args = vec![
-            "--url",
-            node_url,
-            "--cookie-file",
-            cookie_file,
-            "--network",
-            "regtest",
-            "--firma-datadir",
-            &datadir,
-        ];
+        let args = vec!["--url", node_url, "--cookie-file", cookie_file];
         let result = self.online("connect", args);
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
@@ -438,7 +428,7 @@ impl FirmaCommand {
         let mut process = Command::new(format!("{}/firma-offline", self.exe_dir))
             .stdin(stdin)
             .stdout(Stdio::piped())
-            .arg("--firma-datadir")
+            .arg("--datadir")
             .arg(format!("{}", self.work_dir.path().display()))
             .arg("--network")
             .arg("regtest")
