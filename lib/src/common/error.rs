@@ -45,6 +45,7 @@ pub enum Error {
     EncryptionKeyNot32Bytes(usize),
     MissingEncryptionKey,
     InvalidMessageSignature,
+    MissingIdentifier,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -153,6 +154,7 @@ impl fmt::Display for Error {
             Error::MissingEncryptionKey => write!(f, "MissingEncryptionKey"),
             Error::InvalidMessageSignature => write!(f, "Invalid message signature"),
             Error::CannotOverwrite(p) => write!(f, "Cannot overwrite {:?}", p),
+            Error::MissingIdentifier => write!(f, "Missing identifier"),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

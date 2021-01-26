@@ -11,6 +11,7 @@ use std::io::Write;
 
 pub mod context;
 pub mod error;
+pub mod import;
 pub mod json;
 pub mod list;
 pub mod mnemonic;
@@ -172,6 +173,8 @@ mod tests {
     use crate::{check_compatibility, strip_witness};
     use bitcoin::consensus::deserialize;
     use bitcoin::{Network, Transaction};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
 
     #[test]
     fn test_strip() {
@@ -195,4 +198,8 @@ mod tests {
         assert!(check_compatibility(Network::Regtest, Network::Bitcoin).is_err());
         assert!(check_compatibility(Network::Testnet, Network::Bitcoin).is_err());
     }
+
+    pub fn rnd_string() -> String {
+            thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+        }
 }

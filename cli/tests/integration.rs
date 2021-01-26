@@ -3,17 +3,17 @@ use bitcoincore_rpc::{Client, RpcApi};
 use firma::bitcoin::Network;
 use firma::common::json::identifier::{Identifier, Kind};
 use firma::*;
-use rand::distributions::Alphanumeric;
 use rand::{self, thread_rng, Rng};
 use serde_json::{from_value, to_string_pretty, Value};
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
+use rand::distributions::Alphanumeric;
 
 mod bitcoind;
 
-fn rnd_string() -> String {
+pub fn rnd_string() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(20).collect()
 }
 
@@ -387,7 +387,7 @@ impl FirmaCommand {
         )?)
     }
 
-    fn online_rescan(&self, wallet_name: &str) -> Result<usize> {
+    pub fn _online_rescan(&self, wallet_name: &str) -> Result<usize> {
         Ok(from_value(
             self.online(
                 "rescan",
@@ -552,7 +552,7 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    fn offline_list(&self, kind: Kind, encryption_key: Option<&[u8]>) -> Result<ListOutput> {
+    pub fn _offline_list(&self, kind: Kind, encryption_key: Option<&[u8]>) -> Result<ListOutput> {
         Ok(from_value(
             self.offline("list", vec!["--kind", &kind.to_string()], encryption_key)
                 .unwrap(),

@@ -1,5 +1,5 @@
 use firma::log::debug;
-use firma::online::{ConnectOptions, WalletNameOptions};
+use firma::online::{ConnectOptions, PathOptions, WalletNameOptions};
 use firma::serde_json::Value;
 use firma::*;
 use std::convert::TryInto;
@@ -46,6 +46,9 @@ enum FirmaOnlineSubcommands {
 
     /// View wallet coins
     ListCoins(WalletNameOptions),
+
+    /// Import the file containing a firma json object
+    Import(PathOptions),
 }
 
 fn main() -> Result<()> {
@@ -78,5 +81,6 @@ fn start() -> Result<Value> {
         Balance(opt) => context.balance(&opt)?.try_into(),
         Rescan(opt) => Ok(context.rescan(&opt)?),
         ListCoins(opt) => context.list_coins(&opt)?.try_into(),
+        Import(opt) => context.import(&opt),
     }
 }

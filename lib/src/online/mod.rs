@@ -1,6 +1,7 @@
 use crate::common::json::identifier::{Identifier, Kind};
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 pub mod balance;
@@ -16,6 +17,11 @@ pub struct WalletNameOptions {
     /// The name of the wallet to use
     #[structopt(long = "wallet-name")]
     pub wallet_name: String,
+}
+
+#[derive(StructOpt, Debug)]
+pub struct PathOptions {
+    pub path: PathBuf,
 }
 
 #[derive(StructOpt, Debug)]

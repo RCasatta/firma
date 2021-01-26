@@ -1,6 +1,6 @@
 pub mod identifier;
 
-use crate::common::json::identifier::{Identifiable, Identifier, Overwriteable, WhichKind};
+use crate::common::json::identifier::{Identifiable, Overwritable, WhichKind};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
 use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
@@ -15,7 +15,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 
-pub use crate::common::json::identifier::Kind;
+pub use crate::common::json::identifier::{Kind, Identifier};
 
 //TODO remove json suffix, use it with json namespace
 
@@ -403,7 +403,7 @@ macro_rules! impl_traits {
                 &self.id
             }
         }
-        impl Overwriteable for $for {
+        impl Overwritable for $for {
             fn can_overwrite() -> bool {
                 $val
             }

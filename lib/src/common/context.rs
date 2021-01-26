@@ -1,4 +1,4 @@
-use crate::common::json::identifier::{Identifiable, Identifier, Overwriteable, WhichKind};
+use crate::common::json::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
 use crate::*;
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::Network;
@@ -72,7 +72,7 @@ impl Context {
 
     pub fn write<T>(&self, value: &T) -> Result<()>
     where
-        T: Serialize + DeserializeOwned + Debug + Identifiable + Overwriteable,
+        T: Serialize + DeserializeOwned + Debug + Identifiable + Overwritable,
     {
         value
             .id()
@@ -150,21 +150,21 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::offline::random::RandomOptions;
     use crate::{Context, MasterSecretJson, PublicMasterKey};
     use bitcoin::Network;
     use std::ops::Deref;
     use tempfile::TempDir;
 
-    struct TestContext {
+    pub struct TestContext {
         context: Context,
         #[allow(unused)]
         datadir: TempDir, // must be here so directory isnt't removed before dropping the object
     }
 
     impl TestContext {
-        fn new() -> Self {
+        pub fn new() -> Self {
             let datadir = TempDir::new().unwrap();
             let firma_datadir = format!("{}/", datadir.path().display());
             let network = Network::Testnet;

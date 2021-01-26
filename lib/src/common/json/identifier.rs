@@ -69,7 +69,7 @@ impl FromStr for Kind {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Identifier {
-    kind: Kind,
+    pub kind: Kind,
     pub name: String,
     pub network: Network,
 }
@@ -78,7 +78,7 @@ pub trait Identifiable {
     fn id(&self) -> &Identifier;
 }
 
-pub trait Overwriteable {
+pub trait Overwritable {
     fn can_overwrite() -> bool;
 }
 
@@ -156,6 +156,17 @@ impl Identifier {
 mod tests {
     use crate::common::json::identifier::{Identifier, Kind};
     use bitcoin::Network;
+    use crate::common::tests::rnd_string;
+
+    impl Identifier {
+        pub fn new_test(kind: Kind) -> Self {
+            Identifier {
+                kind,
+                name: rnd_string(),
+                network: Network::Testnet
+            }
+        }
+    }
 
     #[test]
     fn test_identifier() {
