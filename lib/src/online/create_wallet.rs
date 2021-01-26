@@ -1,5 +1,4 @@
 use crate::common::json::identifier::{Identifier, Kind};
-use crate::online::read_xpubs_names;
 use crate::*;
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
@@ -44,7 +43,7 @@ impl CreateWalletOptions {
             return Err("required signatures cannot be greater than the number of xpubs".into());
         }
 
-        let mut xpubs = read_xpubs_names(&self.key_names, context)?;
+        let mut xpubs = context.read_xpubs_from_names(&self.key_names)?;
         xpubs.extend(&self.xpubs);
 
         for xpub in xpubs.iter() {
@@ -73,7 +72,7 @@ impl Context {
         let client = self.make_client(&opt.wallet_name)?;
         debug!("create");
 
-        let mut xpubs = read_xpubs_names(&opt.key_names, self)?;
+        let mut xpubs = self.read_xpubs_from_names(&opt.key_names)?;
         xpubs.extend(&opt.xpubs);
 
         let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();

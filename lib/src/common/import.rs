@@ -28,14 +28,17 @@ impl Context {
 
 #[cfg(test)]
 mod tests {
-    use crate::{IndexesJson, Identifier, Kind};
     use crate::context::tests::TestContext;
     use crate::online::PathOptions;
+    use crate::{Identifier, IndexesJson, Kind};
 
     #[test]
     fn test_import() {
         let context = TestContext::new();
-        let i = IndexesJson { id: Identifier::new_test(Kind::WalletIndexes), main: 0 };
+        let i = IndexesJson {
+            id: Identifier::new_test(Kind::WalletIndexes),
+            main: 0,
+        };
         context.write(&i).unwrap();
         let path = i.id.as_path_buf(&context.firma_datadir, false).unwrap();
         let second_context = TestContext::new();

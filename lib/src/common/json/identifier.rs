@@ -155,15 +155,15 @@ impl Identifier {
 #[cfg(test)]
 mod tests {
     use crate::common::json::identifier::{Identifier, Kind};
-    use bitcoin::Network;
     use crate::common::tests::rnd_string;
+    use bitcoin::Network;
 
     impl Identifier {
         pub fn new_test(kind: Kind) -> Self {
             Identifier {
                 kind,
                 name: rnd_string(),
-                network: Network::Testnet
+                network: Network::Testnet,
             }
         }
     }

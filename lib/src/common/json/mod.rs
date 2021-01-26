@@ -15,7 +15,7 @@ use std::collections::{BTreeSet, HashSet};
 use std::convert::TryInto;
 use std::path::PathBuf;
 
-pub use crate::common::json::identifier::{Kind, Identifier};
+pub use crate::common::json::identifier::{Identifier, Kind};
 
 //TODO remove json suffix, use it with json namespace
 

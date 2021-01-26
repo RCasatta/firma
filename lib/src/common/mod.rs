@@ -173,8 +173,8 @@ mod tests {
     use crate::{check_compatibility, strip_witness};
     use bitcoin::consensus::deserialize;
     use bitcoin::{Network, Transaction};
-    use rand::{thread_rng, Rng};
     use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
 
     #[test]
     fn test_strip() {
@@ -200,6 +200,6 @@ mod tests {
     }
 
     pub fn rnd_string() -> String {
-            thread_rng().sample_iter(&Alphanumeric).take(20).collect()
-        }
+        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+    }
 }

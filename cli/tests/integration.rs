@@ -3,13 +3,13 @@ use bitcoincore_rpc::{Client, RpcApi};
 use firma::bitcoin::Network;
 use firma::common::json::identifier::{Identifier, Kind};
 use firma::*;
+use rand::distributions::Alphanumeric;
 use rand::{self, thread_rng, Rng};
 use serde_json::{from_value, to_string_pretty, Value};
 use std::env;
 use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
-use rand::distributions::Alphanumeric;
 
 mod bitcoind;
 

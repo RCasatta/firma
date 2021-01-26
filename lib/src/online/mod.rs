@@ -1,6 +1,4 @@
-use crate::common::json::identifier::{Identifier, Kind};
 use crate::*;
-use bitcoin::util::bip32::ExtendedPubKey;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -31,14 +29,4 @@ pub struct ConnectOptions {
 
     #[structopt(flatten)]
     pub daemon_opts: DaemonOpts,
-}
-
-fn read_xpubs_names(names: &[String], context: &Context) -> Result<Vec<ExtendedPubKey>> {
-    let mut result = vec![];
-    for name in names {
-        let k: PublicMasterKey = Identifier::new(context.network, Kind::DescriptorPublicKey, name)
-            .read(&context.firma_datadir)?;
-        result.push(k.xpub);
-    }
-    Ok(result)
 }

@@ -1,6 +1,7 @@
 use crate::common::json::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
 use crate::*;
 use bitcoin::blockdata::constants::genesis_block;
+use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use log::{debug, info};
@@ -106,12 +107,23 @@ impl Context {
             .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
         Ok(daemon_opts)
     }
+
     pub fn make_client(&self, wallet_name: &str) -> Result<Client> {
         let client = self
             .read_daemon_opts()?
             .make_client(Some(wallet_name.to_string()), self.network)?;
         load_if_unloaded(&client, wallet_name)?;
         Ok(client)
+    }
+
+    pub fn read_xpubs_from_names(&self, names: &[String]) -> Result<Vec<ExtendedPubKey>> {
+        let mut result = vec![];
+        for name in names {
+            let k: PublicMasterKey = Identifier::new(self.network, Kind::DescriptorPublicKey, name)
+                .read(&self.firma_datadir)?;
+            result.push(k.xpub);
+        }
+        Ok(result)
     }
 }
 
