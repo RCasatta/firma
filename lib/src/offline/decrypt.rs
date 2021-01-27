@@ -9,6 +9,7 @@ use std::fmt::Debug;
 
 pub type EncryptionKey = [u8; 32];
 
+//TODO accept object name other than path
 pub fn decrypt<T>(opt: &PathOptions, encryption_key: &Option<StringEncoding>) -> Result<T>
 where
     T: Serialize + DeserializeOwned + Debug,

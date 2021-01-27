@@ -108,15 +108,12 @@ fn integration_test() {
     let create_tx = firma_2of2
         .online_create_tx(recipients, &psbt_name, &name_2of2)
         .unwrap();
-    let buf = Identifier::new(Network::Regtest, Kind::PSBT, &create_tx.psbt_name)
-        .as_path_buf(&firma_2of2.work_dir, false)
-        .unwrap();
-    let psbt_file_str = buf.to_str().unwrap();
+    let psbt_file_str = firma_2of2.path_str(Kind::PSBT, &create_tx.psbt_name);
 
     //let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
     //assert_eq!(sign_a_wrong.unwrap_err().to_string(),Error::WrongKeyFileName.to_string());
 
-    let print_a = firma_2of2.offline_print(psbt_file_str).unwrap();
+    let print_a = firma_2of2.offline_print(&psbt_file_str).unwrap();
     let print_a_by_name = firma_2of2.offline_print_by_name(&psbt_name).unwrap();
     assert_eq!(print_a, print_a_by_name);
     let sign_a = firma_2of2
@@ -258,12 +255,12 @@ fn integration_test() {
     */
 
     // test key encryption
-    //let encryption_key = Some(&[0u8; 32][..]);
-    /*let encryption_key = None;
+    let encryption_key = Some(&[0u8; 32][..]);
     let e1 = firma_2of2
         .offline_random("key_encrypted", encryption_key)
         .unwrap();
-    let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
+    let key_file_str = firma_2of2.path_str(Kind::MasterSecret, &e1.id.name);
+    /*let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
     assert!(
         !list_keys
             .keys
@@ -278,15 +275,12 @@ fn integration_test() {
             .iter()
             .any(|k| k.key.id.name == e1.key.id.name),
         "can't see private key with encryption_key"
-    );
-    assert!(firma_2of2
-        .offline_decrypt(e1.private_file.to_str().unwrap(), None)
-        .is_err());
+    );*/
+    assert!(firma_2of2.offline_decrypt(&key_file_str, None).is_err());
     let d1 = firma_2of2
-        .offline_decrypt(e1.private_file.to_str().unwrap(), encryption_key)
+        .offline_decrypt(&key_file_str, encryption_key)
         .unwrap();
-    assert_eq!(d1.xprv, e1.key.xprv);
-    */
+    assert_eq!(d1.xprv, e1.xprv);
 
     // stop bitcoind
     bitcoind.client.stop().unwrap();
@@ -306,6 +300,13 @@ impl FirmaCommand {
             exe_dir: exe_dir.to_string(),
             work_dir,
         })
+    }
+
+    pub fn path_str(&self, kind: Kind, name: &str) -> String {
+        let buf = Identifier::new(Network::Regtest, kind, name)
+            .as_path_buf(&self.work_dir, false)
+            .unwrap();
+        buf.to_str().unwrap().to_string()
     }
 
     pub fn online(&self, subcmd: &str, args: Vec<&str>) -> Result<Value> {
@@ -422,7 +423,7 @@ impl FirmaCommand {
         encryption_key: Option<&[u8]>,
     ) -> Result<Value> {
         let (stdin, read_stdin_arg) = match encryption_key {
-            Some(_) => (Stdio::piped(), vec!["--read-stdin"]),
+            Some(_) => (Stdio::piped(), vec!["--encrypt"]),
             None => (Stdio::null(), vec![]),
         };
         let mut process = Command::new(format!("{}/firma-offline", self.exe_dir))
@@ -471,7 +472,7 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    pub fn _offline_decrypt(
+    pub fn offline_decrypt(
         &self,
         file_name: &str,
         encryption_key: Option<&[u8]>,

@@ -19,6 +19,7 @@ pub struct WalletNameOptions {
 
 #[derive(StructOpt, Debug)]
 pub struct PathOptions {
+    #[structopt(short, long)]
     pub path: PathBuf,
 }
 
