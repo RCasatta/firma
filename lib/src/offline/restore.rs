@@ -44,21 +44,23 @@ impl FromStr for Nature {
     }
 }
 
-pub fn start(context: &Context, opt: &RestoreOptions) -> Result<MasterSecretJson> {
-    let master_key = match opt.nature {
-        Nature::Xprv => {
-            let key = ExtendedPrivKey::from_str(&opt.value)?;
-            check_compatibility(key.network, context.network)?;
-            MasterSecretJson::from_xprv(key, &opt.key_name)
-        }
-        Nature::Mnemonic => {
-            let mnemonic = Mnemonic::from_str(&opt.value)?;
-            MasterSecretJson::new(context.network, &mnemonic, &opt.key_name)?
-        }
-    };
-    context.write_keys(&master_key)?;
+impl Context {
+    pub fn restore(&self, opt: &RestoreOptions) -> Result<MasterSecretJson> {
+        let master_key = match opt.nature {
+            Nature::Xprv => {
+                let key = ExtendedPrivKey::from_str(&opt.value)?;
+                check_compatibility(key.network, self.network)?;
+                MasterSecretJson::from_xprv(key, &opt.key_name)
+            }
+            Nature::Mnemonic => {
+                let mnemonic = Mnemonic::from_str(&opt.value)?;
+                MasterSecretJson::new(self.network, &mnemonic, &opt.key_name)?
+            }
+        };
+        self.write_keys(&master_key)?;
 
-    Ok(master_key)
+        Ok(master_key)
+    }
 }
 
 #[cfg(test)]
@@ -84,7 +86,7 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.xprv.to_string(),
         };
-        let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
+        let key_restored = context.restore(&restore_opts).unwrap();
         assert_eq!(key_orig.xprv, key_restored.xprv);
         assert_eq!(key_orig.xpub, key_restored.xpub);
         assert_ne!(key_orig.mnemonic, key_restored.mnemonic);
@@ -95,7 +97,7 @@ mod tests {
             nature: Nature::Mnemonic,
             value: key_orig.mnemonic.as_ref().unwrap().to_string(),
         };
-        let key_restored = crate::offline::restore::start(&context, &restore_opts).unwrap();
+        let key_restored = context.restore(&restore_opts).unwrap();
         assert_eq!(key_orig.xprv, key_restored.xprv);
         assert_eq!(key_orig.xpub, key_restored.xpub);
         assert_eq!(&key_orig.mnemonic, &key_restored.mnemonic);
@@ -108,7 +110,7 @@ mod tests {
             nature: Nature::Xprv,
             value: "X".to_string(),
         };
-        let result = crate::offline::restore::start(&context, &restore_opts);
+        let result = context.restore(&restore_opts);
         assert!(result.is_err());
 
         let (key_name, _name_counter) = (format!("{}", name_counter), name_counter + 1);
@@ -117,7 +119,7 @@ mod tests {
             nature: Nature::Xprv,
             value: key_orig.xpub.to_string(),
         };
-        let result = crate::offline::restore::start(&context, &restore_opts);
+        let result = context.restore(&restore_opts);
         assert!(result.is_err());
     }
 }

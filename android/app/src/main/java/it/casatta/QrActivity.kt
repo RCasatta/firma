@@ -4,26 +4,27 @@ import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import java.io.File
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import it.casatta.json.Data
 import java.io.Serializable
 
 
-class QrActivity : AppCompatActivity() {
+class QrActivity : ContextActivity() {
     private val imagesAdapter = ImageItemsAdapter()
+    private val mapper = ObjectMapper().registerModule(KotlinModule())
 
     companion object {
-        fun comeHere(from: Activity, titlePrefix: String, files: List<String>) {
+        fun comeHere(from: Activity, titlePrefix: String, qrContent: Data.StringEncoding) {
             val newIntent = Intent(from, QrActivity::class.java)
-            newIntent.putStringArrayListExtra(C.QRS, ArrayList(files))
+            newIntent.putExtra(C.QR_CONTENT, Data.decodeStringEncoding(qrContent))
             newIntent.putExtra(C.TITLE_PREFIX, titlePrefix)
             from.startActivityForResult(newIntent, 0)
         }
@@ -44,27 +45,23 @@ class QrActivity : AppCompatActivity() {
         )
         recyclerView.adapter = imagesAdapter
 
-        val qrs = intent.getStringArrayListExtra(C.QRS)
-        Log.d("QR", qrs.toString())
+        val qrContent = Data.encodeStringEncodingHex( intent.getByteArrayExtra(C.QR_CONTENT)!! )
+        val encodedQrs = Rust().qrs(context(), qrContent)
 
-        var count = 0
-        for (qr in qrs!!.iterator()) {
-            if (qr.endsWith(".bmp")) {
-                imagesAdapter.list.add(ImageItem(qr))
-                count += 1
-            }
+        for (qrBmp in encodedQrs.qrs) {
+            imagesAdapter.list.add(ImageItem( Data.decodeStringEncoding(qrBmp)))
         }
 
         val titlePrefix = intent.getStringExtra(C.TITLE_PREFIX)
-        title = if (count<=1) {
+        title = if (imagesAdapter.list.size<=1) {
             "$titlePrefix - QR code"
         } else {
-            "$titlePrefix - $count QR codes"
+            "$titlePrefix - ${imagesAdapter.list.size} QR codes"
         }
     }
 }
 
-data class ImageItem(val name: String): Serializable
+data class ImageItem(val qrContent: ByteArray): Serializable
 
 class ImageItemsAdapter : RecyclerView.Adapter<ImageItemHolder>(){
 
@@ -88,12 +85,8 @@ class ImageItemHolder(itemView: View): RecyclerView.ViewHolder(itemView) {
     private val imageView = itemView.findViewById<ImageView>(R.id.qr_image)
 
     fun update(item: ImageItem) {
-        val imgFile = File(item.name)
-
-        if (imgFile.exists()) {
-            val myBitmap = BitmapFactory.decodeFile(imgFile.absolutePath)
-            imageView.setImageBitmap(myBitmap)
-        }
+        val decodedImage = BitmapFactory.decodeByteArray(item.qrContent, 0, item.qrContent.size)
+        imageView.setImageBitmap(decodedImage)
     }
 }
 

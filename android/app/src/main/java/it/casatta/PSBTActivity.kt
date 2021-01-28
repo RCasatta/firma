@@ -20,7 +20,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class PSBTActivity : AppCompatActivity() {
+class PSBTActivity : ContextActivity() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
     private val inputsAdapter = TxInOutAdapter()
     private val outputsAdapter = TxInOutAdapter()
@@ -38,23 +38,24 @@ class PSBTActivity : AppCompatActivity() {
 
         val psbtString = intent.getStringExtra(C.PSBT)
         Log.d("PSBT", "${Network.TYPE} $psbtString")
-        val psbtJson = mapper.readValue(psbtString, Data.PsbtJsonOutput::class.java)
-        val psbtFileDir = "$filesDir/${Network.TYPE}/psbts/${psbtJson.psbt.name}/"
+        val psbtJson = mapper.readValue(psbtString, Data.PsbtJson::class.java)
+        val psbtFileDir = "$filesDir/${Network.TYPE}/psbts/${psbtJson.id.name}/"
         val psbtFileName = "$psbtFileDir/psbt.json"
-        val psbtPretty = Rust().print(filesDir.toString(), psbtFileName)
+        val psbtPretty = Rust().print(context(), psbtFileName)
 
-        val psbtTitle = "Transaction: ${psbtJson.psbt.name}"
+        val psbtTitle = "Transaction: ${psbtJson.id.name}"
+        val qrContent = Data.StringEncoding(Data.Encoding.BASE64, psbtJson.psbt)
         title = psbtTitle
-        view_qr.setOnClickListener { QrActivity.comeHere(this, psbtTitle, psbtJson.qr_files ) }
+        view_qr.setOnClickListener { QrActivity.comeHere(this, psbtTitle, qrContent ) }
         select.setOnClickListener {
             val returnIntent = Intent()
-            returnIntent.putExtra(C.RESULT, psbtJson.psbt.name)
+            returnIntent.putExtra(C.RESULT, psbtJson.id.name)
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         }
 
         delete.setOnClickListener {
-            C.showDeleteDialog(this, psbtJson.psbt.name, psbtFileDir)
+            C.showDeleteDialog(this, psbtJson.id.name, psbtFileDir)
         }
 
         for (i in psbtPretty.inputs.indices) {
@@ -90,7 +91,7 @@ class PSBTActivity : AppCompatActivity() {
         itemsAdapter.list.add(DescItem("Estimated size", "${psbtPretty.size.estimated} bytes"))
         itemsAdapter.list.add(DescItem("Unsigned size", "${psbtPretty.size.unsigned} bytes"))
         itemsAdapter.list.add(DescItem("PSBT size", "${psbtPretty.size.psbt} bytes"))
-        itemsAdapter.list.add(DescItem("PSBT", psbtJson.psbt.psbt))
+        itemsAdapter.list.add(DescItem("PSBT", psbtJson.psbt))
 
     }
 }

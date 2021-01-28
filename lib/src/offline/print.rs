@@ -1,6 +1,6 @@
 use crate::list::ListOptions;
 use crate::offline::decrypt::decrypt;
-use crate::offline::descriptor::{derive_address, DeriveAddressOpts};
+use crate::offline::descriptor::{derive_address, DeriveAddressOptions};
 use crate::online::PathOptions;
 use crate::*;
 use bitcoin::consensus::serialize;
@@ -64,8 +64,7 @@ impl Context {
             verify_wallets_signatures: opt.verify_wallets_signatures,
         };
         let result = self.list(&opt)?;
-        let wallets: Vec<WalletJson> = result.wallets.iter().map(|w| w.wallet.clone()).collect();
-        let output = pretty_print(&psbt, self.network, &wallets)?;
+        let output = pretty_print(&psbt, self.network, &result.wallets)?;
         Ok(output)
     }
 }
@@ -250,7 +249,7 @@ fn wallet_with_path(
                         _ => return None,
                     };
                     if let ChildNumber::Normal { index } = path_vec.last()? {
-                        let opts = DeriveAddressOpts {
+                        let opts = DeriveAddressOptions {
                             descriptor: descriptor.to_string(),
                             index: *index,
                         };

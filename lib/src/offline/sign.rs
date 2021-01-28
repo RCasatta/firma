@@ -1,5 +1,6 @@
 use crate::common::json::identifier::{Identifier, Kind};
 //use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
+use crate::common::list::ListOptions;
 use crate::offline::print::pretty_print;
 use crate::*;
 use bitcoin::blockdata::opcodes;
@@ -10,10 +11,10 @@ use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::psbt::{raw, Map};
-use bitcoin::{Network, Script, SigHashType, Txid};
+use bitcoin::{Network, Script, SigHashType};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
@@ -66,79 +67,78 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-pub fn save_psbt_options(context: &Context, opt: &SavePSBTOptions) -> Result<()> {
-    info!("save_psbt_options {:?}", opt);
-    let bytes = opt
-        .psbt
-        .as_bytes()
-        .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
-    let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
+impl Context {
+    pub fn save_psbt_options(&self, opt: &SavePSBTOptions) -> Result<()> {
+        info!("save_psbt_options {:?}", opt);
+        let bytes = opt
+            .psbt
+            .as_bytes()
+            .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
+        let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
 
-    save_psbt(context, &mut psbt)?;
-    Ok(())
-}
+        self.save_psbt(&mut psbt)?;
+        Ok(())
+    }
 
-fn read_psbt_json(_p: &PathBuf) -> Result<PsbtJson> {
-    unimplemented!();
-}
+    /// psbts_dir is general psbts dir, name is extracted from PSBT
+    /// if file exists a PSBT merge will be attempted
+    pub fn save_psbt(&self, psbt: &mut PSBT) -> Result<String> {
+        debug!("save_psbt");
 
-/// Search existing psbt, if one matches the txid, return that name, otherwise it gives a new unused name
-fn get_name(psbts_dir: &PathBuf, txid: &Txid) -> Result<String> {
-    for entry in std::fs::read_dir(psbts_dir)? {
-        let entry = entry?;
-        let mut path = entry.path();
-        path.push("psbt.json");
-        //TODO use list
-        if let Ok(psbt_json) = read_psbt_json(&path) {
-            if let Ok((_, psbt)) = psbt_from_base64(&psbt_json.psbt) {
-                if &psbt.global.unsigned_tx.txid() == txid {
-                    return Ok(psbt_json.id.name);
-                }
+        let name = match get_psbt_name(psbt) {
+            Some(name) => name,
+            None => {
+                let opt = ListOptions {
+                    kind: Kind::PSBT,
+                    verify_wallets_signatures: false,
+                };
+                let psbts = self.list(&opt)?.psbts;
+                find_or_create(psbt, psbts)?
+            }
+        };
+
+        debug!("psbt_name: {}", name);
+        let id = Identifier::new(self.network, Kind::PSBT, &name);
+        if let Ok(existing_psbt) = self.read::<PsbtJson>(&name) {
+            info!("old psbt exist, merging together");
+            let existing_psbt = existing_psbt.psbt()?;
+            psbt.merge(existing_psbt.clone())?;
+            if psbt == &existing_psbt {
+                return Err(Error::PSBTNotChangedAfterMerge);
             }
         }
-    }
-    let mut count = 0usize;
-    let mut psbts_name = psbts_dir.clone();
-    psbts_name.push("dummy");
-    loop {
-        let name = format!("psbt-{}", count);
-        psbts_name.set_file_name(&name);
-        if !psbts_name.exists() {
-            return Ok(name);
-        }
-        count += 1;
+        let psbt = psbt_to_base64(&psbt).1;
+        let psbt_json = PsbtJson { id, psbt };
+        self.write(&psbt_json)?;
+        debug!("finish");
+        Ok(name)
     }
 }
 
-/// psbts_dir is general psbts dir, name is extracted from PSBT
-/// if file exists a PSBT merge will be attempted
-pub fn save_psbt(context: &Context, psbt: &mut PSBT) -> Result<String> {
-    debug!("save_psbt");
+fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
+    let txid = psbt.global.unsigned_tx.txid();
 
-    let name = get_psbt_name(psbt).unwrap_or_else(|| {
-        let fake_id = Identifier::new(context.network, Kind::PSBT, "");
-        let psbts_dir = fake_id.as_path_buf(&context.datadir, false).unwrap(); // TODO remove unwrap
-        debug!("psbts_dir {:?}", psbts_dir);
-        let new_name = get_name(&psbts_dir, &psbt.global.unsigned_tx.txid()).unwrap(); // TODO remove unwrap
-        info!("PSBT without name, giving one: {}", new_name);
-        let pair = raw::Pair {
-            key: get_name_key(),
-            value: new_name.as_bytes().to_vec(),
-        };
-        let _ = psbt.global.insert_pair(pair);
-        new_name
-    });
+    for psbt in psbts.iter() {
+        if txid == psbt.psbt()?.global.unsigned_tx.txid() {
+            return Ok(psbt.id.name.to_string());
+        }
+    }
 
-    debug!("psbt_name: {}", name);
-    let id = Identifier::new(context.network, Kind::PSBT, &name);
-    let psbt = psbt_to_base64(&psbt).1;
-    let psbt_json = PsbtJson {
-        id: id.clone(),
-        psbt,
-    };
-    context.write(&psbt_json)?;
-    debug!("finish");
-    Ok(name)
+    let names: HashSet<_> = psbts.iter().map(|p| p.id.name.to_string()).collect();
+    let mut counter = 0u32;
+    loop {
+        let new_name = format!("psbt-{}", counter);
+        if !names.contains(&new_name) {
+            info!("PSBT without name, giving one: {}", new_name);
+            let pair = raw::Pair {
+                key: get_name_key(),
+                value: new_name.as_bytes().to_vec(),
+            };
+            let _ = psbt.global.insert_pair(pair);
+            return Ok(new_name);
+        }
+        counter += 1;
+    }
 }
 
 impl PSBTSigner {

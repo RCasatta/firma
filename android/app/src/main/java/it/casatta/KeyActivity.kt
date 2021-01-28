@@ -15,6 +15,7 @@ import kotlinx.android.synthetic.main.activity_key.delete
 import kotlinx.android.synthetic.main.activity_key.items
 import kotlinx.android.synthetic.main.activity_key.select
 import kotlinx.android.synthetic.main.activity_key.view_qr
+import java.nio.charset.Charset
 
 class KeyActivity : AppCompatActivity() {
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
@@ -26,14 +27,15 @@ class KeyActivity : AppCompatActivity() {
         setContentView(R.layout.activity_key)
 
         val keyString = intent.getStringExtra(C.KEY)
-        val keyJson = mapper.readValue(keyString, MasterKeyOutput::class.java)
-        val keyTitle = "key: ${keyJson.key.name}"
+        val keyJson = mapper.readValue(keyString, PrivateMasterKey::class.java)
+        val keyTitle = "key: ${keyJson.id.name}"
         title = keyTitle
 
-        view_qr.setOnClickListener { QrActivity.comeHere(this, keyTitle, keyJson.public_qr_files ) }
+        val qrContent = StringEncoding(Encoding.PLAIN, keyJson.xpub)
+        view_qr.setOnClickListener { QrActivity.comeHere(this, keyTitle, qrContent) }
         select.setOnClickListener {
             val returnIntent = Intent()
-            returnIntent.putExtra(C.RESULT, keyJson.key.name)
+            returnIntent.putExtra(C.RESULT, keyJson.id.name)
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         }
@@ -44,29 +46,29 @@ class KeyActivity : AppCompatActivity() {
                 hidden_items.visibility = View.GONE
             }
         }
-        val keyDir = "$filesDir/${Network.TYPE}/keys/${keyJson.key.name}/"
+        val keyDir = "$filesDir/${Network.TYPE}/keys/${keyJson.id.name}/"
         delete.setOnClickListener {
-            C.showDeleteDialog(this, keyJson.key.name , keyDir)
+            C.showDeleteDialog(this, keyJson.id.name , keyDir)
         }
 
         items.layoutManager = LinearLayoutManager(this)
         items.adapter = itemsAdapter
 
-        itemsAdapter.list.add(DescItem("Fingerprint", keyJson.key.fingerprint))
-        itemsAdapter.list.add(DescItem("Xpub", keyJson.key.xpub))
+        itemsAdapter.list.add(DescItem("Fingerprint", keyJson.fingerprint))
+        itemsAdapter.list.add(DescItem("Xpub", keyJson.xpub))
 
         hidden_items.layoutManager = LinearLayoutManager(this)
         hidden_items.adapter = hiddenItemsAdapter
-        hiddenItemsAdapter.list.add(DescItem("Xpriv", keyJson.key.xprv))
+        hiddenItemsAdapter.list.add(DescItem("Xpriv", keyJson.xprv))
 
-        if (keyJson.key.mnemonic != null) {
-            hiddenItemsAdapter.list.add(DescItem("Mnemonic", keyJson.key.mnemonic))
+        if (keyJson.mnemonic != null) {
+            hiddenItemsAdapter.list.add(DescItem("Mnemonic", keyJson.mnemonic))
         }
 
-        if (keyJson.key.dice != null) {
-            hiddenItemsAdapter.list.add(DescItem("Faces", keyJson.key.dice.faces.toString() ))
-            hiddenItemsAdapter.list.add(DescItem("Launches", keyJson.key.dice.launches ))
-            hiddenItemsAdapter.list.add(DescItem("Value", keyJson.key.dice.value ))
+        if (keyJson.dice != null) {
+            hiddenItemsAdapter.list.add(DescItem("Faces", keyJson.dice.faces.toString() ))
+            hiddenItemsAdapter.list.add(DescItem("Launches", keyJson.dice.launches ))
+            hiddenItemsAdapter.list.add(DescItem("Value", keyJson.dice.value ))
         }
     }
 }

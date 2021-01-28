@@ -9,7 +9,6 @@ import android.view.*
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -21,12 +20,12 @@ import kotlinx.android.synthetic.main.activity_list.*
 import java.io.File
 import java.io.Serializable
 
-class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
+class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
 
     private val itemsAdapter = ItemsAdapter()
     private var listOutput = Data.ListOutput(emptyList(), emptyList(), emptyList())
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
-    private var rawHexes: ArrayList<String> = ArrayList()
+    private var rawData: ArrayList<Data.StringEncoding> = ArrayList()
     private var diceLaunches: ArrayList<Int> = ArrayList()
     private var faces: Int = 0
     private var keyName: String? = null
@@ -78,10 +77,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             }
             NEW_KEY -> {
                 title = "New key"
-                itemsAdapter.list.add(Item(getString( R.string.random), null, null, emptyList()))
-                itemsAdapter.list.add(Item(getString( R.string.dice), null, null, emptyList()))
-                itemsAdapter.list.add(Item(getString( R.string.import_xprv), null, null, emptyList()))
-                itemsAdapter.list.add(Item(getString( R.string.import_mnemonic), null, null, emptyList()))
+                itemsAdapter.list.add(Item(getString( R.string.random), null, null))
+                itemsAdapter.list.add(Item(getString( R.string.dice), null, null))
+                itemsAdapter.list.add(Item(getString( R.string.import_xprv), null, null))
+                itemsAdapter.list.add(Item(getString( R.string.import_mnemonic), null, null))
                 item_new.hide()
             }
             WALLETS -> {
@@ -98,20 +97,20 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             }
             IMPORT_PSBT -> {
                 title = "Import transaction (PSBT)"
-                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
-                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "base64", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null))
+                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "base64", null))
                 item_new.hide()
             }
             IMPORT_WALLET -> {
                 title = "Import wallet"
-                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null, emptyList()))
-                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "json", null, emptyList()))
+                itemsAdapter.list.add(Item(getString(R.string.scan), "one or more qr codes", null))
+                itemsAdapter.list.add(Item(getString(R.string.insert_manually), "json", null))
                 item_new.hide()
             }
             DICE_FACES -> {
                 title = "How many faces has the dice?"
                 for (el in PERFECT_SOLID_FACES) {
-                    itemsAdapter.list.add(Item(el.toString(), null, null, emptyList()))
+                    itemsAdapter.list.add(Item(el.toString(), null, null))
                 }
                 item_new.hide()
             }
@@ -121,14 +120,14 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                 title = "$a dice launch of $b?"
                 val faces = intent.getIntExtra(C.FACES, 0)
                 for (el in (1..faces)) {
-                    itemsAdapter.list.add(Item(el.toString(), null, null, emptyList()))
+                    itemsAdapter.list.add(Item(el.toString(), null, null))
                 }
                 item_new.hide()
             }
             ADDRESS_INDEX -> {
                 title = "Select index"
                 for (i in 0..1000) {
-                    itemsAdapter.list.add(Item("$i", null, null, emptyList()))
+                    itemsAdapter.list.add(Item("$i", null, null))
                 }
                 item_new.hide()
             }
@@ -149,10 +148,10 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     }
 
     private fun updateKeys() {
-        update(Data.Kind.KEY)
-        for (key in listOutput.keys) {
+        update(Data.Kind.MASTER_SECRET)
+        for (key in listOutput.master_secrets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(key)
-            itemsAdapter.list.add(Item(key.key.name, key.key.fingerprint, details, key.public_qr_files))
+            itemsAdapter.list.add(Item(key.id.name, key.fingerprint, details))
         }
         itemsAdapter.notifyDataSetChanged()
     }
@@ -161,7 +160,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         update(Data.Kind.WALLET)
         for (wallet in listOutput.wallets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet)
-            itemsAdapter.list.add(Item(wallet.wallet.name, wallet.wallet.fingerprints.toString(), details, wallet.qr_files))
+            itemsAdapter.list.add(Item(wallet.id.name, wallet.fingerprints.toString(), details))
         }
         itemsAdapter.notifyDataSetChanged()
     }
@@ -170,7 +169,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         update(Data.Kind.PSBT)
         for (psbt in listOutput.psbts) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(psbt)
-            itemsAdapter.list.add(Item(psbt.psbt.name, psbt.signatures, details, psbt.qr_files))
+            itemsAdapter.list.add(Item(psbt.id.name, "", details))  // TODO description was signatures
         }
         itemsAdapter.notifyDataSetChanged()
     }
@@ -178,7 +177,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun update(kind: Data.Kind) {
         try {
             itemsAdapter.list.clear()
-            listOutput = Rust().list(filesDir.toString(), kind, EncryptionKey.get(applicationContext))
+            listOutput = Rust().list(context(), kind)
         } catch (e: RustException) {
             C.showMessageDialog(this, e.message?:"Null")
         }
@@ -226,7 +225,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             .setView(valueEditText)
                             .setPositiveButton("Ok") { _, _ ->
                                 val text = valueEditText.text.toString()
-                                savePsbt(text, Data.Encoding.BASE64)
+                                savePsbt(Data.StringEncoding(Data.Encoding.BASE64, text))
                                 finish()
                             }
                             .setNegativeButton("Cancel", null)
@@ -302,7 +301,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             .setPositiveButton("Ok") { _, _ ->
                 val text = valueEditText.text.toString()
                 try {
-                    Rust().restore(filesDir.toString(), name, Data.Nature.valueOf(nature.toUpperCase()), text, EncryptionKey.get(applicationContext))
+                    Rust().restore(context(), name, Data.Nature.valueOf(nature.toUpperCase()), text)
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Log.e("LIST", e.message?:"Null")
@@ -333,7 +332,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                     } else {
                         when (what) {
                             getString(R.string.random) -> {
-                                Rust().random(filesDir.toString(), keyName, EncryptionKey.get(applicationContext))
+                                Rust().random(context(), keyName)
                                 setResult(Activity.RESULT_OK, Intent())
                                 finish()
                             }
@@ -355,19 +354,19 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
     private fun saveWallet(content: String) {
         Log.d("LIST", "saveWallet $content")
         try {
-            val json = mapper.readValue(content, Data.WalletJson::class.java)
-            Rust().importWallet(filesDir.toString(), json)
-            Rust().signWallet(filesDir.toString(), json.name, EncryptionKey.get(applicationContext))
+            val wallet = mapper.readValue(content, Data.WalletJson::class.java)
+            Rust().importWallet(context(), wallet)
+            Rust().signWallet(context(), wallet.id.name)
         } catch (e: Exception) {
             Log.e("LIST", e.message?:"Null")
             setResultMessage(R.string.wallet_not_imported)
         }
     }
 
-    private fun savePsbt(psbt: String, encoding: Data.Encoding) {
-        Log.d("LIST", "savePsbt ${psbt.length} chars length, encoding: $encoding")
+    private fun savePsbt(data: Data.StringEncoding) {
+        Log.d("LIST", "savePsbt ${data.c.length} chars length, encoding: $data.t")
         try {
-            Rust().savePSBT(filesDir.toString(),  Data.StringEncoding( encoding, psbt))
+            Rust().savePSBT(context(), data)
         } catch (e: Exception) {
             val message = e.message ?: "Null"
             Log.e("LIST", message)
@@ -392,24 +391,24 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         val result = IntentIntegrator.parseActivityResult(requestCode, resultCode, data)
         if (result != null) {
             if (result.contents == null) {
-                rawHexes.clear()
+                rawData.clear()
                 C.showMessageDialog(this, R.string.cancelled)
             } else {
-                val hexString = result.rawBytes.toHexString()
-                this.rawHexes.add(hexString)
-                if (hexString.startsWith("3")) {
+                val bytesEncoded = Data.encodeStringEncodingHex(result.rawBytes)
+                this.rawData.add(bytesEncoded)
+                if (bytesEncoded.t == Data.Encoding.HEX && bytesEncoded.c.startsWith("3")) {
                     try {
-                        val hexResult = Rust().mergeQrs(filesDir.toString(), this.rawHexes)
-                        rawHexes.clear()
-                        Log.d("MAIN", "qr complete: $hexResult")
+                        val mergedQrs = Rust().mergeQrs(context(), this.rawData)
+                        rawData.clear()
+                        Log.d("MAIN", "qr complete: $result")
                         when (intent.getIntExtra(C.WHAT, 0)) {
                             IMPORT_WALLET -> {
-                                val bytes = decodeHexString(hexResult)
-                                saveWallet(bytes!!.toString(Charsets.UTF_8))
+                                val bytes = Data.decodeStringEncoding(mergedQrs)
+                                saveWallet(bytes.toString(Charsets.UTF_8))
                                 finish()
                             }
                             IMPORT_PSBT -> {
-                                savePsbt(hexResult, Data.Encoding.HEX)
+                                savePsbt(mergedQrs)
                                 finish()
                             }
                         }
@@ -423,7 +422,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
                             updateWallets()
                         }
                         PSBTS -> {
-                            savePsbt(result.contents, Data.Encoding.HEX)
+                            savePsbt(Data.StringEncoding(Data.Encoding.HEX,result.contents))
                             updatePsbts()
                         }
                     }
@@ -440,7 +439,7 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
             diceLaunches.add(launch.toInt())
             if (diceLaunches.size == launchesRequired(faces)) {
                 Log.d("LIST", "finish diceLaunches $diceLaunches")
-                Rust().dice(filesDir.toString(), keyName!!, Data.Base.valueOf("_$faces"), diceLaunches, EncryptionKey.get(applicationContext))
+                Rust().dice(context(), keyName!!, Data.Base.valueOf("_$faces"), diceLaunches)
                 resetFields()
                 finish()
             } else {
@@ -474,38 +473,9 @@ class ListActivity : AppCompatActivity() , ItemsAdapter.ItemGesture {
         newIntent.putExtra(C.LAUNCH_NUMBER, launchNumber)
         startActivityForResult(newIntent, DICE_LAUNCH)
     }
-
-    private fun hexToByte(hexString: String): Byte {
-        val firstDigit = toDigit(hexString[0])
-        val secondDigit = toDigit(hexString[1])
-        return ((firstDigit shl 4) + secondDigit).toByte()
-    }
-
-    private fun toDigit(hexChar: Char): Int {
-        val digit: Int = Character.digit(hexChar, 16)
-        if (digit == -1) {
-            throw IllegalArgumentException(
-                    "Invalid Hexadecimal Character: $hexChar")
-        }
-        return digit
-    }
-
-    private fun decodeHexString(hexString: String): ByteArray? {
-        if (hexString.length % 2 == 1) {
-            throw IllegalArgumentException(
-                    "Invalid hexadecimal String supplied.")
-        }
-        val bytes = ByteArray(hexString.length / 2)
-        var i = 0
-        while (i < hexString.length ) {
-            bytes[i / 2] = hexToByte(hexString.substring(i, i + 2))
-            i += 2
-        }
-        return bytes
-    }
 }
 
-data class Item(val name: String, val description: String?, val json: String?, val qrs: List<String>): Serializable
+data class Item(val name: String, val description: String?, val json: String?): Serializable
 
 class ItemsAdapter : RecyclerView.Adapter<ItemHolder>() {
 

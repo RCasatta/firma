@@ -20,37 +20,37 @@ class WalletActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_wallet)
 
-        val walletString = intent.getStringExtra(C.WALLET)
+        val walletString = intent.getStringExtra(C.WALLET)!!
         Log.d("WALLET", "${Network.TYPE} $walletString")
-        val walletJson = mapper.readValue(walletString, Data.CreateWalletOutput::class.java)
-        walletDescriptor = walletJson.wallet.descriptor
-        val walletTitle = "wallet: ${walletJson.wallet.name}"
+        val walletJson = mapper.readValue(walletString, Data.WalletJson::class.java)
+        walletDescriptor = walletJson.descriptor
+        val walletTitle = "wallet: ${walletJson.id.name}"
         title = walletTitle
-
-        view_qr.setOnClickListener { QrActivity.comeHere(this, walletTitle, walletJson.qr_files ) }
+        val qrContent = Data.StringEncoding(Data.Encoding.PLAIN, walletString)
+        view_qr.setOnClickListener { QrActivity.comeHere(this, walletTitle, qrContent) }
         select.setOnClickListener {
             val returnIntent = Intent()
-            returnIntent.putExtra(C.RESULT, walletJson.wallet.name)
+            returnIntent.putExtra(C.RESULT, walletJson.id.name)
             setResult(Activity.RESULT_OK, returnIntent)
             finish()
         }
 
         get_address.setOnClickListener { ListActivity.comeHere(this, ListActivity.ADDRESS_INDEX ) }
 
-        val walletDir = "$filesDir/${Network.TYPE}/wallets/${walletJson.wallet.name}/"
+        val walletDir = "$filesDir/${Network.TYPE}/wallets/${walletJson.id.name}/"
         delete.setOnClickListener {
-            C.showDeleteDialog(this, walletJson.wallet.name , walletDir)
+            C.showDeleteDialog(this, walletJson.id.name , walletDir)
         }
 
         items.layoutManager = LinearLayoutManager(this)
         items.adapter = itemsAdapter
 
-        itemsAdapter.list.add(DescItem("Fingerprints", walletJson.wallet.fingerprints.toString() ))
-        itemsAdapter.list.add(DescItem("Descriptor main", walletJson.wallet.descriptor ))
-        itemsAdapter.list.add(DescItem("Required sig", walletJson.wallet.required_sig.toString() ))
-        itemsAdapter.list.add(DescItem("Created at height", walletJson.wallet.created_at_height.toString() ))
-        itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson.wallet) ))
-        itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(walletJson.signature) ))
+        itemsAdapter.list.add(DescItem("Fingerprints", walletJson.fingerprints.toString() ))
+        itemsAdapter.list.add(DescItem("Descriptor main", walletJson.descriptor ))
+        itemsAdapter.list.add(DescItem("Required sig", walletJson.required_sig.toString() ))
+        itemsAdapter.list.add(DescItem("Created at height", walletJson.created_at_height.toString() ))
+        itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson) ))
+        //itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(walletJson.signature) ))
     }
 
     override fun onActivityResult(

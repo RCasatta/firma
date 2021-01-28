@@ -1,5 +1,6 @@
 use crate::common::list::ListOptions;
-use crate::offline::descriptor::DeriveAddressOpts;
+use crate::common::qr::{QrMergeOptions, QrOptions};
+use crate::offline::descriptor::DeriveAddressOptions;
 use crate::offline::dice::DiceOptions;
 use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
@@ -8,7 +9,6 @@ use crate::offline::sign::SignOptions;
 use crate::offline::sign_wallet::SignWalletOptions;
 use crate::*;
 use android_logger::Config;
-use bitcoin::Network;
 use common::error::ToJson;
 use jni::objects::{JClass, JString};
 use jni::sys::jstring;
@@ -17,95 +17,88 @@ use log::{debug, info, Level};
 use serde_json::Value;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use std::str::FromStr;
 use std::sync::Once;
 
 fn rust_call(c_str: &CStr) -> Result<CString> {
     let str = c_str.to_str()?;
     let value: Value = serde_json::from_str(str)?;
-    let datadir = value
-        .get("datadir")
-        .and_then(|s| s.as_str())
-        .ok_or_else(|| Error::MissingDatadir)?;
-    let network = value
-        .get("network")
-        .and_then(|s| s.as_str())
-        .ok_or_else(|| Error::MissingNetwork)?;
-    let network = Network::from_str(network)?;
-    let method = value.get("method").and_then(|s| s.as_str());
-    let args = value.get("args").unwrap_or(&Value::Null);
 
-    info!(
-        "method:{:?} datadir:{} network:{} args:{:?}",
-        method, datadir, network, args
-    );
+    let method = value
+        .get("method")
+        .ok_or_else(|| Error::MissingMethod)?
+        .as_str()
+        .ok_or_else(|| Error::MissingMethod)?
+        .to_string();
+    let context_value = value
+        .get("context")
+        .ok_or_else(|| Error::MissingContext)?
+        .clone();
+    let context: Context = serde_json::from_value(context_value)?;
+    let args = value.get("args").unwrap_or(&Value::Null).clone();
 
-    let value = match method {
-        Some("random") => {
-            let random_opts: RandomOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::random::create_key(datadir, network, &random_opts)?;
+    info!("method:{:?} context:{:?} args:{:?}", method, context, args);
+
+    let value = match method.as_str() {
+        "random" => {
+            let random_opts: RandomOptions = serde_json::from_value(args)?;
+            let result = context.create_key(&random_opts)?;
             serde_json::to_value(result)?
         }
-        Some("dice") => {
-            let dice_opts: DiceOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::dice::roll(datadir, network, &dice_opts)?;
+        "dice" => {
+            let dice_opts: DiceOptions = serde_json::from_value(args)?;
+            let result = context.roll(&dice_opts)?;
             serde_json::to_value(result)?
         }
-        Some("list") => {
-            let list_opts: ListOptions = serde_json::from_value(args.clone())?;
-            let result = crate::common::list::list(datadir, network, &list_opts)?;
+        "list" => {
+            let list_opts: ListOptions = serde_json::from_value(args)?;
+            let result = context.list(&list_opts)?;
             serde_json::to_value(result)?
         }
-        Some("merge_qrs") => {
-            let string_values: Vec<String> = serde_json::from_value(args.clone())?;
-            let mut values = vec![];
-            for string in string_values {
-                values.push(hex::decode(&string)?);
-            }
-            match qr_code::structured::merge_qrs(values) {
-                Ok(merged) => hex::encode(merged).into(),
-                Err(e) => e.to_json(),
-            }
-        }
-        Some("sign") => {
-            let opts: SignOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::sign::start(&opts, network)?;
+        "merge_qrs" => {
+            let opts: QrMergeOptions = serde_json::from_value(args)?;
+            let result = qr::merge_qrs(opts)?;
             serde_json::to_value(result)?
         }
-        Some("restore") => {
-            let opts: RestoreOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::restore::start(datadir, network, &opts)?;
+        "qrs" => {
+            let opts: QrOptions = serde_json::from_value(args)?;
+            let result = qr::qrs_string_encoding(opts)?;
             serde_json::to_value(result)?
         }
-        Some("print") => {
-            let opts: PrintOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::print::start(datadir, network, &opts)?;
+        "sign" => {
+            let opts: SignOptions = serde_json::from_value(args)?;
+            let result = context.sign(&opts)?;
             serde_json::to_value(result)?
         }
-        Some("save_psbt") => {
-            let opts: SavePSBTOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::sign::save_psbt_options(datadir, network, &opts)?;
+        "restore" => {
+            let opts: RestoreOptions = serde_json::from_value(args)?;
+            let result = context.restore(&opts)?;
             serde_json::to_value(result)?
         }
-        Some("derive_address") => {
-            let opts: DeriveAddressOpts = serde_json::from_value(args.clone())?;
-            let result = crate::offline::descriptor::derive_address(network, &opts)?;
+        "print" => {
+            let opts: PrintOptions = serde_json::from_value(args)?;
+            let result = context.print(&opts)?;
             serde_json::to_value(result)?
         }
-        Some("import_wallet") => {
-            let wallet: WalletJson = serde_json::from_value(args.clone())?;
-            let result = crate::offline::import::import_wallet(datadir, network, &wallet)?;
+        "save_psbt" => {
+            let opts: SavePSBTOptions = serde_json::from_value(args)?;
+            let result = context.save_psbt_options(&opts)?;
             serde_json::to_value(result)?
         }
-        Some("sign_wallet") => {
-            let opts: SignWalletOptions = serde_json::from_value(args.clone())?;
-            let result = crate::offline::sign_wallet::sign_wallet(datadir, network, &opts)?;
+        "derive_address" => {
+            let opts: DeriveAddressOptions = serde_json::from_value(args)?;
+            let result = crate::offline::descriptor::derive_address(context.network, &opts)?;
             serde_json::to_value(result)?
         }
-        _ => {
-            let error: Error = "invalid method".into();
-            error.to_json()
+        "import" => {
+            let result = context.import_json(args)?;
+            serde_json::to_value(result)?
         }
+        "sign_wallet" => {
+            let opts: SignWalletOptions = serde_json::from_value(args)?;
+            let result = context.sign_wallet(&opts)?;
+            serde_json::to_value(result)?
+        }
+        a @ _ => Error::MethodNotExist(a.to_string()).to_json(),
     };
     let result = serde_json::to_string(&value)?;
     debug!("result: ({})", result);

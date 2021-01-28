@@ -1,6 +1,4 @@
-use crate::offline::sign::save_psbt;
 use crate::online::get_address::GetAddressOptions;
-use crate::qr::QrMode;
 use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
 use bitcoincore_rpc::bitcoincore_rpc_json::{
@@ -100,7 +98,6 @@ impl Context {
         let get_addr_opts = GetAddressOptions {
             wallet_name: opt.wallet_name.to_string(),
             index: None,
-            qr_mode: QrMode::None,
         };
 
         let change_address = self.get_address(&get_addr_opts)?.address;
@@ -132,7 +129,7 @@ impl Context {
 
         let mut psbt = psbt_from_rpc(&funded_psbt, &opt.psbt_name)?;
 
-        let psbt_name = save_psbt(self, &mut psbt)?;
+        let psbt_name = self.save_psbt(&mut psbt)?;
 
         // detect address reuse
         let transactions = client
@@ -150,7 +147,7 @@ impl Context {
         }
 
         let create_tx = CreateTxOutput {
-            funded_psbt: ((&psbt, self.network)).into(),
+            funded_psbt: (&psbt, self.network).into(),
             psbt_name,
             address_reused,
         };

@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import kotlinx.android.synthetic.main.activity_address.*
 
-class AddressActivity : AppCompatActivity() {
+class AddressActivity : ContextActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -16,7 +16,7 @@ class AddressActivity : AppCompatActivity() {
         val descriptor = intent.getStringExtra(C.DESCRIPTOR)!!
         Log.i("ADDRESS", "$index $descriptor")
 
-        val addressData = Rust().deriveAddress(descriptor, index)
+        val addressData = Rust().deriveAddress(context(), descriptor, index)
 
         address.text = addressData.address
         path.text = addressData.path

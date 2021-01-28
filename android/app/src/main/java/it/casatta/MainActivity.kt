@@ -7,7 +7,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ContextActivity() {
 
     companion object {
         init {
@@ -38,11 +38,11 @@ class MainActivity : AppCompatActivity() {
             if (key_text.text == getString(R.string.select_key) || wallet_text.text == getString(R.string.select_wallet)  || psbt_text.text == getString(R.string.select_transaction)) {
                 C.showMessageDialog(this, R.string.select_all)
             } else {
-                val keyFile = "$filesDir/${Network.TYPE}/keys/${key_text.text}/PRIVATE.json"
-                val walletFile = "$filesDir/${Network.TYPE}/wallets/${wallet_text.text}/descriptor.json"
-                val psbtFile = "$filesDir/${Network.TYPE}/psbts/${psbt_text.text}/psbt.json"
+                val keyName= "${key_text.text}"
+                val walletName = "${wallet_text.text}"
+                val psbtName = "${psbt_text.text}"
                 try {
-                    val result = Rust().sign(filesDir.toString(), keyFile, walletFile, psbtFile, EncryptionKey.get(applicationContext))
+                    val result = Rust().sign(context(), keyName, walletName, psbtName)
                     if (result.info.contains(getString(R.string.added_signatures))) {
                         AlertDialog.Builder(this).setMessage(R.string.added_signatures).create().show()
                     } else {
@@ -75,6 +75,6 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
+
 //fun String.hexStringToByteArray() = ByteArray(this.length / 2) { this.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
 

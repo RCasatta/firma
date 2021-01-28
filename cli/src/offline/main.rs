@@ -90,7 +90,7 @@ fn launch_subcommand(context: &Context, subcommand: FirmaOfflineSubcommands) -> 
         Sign(opt) => context.sign(opt)?.try_into(),
         Random(opt) => context.create_key(opt)?.try_into(),
         Print(opt) => context.print(opt)?.try_into(),
-        Restore(opt) => offline::restore::start(context, opt)?.try_into(),
+        Restore(opt) => context.restore(opt)?.try_into(),
         List(opt) => context.list(opt)?.try_into(),
         SignWallet(opt) => context.sign_wallet(opt)?.try_into(),
         VerifyWallet(opt) => context.verify_wallet(opt)?.try_into(),

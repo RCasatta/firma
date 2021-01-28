@@ -77,19 +77,9 @@ pub struct Dice {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct MasterKeyOutput {
-    pub key: MasterSecretJson,
-    pub private_file: PathBuf,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub public_file: Option<PathBuf>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct PsbtJsonOutput {
     pub psbt: PsbtJson,
-    pub file: PathBuf,
     pub signatures: String,
-    pub qr_files: Vec<PathBuf>,
     pub unsigned_txid: Txid,
 }
 
@@ -128,19 +118,14 @@ pub struct CreateTxOutput {
     pub address_reused: HashSet<Address>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct CreateWalletOutput {
-    // TODO remove all *Output?
-    pub wallet_file: PathBuf,
-    pub wallet: WalletJson,
-    pub signature: Option<WalletSignatureJson>,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct ListOutput {
-    pub keys: Vec<MasterKeyOutput>,
-    pub wallets: Vec<CreateWalletOutput>,
-    pub psbts: Vec<PsbtJsonOutput>,
+    pub wallets: Vec<WalletJson>,
+    //pub wallets_indexes: Vec<IndexesJson>,
+    //pub wallets_signatures: Vec<WalletSignatureJson>,
+    pub master_secrets: Vec<MasterSecretJson>,
+    //pub descriptor_public_keys: Vec<PublicMasterKey>,
+    pub psbts: Vec<PsbtJson>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -221,11 +206,17 @@ pub struct VerifyWalletResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct EncodedQrs {
+    pub qrs: Vec<StringEncoding>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(tag = "t", content = "c", rename_all = "lowercase")]
 pub enum StringEncoding {
     Base64(String),
     Hex(String),
     Bech32(String),
+    Plain(String),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -249,6 +240,10 @@ impl StringEncoding {
         StringEncoding::Base64(base64::encode(content))
     }
 
+    pub fn new_hex(content: &[u8]) -> Self {
+        StringEncoding::Hex(hex::encode(content))
+    }
+
     pub fn as_bytes(&self) -> crate::Result<Vec<u8>> {
         Ok(match self {
             StringEncoding::Base64(s) => base64::decode(s)?,
@@ -257,6 +252,7 @@ impl StringEncoding {
                 let (_, vec_u5) = bech32::decode(s)?;
                 Vec::<u8>::from_base32(&vec_u5)?
             }
+            StringEncoding::Plain(s) => s.as_bytes().to_vec(),
         })
     }
 
@@ -275,6 +271,7 @@ impl StringEncoding {
             StringEncoding::Base64(_) => "base64",
             StringEncoding::Hex(_) => "hex",
             StringEncoding::Bech32(_) => "bech32",
+            StringEncoding::Plain(_) => "plain",
         }
         .to_string()
     }
@@ -317,18 +314,6 @@ impl PsbtJson {
 
     pub fn set_psbt(&mut self, psbt: &PSBT) {
         self.psbt = psbt_to_base64(psbt).1;
-    }
-}
-
-impl MasterKeyOutput {
-    pub fn public_file_str(&self) -> Option<String> {
-        self.public_file
-            .as_ref()
-            .and_then(|p| p.to_str().map(|s| s.to_string()))
-    }
-
-    pub fn private_file_str(&self) -> Option<String> {
-        self.private_file.to_str().map(|s| s.to_string())
     }
 }
 
@@ -379,8 +364,7 @@ macro_rules! impl_try_into {
         }
     };
 }
-impl_try_into!(MasterKeyOutput);
-impl_try_into!(CreateWalletOutput);
+
 impl_try_into!(CreateTxOutput);
 impl_try_into!(SendTxOutput);
 impl_try_into!(BalanceOutput);

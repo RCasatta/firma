@@ -1,30 +1,80 @@
 package it.casatta.json
 
+import android.util.Base64
 import com.fasterxml.jackson.annotation.JsonValue
 
 class Data {
+
+    companion object {
+        private fun hexToByte(hexString: String): Byte {
+            val firstDigit = toDigit(hexString[0])
+            val secondDigit = toDigit(hexString[1])
+            return ((firstDigit shl 4) + secondDigit).toByte()
+        }
+
+        private fun toDigit(hexChar: Char): Int {
+            val digit: Int = Character.digit(hexChar, 16)
+            if (digit == -1) {
+                throw IllegalArgumentException(
+                    "Invalid Hexadecimal Character: $hexChar")
+            }
+            return digit
+        }
+
+        private fun decodeHexString(hexString: String): ByteArray {
+            if (hexString.length % 2 == 1) {
+                throw IllegalArgumentException(
+                    "Invalid hexadecimal String supplied.")
+            }
+            val bytes = ByteArray(hexString.length / 2)
+            var i = 0
+            while (i < hexString.length ) {
+                bytes[i / 2] = hexToByte(hexString.substring(i, i + 2))
+                i += 2
+            }
+            return bytes
+        }
+
+        fun decodeStringEncoding(data: StringEncoding): ByteArray {
+            return when(data.t) {
+                Encoding.HEX -> decodeHexString(data.c)
+                Encoding.PLAIN -> data.c.toByteArray(Charsets.UTF_8)
+                Encoding.BASE64 -> Base64.decode(data.c, Base64.DEFAULT)
+                Encoding.BECH32 -> error("Assertion failed, bech32 not supported")
+            }
+        }
+
+        fun encodeStringEncodingHex(data: ByteArray): StringEncoding {
+            return StringEncoding(Encoding.HEX, data.toHexString())
+        }
+    }
+
     data class JsonRpc(
         val method: String,
-        val datadir: String,
-        val network: String,
+        val context: Context,
         val args: Any
     )
 
-    data class ListOutput(
-        val keys: List<MasterKeyOutput>,
-        val wallets: List<CreateWalletOutput>,
-        val psbts: List<PsbtJsonOutput>
+    data class Context(
+        val datadir: String,
+        val network: String,
+        val encryption_key: StringEncoding?
     )
 
-    data class MasterKeyOutput(
-        val key: PrivateMasterKey,
-        val private_file: String,
-        val public_file: String?,
-        val public_qr_files: List<String>
+    data class ListOutput(
+        val master_secrets: List<PrivateMasterKey>,
+        val wallets: List<WalletJson>,
+        val psbts: List<PsbtJson>
+    )
+
+    data class Identifier(
+        val kind: Kind,
+        val name: String,
+        val network: String
     )
 
     data class PrivateMasterKey(
-        val name: String,
+        val id: Identifier,
         val xpub: String,
         val xprv: String,
         val mnemonic: String?,
@@ -38,15 +88,8 @@ class Data {
         val value: String
     )
 
-    data class CreateWalletOutput(
-        val wallet_file: String,
-        val wallet: WalletJson,
-        val qr_files: List<String>,
-        val signature: WalletSignature?
-    )
-
     data class WalletJson(
-        val name: String,
+        val id: Identifier,
         val descriptor: String,
         val fingerprints: List<String>,
         val required_sig: Int,
@@ -54,24 +97,17 @@ class Data {
     )
 
     data class WalletSignature(
+        val id: Identifier,
         val xpub: String,
         val address: String,
         val signature: String
     )
 
     data class PsbtJson(
-        val name: String,
+        val id: Identifier,
         val psbt: String,
         val fee: Double,
         val changepos: Int
-    )
-
-    data class PsbtJsonOutput(
-        val signatures: String,
-        val psbt: PsbtJson,
-        val file: String,
-        val qr_files: List<String>,
-        val unsigned_txid: String
     )
 
     data class TxIn(
@@ -85,7 +121,6 @@ class Data {
         val address: String,
         val value: String,
         val wallet_with_path: String?
-
     )
 
     data class Size(
@@ -120,11 +155,9 @@ class Data {
         val c: String
     )
 
-    enum class Kind(@JsonValue val code: String) {
-        WALLET("wallets"),
-        KEY("keys"),
-        PSBT("psbts")
-    }
+    data class EncodedQrs(
+        val qrs: List<StringEncoding>
+    )
 
     enum class Base(@JsonValue val code: String) {
         _2("2"),
@@ -149,7 +182,18 @@ class Data {
     enum class Encoding(@JsonValue val code: String) {
         BASE64("base64"),
         HEX("hex"),
-        BECH32("bech32")
+        BECH32("bech32"),
+        PLAIN("plain")
     }
 
+    enum class Kind(@JsonValue val code: String) {
+        WALLET("Wallet"),
+        WALLET_INDEXES("WalletIndexes"),
+        WALLET_SIGNATURE("WalletSignature"),
+        MASTER_SECRET("MasterSecret"),
+        DESCRIPTOR_PUBLIC_KEY("DescriptorPublicKey"),
+        PSBT("PSBT")
+    }
 }
+
+fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }

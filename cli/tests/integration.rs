@@ -239,20 +239,16 @@ fn integration_test() {
     let coins_output = firma_2of3.online_list_coins(&name_2of3).unwrap();
     assert!(!coins_output.coins.is_empty());
 
-    /*
     let list_keys = firma_2of2.offline_list(Kind::MasterSecret, None).unwrap();
-    assert!(list_keys.keys.iter().any(|k| k.key.id.name == r1.id.name));
-    assert!(list_keys.keys.iter().any(|k| k.key.id.name == r2.id.name));
+    let keys = &list_keys.master_secrets;
+    assert!(keys.iter().any(|k| k.id.name == r1.id.name));
+    assert!(keys.iter().any(|k| k.id.name == r2.id.name));
     let list_wallets = firma_2of2.offline_list(Kind::Wallet, None).unwrap();
-    assert!(list_wallets
-        .wallets
-        .iter()
-        .any(|w| w.wallet.id.name == name_2of2));
+    assert!(list_wallets.wallets.iter().any(|w| w.id.name == name_2of2));
     let list_psbt = firma_2of2.offline_list(Kind::PSBT, None).unwrap();
     assert_eq!(list_psbt.psbts.len(), 2);
     let result = firma_2of3.online_rescan(&name_2of3); // TODO test restore a wallet, find funds with rescan
     assert!(result.is_ok());
-    */
 
     // test key encryption
     let encryption_key = Some(&[0u8; 32][..]);
@@ -260,22 +256,20 @@ fn integration_test() {
         .offline_random("key_encrypted", encryption_key)
         .unwrap();
     let key_file_str = firma_2of2.path_str(Kind::MasterSecret, &e1.id.name);
-    /*let list_keys = firma_2of2.offline_list(Kind::Key, None).unwrap();
+    let list_keys = firma_2of2.offline_list(Kind::MasterSecret, None).unwrap();
+    let keys = &list_keys.master_secrets;
     assert!(
-        !list_keys
-            .keys
-            .iter()
-            .any(|k| k.key.id.name == e1.key.id.name),
+        !keys.iter().any(|k| k.id.name == e1.id.name),
         "can see private key without encryption_key"
     );
-    let list_keys = firma_2of2.offline_list(Kind::Key, encryption_key).unwrap();
+    let keys = firma_2of2
+        .offline_list(Kind::MasterSecret, encryption_key)
+        .unwrap()
+        .master_secrets;
     assert!(
-        list_keys
-            .keys
-            .iter()
-            .any(|k| k.key.id.name == e1.key.id.name),
+        keys.iter().any(|k| k.id.name == e1.id.name),
         "can't see private key with encryption_key"
-    );*/
+    );
     assert!(firma_2of2.offline_decrypt(&key_file_str, None).is_err());
     let d1 = firma_2of2
         .offline_decrypt(&key_file_str, encryption_key)
@@ -378,7 +372,7 @@ impl FirmaCommand {
         )?)
     }
 
-    pub fn _online_rescan(&self, wallet_name: &str) -> Result<usize> {
+    pub fn online_rescan(&self, wallet_name: &str) -> Result<usize> {
         Ok(from_value(
             self.online(
                 "rescan",
@@ -543,7 +537,7 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    pub fn _offline_list(&self, kind: Kind, encryption_key: Option<&[u8]>) -> Result<ListOutput> {
+    pub fn offline_list(&self, kind: Kind, encryption_key: Option<&[u8]>) -> Result<ListOutput> {
         Ok(from_value(
             self.offline("list", vec!["--kind", &kind.to_string()], encryption_key)
                 .unwrap(),

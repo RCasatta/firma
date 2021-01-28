@@ -8,13 +8,13 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DeriveAddressOpts {
+pub struct DeriveAddressOptions {
     pub descriptor: String,
     pub index: u32,
 }
 
 /// derive address from descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
-pub fn derive_address(network: Network, opt: &DeriveAddressOpts) -> Result<GetAddressOutput> {
+pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<GetAddressOutput> {
     // checksum not supported at the moment, stripping out
     let end = opt
         .descriptor
@@ -65,7 +65,7 @@ mod tests {
     fn derive_address_test() {
         // firma-online --wallet-name firma-wallet2 get-address --index 0
         // tb1q5nrregep899vnvaa5vdpxcwg8794jqy38nu304kl4d7wm4e92yeqz4jfmk
-        let mut opts = DeriveAddressOpts {
+        let mut opts = DeriveAddressOptions {
             descriptor: DESCRIPTOR.to_string(),
             index: 0,
         };

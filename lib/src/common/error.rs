@@ -16,8 +16,9 @@ pub enum Error {
     WrongKeyFileName,
     MissingPrevoutTx,
     MismatchPrevoutHash,
-    MissingDatadir,
-    MissingNetwork,
+    MissingContext,
+    MissingMethod,
+    MethodNotExist(String),
     MissingDaemonOpts,
     MissingOutpoint,
     MissingTxout,
@@ -121,8 +122,9 @@ impl fmt::Display for Error {
             Error::WrongKeyFileName => write!(f, "Private file name MUST be PRIVATE.json"),
             Error::MissingPrevoutTx => write!(f, "Missing prevout tx"),
             Error::MismatchPrevoutHash => write!(f, "Prevout hash doesn't match previous tx"),
-            Error::MissingDatadir => write!(f, "Missing datadir"),
-            Error::MissingNetwork => write!(f, "Missing network"),
+            Error::MissingContext => write!(f, "Missing context"),
+            Error::MissingMethod => write!(f, "Missing method"),
+            Error::MethodNotExist(m) => write!(f, "Method {} not exist", m),
             Error::MissingDaemonOpts => write!(f, "Missing daemon options (url and cookie file)"),
             Error::FileNotFoundOrCorrupt(p, e) => {
                 write!(f, "{:?} file not found or corrupted: {}", p, e)

@@ -5,12 +5,14 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import it.casatta.json.Data
+import it.casatta.json.toHexString
 import java.security.SecureRandom
 
 
 class EncryptionKey {
 
     companion object {
+        @Synchronized
         fun get(context: Context): Data.StringEncoding {
             Log.i("EncryptionKey", "get")
             val masterKeyAlias =

@@ -20,67 +20,74 @@ class Rust {
         return jsonResult
     }
 
-    private fun callMethod(method: String, datadir: String, network: String, args: Any): JsonNode {
-        val req = JsonRpc(method, datadir, network, args)
+    private fun callMethod(context: Context, method: String, args: Any): JsonNode {
+        val req = JsonRpc(method, context, args)
         val reqString = mapper.writeValueAsString(req)
         return callJson(reqString)
     }
 
-    fun list(datadir: String, kind: Kind, encryptionKey: StringEncoding): ListOutput {
-        val encryptionKeys = listOf(encryptionKey)
-        val opt = ListOptions(kind, encryptionKeys, true)
-        val json = callMethod("list", datadir, Network.TYPE, opt)
+    fun list(context: Context, kind: Kind): ListOutput {
+        val opt = ListOptions(kind, true)
+        val json = callMethod(context, "list",  opt)
         return mapper.convertValue(json, ListOutput::class.java)
     }
 
-    fun random(datadir: String, keyName: String, encryptionKey: StringEncoding): JsonNode {
-        val opt = RandomOptions(keyName, 14, encryptionKey)
-        return callMethod("random", datadir, Network.TYPE, opt)
+    fun random(context: Context, keyName: String): JsonNode {
+        val opt = RandomOptions(keyName)
+        return callMethod(context, "random", opt)
     }
 
-    fun dice(datadir: String, keyName: String, faces: Base, launches: ArrayList<Int>, encryptionKey: StringEncoding): JsonNode {
-        val opt = DiceOptions(keyName, 14, encryptionKey, faces, Bits._256, launches)
-        return callMethod("dice", datadir, Network.TYPE, opt)
+    fun dice(context: Context, keyName: String, faces: Base, launches: ArrayList<Int>): JsonNode {
+        val opt = DiceOptions(keyName,  faces, Bits._256, launches)
+        return callMethod(context,"dice", opt)
     }
 
-    fun mergeQrs(datadir: String, qrs_bytes: List<String>): String {
-        return callMethod("merge_qrs", datadir, Network.TYPE, qrs_bytes).asText()
+    fun mergeQrs(context: Context, qrs_content: List<StringEncoding>): StringEncoding {
+        val opt = QrMergeOptions(qrs_content)
+        val json =  callMethod(context,"merge_qrs",  opt)
+        return mapper.convertValue(json, StringEncoding::class.java)
     }
 
-    fun importWallet(datadir: String, wallet: WalletJson) {
-        callMethod("import_wallet", datadir, Network.TYPE, wallet)
+    fun qrs(context: Context, qr_content: StringEncoding): EncodedQrs {
+        val opt = QrOptions(qr_content, 14)
+        val json =  callMethod(context,"qrs",  opt)
+        return mapper.convertValue(json, EncodedQrs::class.java)
     }
 
-    fun signWallet(datadir: String, walletName: String, encryptionKey: StringEncoding) {
-        val opt = SignWalletOptions(walletName, encryptionKey)
-        callMethod("sign_wallet", datadir, Network.TYPE, opt)
+    fun importWallet(context: Context, wallet: WalletJson) {
+        callMethod(context,"import", wallet)
     }
 
-    fun sign(datadir: String, key: String, wallet: String, psbt: String, encryptionKey: StringEncoding): PsbtPrettyPrint {
-        val opt = SignOptions(key, 100, wallet, 14, psbt, false, encryptionKey )
-        val json = callMethod("sign", datadir, Network.TYPE, opt)
+    fun signWallet(context: Context, walletName: String) {
+        val opt = SignWalletOptions(walletName)
+        callMethod(context, "sign_wallet", opt)
+    }
+
+    fun sign(context: Context, key: String, wallet: String, psbt: String): PsbtPrettyPrint {
+        val opt = SignOptions(key, wallet, psbt, 100, false )
+        val json = callMethod(context, "sign", opt)
         return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
 
-    fun restore(datadir: String, key: String, nature: Nature, value: String, encryptionKey: StringEncoding): JsonNode {
-        val opt = RestoreOptions(key, nature, 14, encryptionKey, value)
-        return callMethod("restore", datadir, Network.TYPE, opt)
+    fun restore(context: Context, key: String, nature: Nature, value: String): JsonNode {
+        val opt = RestoreOptions(key, nature, value)
+        return callMethod(context,"restore", opt)
     }
 
-    fun print(datadir: String, psbt_file: String): PsbtPrettyPrint {
-        val opt = PrintOptions(psbt_file, true)
-        val json = callMethod("print", datadir, Network.TYPE, opt)
+    fun print(context: Context, psbt_file: String): PsbtPrettyPrint {
+        val opt = PrintOptions(psbt_file, null , null, true)
+        val json = callMethod(context,"print", opt)
         return mapper.convertValue(json, PsbtPrettyPrint::class.java)
     }
 
-    fun savePSBT(datadir: String, psbt: StringEncoding) {
-        val opt = SavePSBTOptions(psbt, 14)
-        callMethod("save_psbt", datadir, Network.TYPE, opt)
+    fun savePSBT(context: Context, psbt: StringEncoding) {
+        val opt = SavePSBTOptions(psbt)
+        callMethod(context,"save_psbt", opt)
     }
 
-    fun deriveAddress(walletDescriptor: String, addressIndex: Int): GetAddressOutput {
+    fun deriveAddress(context: Context, walletDescriptor: String, addressIndex: Int): GetAddressOutput {
         val opt = DeriveAddressOpts(walletDescriptor, addressIndex)
-        val json = callMethod("derive_address", "", Network.TYPE, opt)
+        val json = callMethod(context, "derive_address", opt)
         return mapper.convertValue(json, GetAddressOutput::class.java)
     }
 }

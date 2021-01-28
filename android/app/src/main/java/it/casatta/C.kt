@@ -11,7 +11,7 @@ class C {
     companion object {
         const val WHAT = "what"
         const val RESULT = "result"
-        const val QRS = "qrs"
+        const val QR_CONTENT = "encoded_QRS"
         const val PSBT = "psbt"
         const val WALLET = "wallet"
         const val INDEX = "index"

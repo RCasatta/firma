@@ -77,9 +77,9 @@ fn find_key<'a>(
     available_keys: &'a ListOutput,
     xpubs: &[ExtendedPubKey],
 ) -> Result<&'a ExtendedPrivKey> {
-    for key in available_keys.keys.iter() {
-        if check_xpub_in_descriptor(&key.key.xpub, &xpubs).is_ok() {
-            return Ok(&key.key.xprv);
+    for key in available_keys.master_secrets.iter() {
+        if check_xpub_in_descriptor(&key.xpub, &xpubs).is_ok() {
+            return Ok(&key.xprv);
         }
     }
     Err("There is No private key participating in the wallet available".into())

@@ -70,8 +70,9 @@ class WalletTest : Common() {
         )
 
         val name = "wallet-${System.currentTimeMillis()}"
+        val identifier = Data.Identifier(Data.Kind.WALLET, name, Network.TYPE)
         val wallet = Data.WalletJson(
-            name,
+            identifier,
             mainDescriptors[network]!!,
             listOf("8f335370", "6b9128bc"),
             2,
@@ -96,8 +97,9 @@ class WalletTest : Common() {
         checkElementNotInList(name)
 
         val invalidNetwork = invalidNetwork(network)
+        val identifier2 = Data.Identifier(Data.Kind.WALLET, name, Network.TYPE)
         val invalidWallet = Data.WalletJson(
-            name,
+            identifier2,
             mainDescriptors[invalidNetwork]!!,
             listOf("8f335370", "6b9128bc"),
             2,
