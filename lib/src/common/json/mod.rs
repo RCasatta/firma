@@ -339,7 +339,7 @@ impl MasterSecretJson {
         })
     }
 
-    pub fn from_xprv(xprv: ExtendedPrivKey, name: &str) -> Self {
+    pub fn from_xprv(xprv: ExtendedPrivKey, name: &str, network: Network) -> Self {
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
         let xpub = ExtendedPubKey::from_private(&secp, &xprv);
         MasterSecretJson {
@@ -348,7 +348,7 @@ impl MasterSecretJson {
             mnemonic: None,
             dice: None,
             fingerprint: xpub.fingerprint(),
-            id: Identifier::new(xprv.network, Kind::MasterSecret, name),
+            id: Identifier::new(network, Kind::MasterSecret, name),
         }
     }
 }

@@ -50,7 +50,7 @@ impl Context {
             Nature::Xprv => {
                 let key = ExtendedPrivKey::from_str(&opt.value)?;
                 check_compatibility(key.network, self.network)?;
-                MasterSecretJson::from_xprv(key, &opt.key_name)
+                MasterSecretJson::from_xprv(key, &opt.key_name, self.network)
             }
             Nature::Mnemonic => {
                 let mnemonic = Mnemonic::from_str(&opt.value)?;
@@ -66,8 +66,11 @@ impl Context {
 #[cfg(test)]
 mod tests {
     use crate::common::context::tests::TestContext;
+    use crate::list::ListOptions;
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
+    use crate::Kind;
+    use bitcoin::Network;
 
     #[test]
     fn test_restore() {
@@ -82,7 +85,7 @@ mod tests {
 
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name,
+            key_name: key_name.clone(),
             nature: Nature::Xprv,
             value: key_orig.xprv.to_string(),
         };
@@ -90,6 +93,12 @@ mod tests {
         assert_eq!(key_orig.xprv, key_restored.xprv);
         assert_eq!(key_orig.xpub, key_restored.xpub);
         assert_ne!(key_orig.mnemonic, key_restored.mnemonic);
+        let list_options = ListOptions {
+            kind: Kind::MasterSecret,
+            verify_wallets_signatures: false,
+        };
+        let list = context.list(&list_options).unwrap();
+        assert!(list.master_secrets.iter().any(|a| &a.id.name == &key_name));
 
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
@@ -115,11 +124,22 @@ mod tests {
 
         let (key_name, _name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name,
+            key_name: key_name.clone(),
             nature: Nature::Xprv,
             value: key_orig.xpub.to_string(),
         };
         let result = context.restore(&restore_opts);
         assert!(result.is_err());
+
+        let regtest_context = TestContext::with_network(Network::Regtest);
+        let key_orig = regtest_context.create_key(&rand_opts).unwrap();
+        let restore_opts = RestoreOptions {
+            key_name: key_name.clone(),
+            nature: Nature::Xprv,
+            value: key_orig.xprv.to_string(),
+        };
+        let _ = regtest_context.restore(&restore_opts).unwrap();
+        let list = regtest_context.list(&list_options).unwrap();
+        assert!(list.master_secrets.iter().any(|a| &a.id.name == &key_name));
     }
 }

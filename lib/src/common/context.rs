@@ -200,6 +200,7 @@ pub mod tests {
     use std::ops::Deref;
     use tempfile::TempDir;
 
+    #[derive(Debug)]
     pub struct TestContext {
         context: Context,
         #[allow(unused)]
@@ -207,10 +208,9 @@ pub mod tests {
     }
 
     impl TestContext {
-        pub fn new() -> Self {
+        pub fn with_network(network: Network) -> Self {
             let datadir = TempDir::new().unwrap();
             let firma_datadir = format!("{}/", datadir.path().display());
-            let network = Network::Testnet;
             TestContext {
                 context: Context {
                     network,
@@ -219,6 +219,9 @@ pub mod tests {
                 },
                 datadir,
             }
+        }
+        pub fn new() -> Self {
+            Self::with_network(Network::Testnet)
         }
     }
 
