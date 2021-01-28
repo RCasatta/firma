@@ -129,7 +129,7 @@ impl Context {
         let client = self
             .read_daemon_opts()?
             .make_client(Some(wallet_name.to_string()), self.network)?;
-        load_if_unloaded(&client, wallet_name)?;
+        load_if_unloaded(&client, wallet_name, true)?;
         Ok(client)
     }
 
@@ -153,12 +153,18 @@ impl Context {
     }
 }
 
-pub fn load_if_unloaded(client: &Client, wallet_name: &str) -> Result<()> {
+pub fn load_if_unloaded(client: &Client, wallet_name: &str, first_call: bool) -> Result<()> {
     match client.load_wallet(wallet_name) {
         Ok(_) => info!("wallet {} loaded", wallet_name),
         Err(e) => {
+            debug!("load_if_unloaded error {:?}", e);
             if e.to_string().contains("not found") {
-                return Err(format!("{} not found in the bitcoin node", wallet_name).into());
+                return if first_call {
+                    client.create_wallet(&wallet_name, Some(true), None, None, None)?;
+                    load_if_unloaded(client, wallet_name, false)
+                } else {
+                    Err(format!("{} not found in the bitcoin node", wallet_name).into())
+                };
             } else {
                 debug!("wallet {} already loaded", wallet_name);
             }

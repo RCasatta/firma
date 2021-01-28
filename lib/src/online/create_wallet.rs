@@ -79,8 +79,6 @@ impl Context {
         let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
         let descriptor = client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
-        client.create_wallet(&opt.wallet_name, Some(true), None, None, None)?;
-
         let multi_request = ImportMultiRequest {
             range: Some((0, 1000)), //TODO should be a parameter
             timestamp: ImportMultiRescanSince::Now,
