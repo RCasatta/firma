@@ -27,6 +27,11 @@ pub struct CreateWalletOptions {
     /// Key name that are composing the wallet, must be found in firma datadir
     #[structopt(long = "key-name")]
     pub key_names: Vec<String>,
+
+    /// If true, does not error if the wallet to be created already exists in the bitcoin node
+    /// useful for testing locally, to avoid removing the wallets
+    #[structopt(long)]
+    pub allow_wallet_already_exists: bool,
 }
 
 impl CreateWalletOptions {
@@ -68,9 +73,26 @@ impl CreateWalletOptions {
 
 impl Context {
     pub fn create(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
+        debug!("create_wallet {:?}", opt);
         opt.validate(self)?;
+
+        // create the wallet in the bitcoin node  (should not already exist unless forced)
+        match self.make_client(&opt.wallet_name) {
+            Ok(_) => {
+                if !opt.allow_wallet_already_exists {
+                    return Err(Error::WalletAlreadyExistsInNode(
+                        opt.wallet_name.to_string(),
+                    ));
+                }
+            }
+            Err(Error::WalletNotExistsInNode(_)) => {
+                self.read_daemon_opts()?
+                    .make_client(None, self.network)?
+                    .create_wallet(&opt.wallet_name, Some(true), None, None, None)?;
+            }
+            Err(e) => return Err(e),
+        };
         let client = self.make_client(&opt.wallet_name)?;
-        debug!("create");
 
         let mut xpubs = self.read_xpubs_from_names(&opt.key_names)?;
         xpubs.extend(&opt.xpubs);

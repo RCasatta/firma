@@ -49,6 +49,8 @@ pub enum Error {
     MissingEncryptionKey,
     InvalidMessageSignature,
     MissingIdentifier,
+    WalletNotExistsInNode(String),
+    WalletAlreadyExistsInNode(String),
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -164,6 +166,12 @@ impl fmt::Display for Error {
             Error::InvalidMessageSignature => write!(f, "Invalid message signature"),
             Error::CannotOverwrite(p) => write!(f, "Cannot overwrite {:?}", p),
             Error::MissingIdentifier => write!(f, "Missing identifier"),
+            Error::WalletNotExistsInNode(s) => {
+                write!(f, "Wallet {} does not exist in the bitcoin node", s)
+            }
+            Error::WalletAlreadyExistsInNode(s) => {
+                write!(f, "Wallet {} already exists in the bitcoin node", s)
+            }
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

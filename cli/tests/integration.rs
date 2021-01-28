@@ -52,9 +52,16 @@ fn integration_test() {
     let key_names = vec![r1.id.name.to_string(), r2.id.name.to_string()];
 
     let created_2of2_wallet = firma_2of2
-        .online_create_wallet(2, &key_names, &name_2of2)
+        .online_create_wallet(2, &key_names, &name_2of2, true)
         .unwrap();
     assert_eq!(&created_2of2_wallet.id.name, &name_2of2);
+    assert_eq!(
+        firma_2of2
+            .online_create_wallet(2, &key_names, &name_2of2, false)
+            .unwrap_err()
+            .to_string(),
+        "Wallet n2of2 already exists in the bitcoin node"
+    );
 
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
@@ -69,16 +76,15 @@ fn integration_test() {
 
     let key_names_2of3: Vec<String> = vec.iter().map(|e| e.id.name.to_string()).collect();
     let created_2of3_wallet = firma_2of3
-        .online_create_wallet(2, &key_names_2of3, &name_2of3)
+        .online_create_wallet(2, &key_names_2of3, &name_2of3, true)
         .unwrap();
     assert_eq!(&created_2of3_wallet.id.name, &name_2of3);
 
-    let created_2of3_wallet_err = firma_2of3
-        .online_create_wallet(2, &key_names_2of3, &name_2of3)
-        .unwrap_err();
-    assert!(created_2of3_wallet_err
+    assert!(firma_2of3
+        .online_create_wallet(2, &key_names_2of3, &name_2of3, true)
+        .unwrap_err()
         .to_string()
-        .contains("already exist")); // error from bitcoin rpc
+        .contains("Cannot overwrite"));
 
     // create address for firma 2of2
     let address_2of2 = firma_2of2.online_get_address(&name_2of2).unwrap().address;
@@ -338,9 +344,13 @@ impl FirmaCommand {
         required_sig: u8,
         names: &Vec<String>,
         wallet_name: &str,
+        allow_wallet_already_exists: bool,
     ) -> Result<WalletJson> {
         let required_sig = format!("{}", required_sig);
         let mut args = vec!["-r", &required_sig, "--wallet-name", wallet_name];
+        if allow_wallet_already_exists {
+            args.push("--allow-wallet-already-exists");
+        }
         for name in names {
             args.push("--key-name");
             args.push(name);

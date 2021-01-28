@@ -126,10 +126,14 @@ impl Context {
     }
 
     pub fn make_client(&self, wallet_name: &str) -> Result<Client> {
-        let client = self
-            .read_daemon_opts()?
-            .make_client(Some(wallet_name.to_string()), self.network)?;
-        load_if_unloaded(&client, wallet_name, true)?;
+        let opts = self.read_daemon_opts()?;
+        let default_client = opts.make_client(None, self.network)?;
+        let wallet_name_string = wallet_name.to_string();
+        if !default_client.list_wallets()?.contains(&wallet_name_string) {
+            return Err(Error::WalletNotExistsInNode(wallet_name_string));
+        }
+        let client = opts.make_client(Some(wallet_name_string), self.network)?;
+        load_if_unloaded(&client, wallet_name)?;
         Ok(client)
     }
 
@@ -153,18 +157,13 @@ impl Context {
     }
 }
 
-pub fn load_if_unloaded(client: &Client, wallet_name: &str, first_call: bool) -> Result<()> {
+pub fn load_if_unloaded(client: &Client, wallet_name: &str) -> Result<()> {
     match client.load_wallet(wallet_name) {
         Ok(_) => info!("wallet {} loaded", wallet_name),
         Err(e) => {
             debug!("load_if_unloaded error {:?}", e);
             if e.to_string().contains("not found") {
-                return if first_call {
-                    client.create_wallet(&wallet_name, Some(true), None, None, None)?;
-                    load_if_unloaded(client, wallet_name, false)
-                } else {
-                    Err(format!("{} not found in the bitcoin node", wallet_name).into())
-                };
+                return Err(format!("{} not found in the bitcoin node", wallet_name).into());
             } else {
                 debug!("wallet {} already loaded", wallet_name);
             }
