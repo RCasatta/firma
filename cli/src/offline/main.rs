@@ -1,3 +1,4 @@
+use firma::import_export::ExportOptions;
 use firma::log::debug;
 use firma::online::{PathOptions, WalletNameOptions};
 use firma::serde_json::{self, Value};
@@ -39,11 +40,8 @@ enum FirmaOfflineSubcommands {
     /// Restore a json key from xprv or mnemonic
     Restore(offline::restore::RestoreOptions),
 
-    /// List wallets and keys
+    /// List wallets, keys and PSBTs
     List(common::list::ListOptions),
-
-    /// Decrypt an encrypted file
-    Decrypt(PathOptions),
 
     /// Sign a wallet json containing the descriptor to avoid tampering
     SignWallet(WalletNameOptions),
@@ -53,6 +51,9 @@ enum FirmaOfflineSubcommands {
 
     /// Import the file containing a firma json object
     Import(PathOptions),
+
+    /// Export a firma json object
+    Export(ExportOptions),
 }
 
 fn main() -> Result<()> {
@@ -95,6 +96,6 @@ fn launch_subcommand(context: &Context, subcommand: FirmaOfflineSubcommands) -> 
         SignWallet(opt) => context.sign_wallet(opt)?.try_into(),
         VerifyWallet(opt) => context.verify_wallet(opt)?.try_into(),
         Import(opt) => context.import(opt),
-        Decrypt(opt) => offline::decrypt::decrypt::<Value>(opt, &context.encryption_key),
+        Export(opt) => context.export(opt),
     }
 }

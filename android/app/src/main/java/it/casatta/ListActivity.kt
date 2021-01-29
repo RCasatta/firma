@@ -161,7 +161,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
         for (wallet in listOutput.wallets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet)
             try {
-                val ver = Rust().verifyWallet(context(), wallet.id.name)
+                val ver = verifyWallet(wallet.id.name)
                 if (ver.verified) {
                     itemsAdapter.list.add(Item(wallet.id.name, wallet.fingerprints.toString(), details))
                 }
@@ -182,7 +182,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
     private fun update(kind: Data.Kind) {
         try {
             itemsAdapter.list.clear()
-            listOutput = Rust().list(context(), kind)
+            listOutput = list( kind)
         } catch (e: RustException) {
             C.showMessageDialog(this, e.message?:"Null")
         }
@@ -306,7 +306,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
             .setPositiveButton("Ok") { _, _ ->
                 val text = valueEditText.text.toString()
                 try {
-                    Rust().restore(context(), name, Data.Nature.valueOf(nature.toUpperCase()), text)
+                    restore( name, Data.Nature.valueOf(nature.toUpperCase()), text)
                     setResult(Activity.RESULT_OK, Intent())
                 } catch (e: RustException) {
                     Log.e("LIST", e.message?:"Null")
@@ -337,7 +337,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
                     } else {
                         when (what) {
                             getString(R.string.random) -> {
-                                Rust().random(context(), keyName)
+                                random( keyName)
                                 setResult(Activity.RESULT_OK, Intent())
                                 finish()
                             }
@@ -360,8 +360,8 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
         Log.d("LIST", "saveWallet $content")
         try {
             val wallet = mapper.readValue(content, Data.WalletJson::class.java)
-            Rust().importWallet(context(), wallet)
-            Rust().signWallet(context(), wallet.id.name)
+            importWallet( wallet)
+            signWallet( wallet.id.name)
         } catch (e: Exception) {
             Log.e("LIST", e.message?:"Null")
             setResultMessage(R.string.wallet_not_imported)
@@ -371,7 +371,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
     private fun savePsbt(data: Data.StringEncoding) {
         Log.d("LIST", "savePsbt ${data.c.length} chars length, encoding: $data.t")
         try {
-            Rust().savePSBT(context(), data)
+            savePSBT( data)
         } catch (e: Exception) {
             val message = e.message ?: "Null"
             Log.e("LIST", message)
@@ -403,7 +403,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
                 this.rawData.add(bytesEncoded)
                 if (bytesEncoded.t == Data.Encoding.HEX && bytesEncoded.c.startsWith("3")) {
                     try {
-                        val mergedQrs = Rust().mergeQrs(context(), this.rawData)
+                        val mergedQrs = mergeQrs( this.rawData)
                         rawData.clear()
                         Log.d("MAIN", "qr complete: $result")
                         when (intent.getIntExtra(C.WHAT, 0)) {
@@ -444,7 +444,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
             diceLaunches.add(launch.toInt())
             if (diceLaunches.size == launchesRequired(faces)) {
                 Log.d("LIST", "finish diceLaunches $diceLaunches")
-                Rust().dice(context(), keyName!!, Data.Base.valueOf("_$faces"), diceLaunches)
+                dice( keyName!!, Data.Base.valueOf("_$faces"), diceLaunches)
                 resetFields()
                 finish()
             } else {

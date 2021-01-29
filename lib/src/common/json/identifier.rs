@@ -1,5 +1,4 @@
 use crate::offline::decrypt::{decrypt, EncryptionKey, MaybeEncrypted};
-use crate::online::PathOptions;
 use crate::{expand_tilde, Error, Result, StringEncoding};
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::Network;
@@ -130,7 +129,7 @@ impl Identifier {
         let path = self.as_path_buf(datadir, false)?;
         debug!("reading {:?}", path);
 
-        let data = decrypt(&PathOptions { path }, encryption_key)?;
+        let data = decrypt(&path, encryption_key)?;
 
         Ok(data)
     }

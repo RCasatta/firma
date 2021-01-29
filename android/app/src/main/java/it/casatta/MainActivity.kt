@@ -42,7 +42,7 @@ class MainActivity : ContextActivity() {
                 val walletName = "${wallet_text.text}"
                 val psbtName = "${psbt_text.text}"
                 try {
-                    val result = Rust().sign(context(), keyName, walletName, psbtName)
+                    val result = sign(keyName, walletName, psbtName)
                     if (result.info.contains(getString(R.string.added_signatures))) {
                         AlertDialog.Builder(this).setMessage(R.string.added_signatures).create().show()
                     } else {

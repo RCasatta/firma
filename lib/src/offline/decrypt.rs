@@ -1,4 +1,3 @@
-use crate::online::PathOptions;
 use crate::{Error, Result, StringEncoding};
 use aes_gcm_siv::aead::{generic_array::GenericArray, Aead, NewAead};
 use aes_gcm_siv::Aes256GcmSiv;
@@ -6,16 +5,17 @@ use log::warn;
 use rand::{thread_rng, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
+use std::path::PathBuf;
 
 pub type EncryptionKey = [u8; 32];
 
-//TODO accept object name other than path
-pub fn decrypt<T>(opt: &PathOptions, encryption_key: &Option<StringEncoding>) -> Result<T>
+//TODO  use it only internally, use export in API
+pub fn decrypt<T>(path: &PathBuf, encryption_key: &Option<StringEncoding>) -> Result<T>
 where
     T: Serialize + DeserializeOwned + Debug,
 {
-    let file_content = std::fs::read(&opt.path)
-        .map_err(|e| crate::Error::FileNotFoundOrCorrupt(opt.path.clone(), e.to_string()))?;
+    let file_content = std::fs::read(path)
+        .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path.clone(), e.to_string()))?;
     let maybe_encrypted: MaybeEncrypted<T> = serde_json::from_slice(&file_content)?;
     match (maybe_encrypted, encryption_key.clone()) {
         (MaybeEncrypted::Plain(value), None) => Ok(value),

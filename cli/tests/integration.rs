@@ -261,7 +261,6 @@ fn integration_test() {
     let e1 = firma_2of2
         .offline_random("key_encrypted", encryption_key)
         .unwrap();
-    let key_file_str = firma_2of2.path_str(Kind::MasterSecret, &e1.id.name);
     let list_keys = firma_2of2.offline_list(Kind::MasterSecret, None).unwrap();
     let keys = &list_keys.master_secrets;
     assert!(
@@ -276,9 +275,11 @@ fn integration_test() {
         keys.iter().any(|k| k.id.name == e1.id.name),
         "can't see private key with encryption_key"
     );
-    assert!(firma_2of2.offline_decrypt(&key_file_str, None).is_err());
+    assert!(firma_2of2
+        .offline_export("keys", &e1.id.name, None)
+        .is_err());
     let d1 = firma_2of2
-        .offline_decrypt(&key_file_str, encryption_key)
+        .offline_export("keys", &e1.id.name, encryption_key)
         .unwrap();
     assert_eq!(d1.xprv, e1.xprv);
 
@@ -476,12 +477,17 @@ impl FirmaCommand {
         Ok(output)
     }
 
-    pub fn offline_decrypt(
+    pub fn offline_export(
         &self,
-        file_name: &str,
+        kind: &str,
+        name: &str,
         encryption_key: Option<&[u8]>,
     ) -> Result<MasterSecretJson> {
-        let result = self.offline("decrypt", vec!["--path", file_name], encryption_key);
+        let result = self.offline(
+            "export",
+            vec!["--kind", kind, "--name", name],
+            encryption_key,
+        );
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
         Ok(output)

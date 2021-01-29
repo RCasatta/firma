@@ -41,7 +41,7 @@ class PSBTActivity : ContextActivity() {
         val psbtJson = mapper.readValue(psbtString, Data.PsbtJson::class.java)
         val psbtFileDir = "$filesDir/${Network.TYPE}/psbts/${psbtJson.id.name}/"
         val psbtFileName = "$psbtFileDir/psbt.json"
-        val psbtPretty = Rust().print(context(), psbtFileName)
+        val psbtPretty = print(psbtFileName)
 
         val psbtTitle = "Transaction: ${psbtJson.id.name}"
         val qrContent = Data.StringEncoding(Data.Encoding.BASE64, psbtJson.psbt)

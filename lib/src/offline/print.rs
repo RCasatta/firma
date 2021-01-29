@@ -1,7 +1,6 @@
 use crate::list::ListOptions;
 use crate::offline::decrypt::decrypt;
 use crate::offline::descriptor::{derive_address, DeriveAddressOptions};
-use crate::online::PathOptions;
 use crate::*;
 use bitcoin::consensus::serialize;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
@@ -37,8 +36,7 @@ impl Context {
         let psbt =
             match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
                 (Some(path), None, None) => {
-                    let psbt_json: PsbtJson =
-                        decrypt(&PathOptions { path: path.clone() }, &self.encryption_key)?;
+                    let psbt_json: PsbtJson = decrypt(path, &self.encryption_key)?;
                     psbt_json.psbt()?
                 }
                 (None, Some(base64), None) => psbt_from_base64(base64)?.1,

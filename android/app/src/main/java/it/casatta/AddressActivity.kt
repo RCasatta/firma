@@ -16,7 +16,7 @@ class AddressActivity : ContextActivity() {
         val descriptor = intent.getStringExtra(C.DESCRIPTOR)!!
         Log.i("ADDRESS", "$index $descriptor")
 
-        val addressData = Rust().deriveAddress(context(), descriptor, index)
+        val addressData = deriveAddress(descriptor, index)
 
         address.text = addressData.address
         path.text = addressData.path

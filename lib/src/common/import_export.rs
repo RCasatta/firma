@@ -2,11 +2,25 @@ use crate::common::json::identifier::Identifier;
 use crate::offline::decrypt::decrypt;
 use crate::online::PathOptions;
 use crate::*;
+use log::debug;
+use serde::{Deserialize, Serialize};
 use serde_json::{from_value, Value};
+use structopt::StructOpt;
+
+#[derive(StructOpt, Debug, Serialize, Deserialize)]
+pub struct ExportOptions {
+    /// The kind of the object to export
+    #[structopt(long)]
+    pub kind: Kind,
+
+    /// The name of the object to export
+    #[structopt(long)]
+    pub name: String,
+}
 
 impl Context {
     pub fn import(&self, opt: &PathOptions) -> Result<Value> {
-        let value: Value = decrypt(opt, &self.encryption_key)?;
+        let value: Value = decrypt(&opt.path, &self.encryption_key)?;
         self.import_json(value)
     }
 
@@ -23,6 +37,12 @@ impl Context {
             Kind::PSBT => self.write(&from_value::<PsbtJson>(c)?)?,
         }
         Ok(value)
+    }
+
+    pub fn export(&self, opt: &ExportOptions) -> Result<Value> {
+        debug!("export {:?}", opt);
+        let id = Identifier::new(self.network, opt.kind, &opt.name);
+        id.read(&self.datadir, &self.encryption_key)
     }
 }
 

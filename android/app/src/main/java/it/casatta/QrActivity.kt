@@ -46,7 +46,7 @@ class QrActivity : ContextActivity() {
         recyclerView.adapter = imagesAdapter
 
         val qrContent = Data.encodeStringEncodingHex( intent.getByteArrayExtra(C.QR_CONTENT)!! )
-        val encodedQrs = Rust().qrs(context(), qrContent)
+        val encodedQrs = qrs(qrContent)
 
         for (qrBmp in encodedQrs.qrs) {
             imagesAdapter.list.add(ImageItem( Data.decodeStringEncoding(qrBmp)))

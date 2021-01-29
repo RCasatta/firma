@@ -11,7 +11,7 @@ use std::io::Write;
 
 pub mod context;
 pub mod error;
-pub mod import;
+pub mod import_export;
 pub mod json;
 pub mod list;
 pub mod mnemonic;
