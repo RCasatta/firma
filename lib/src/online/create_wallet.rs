@@ -98,7 +98,7 @@ impl Context {
         let mut xpubs = self.read_xpubs_from_names(&opt.key_names)?;
         xpubs.extend(&opt.xpubs);
 
-        let descriptor = create_descriptor(opt.required_sigs, &mut xpubs);
+        let descriptor = create_descriptor(opt.required_sigs, &xpubs);
         let descriptor = client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
         let multi_request = ImportMultiRequest {
@@ -140,7 +140,7 @@ impl Context {
     }
 }
 
-fn create_descriptor(required_sigs: u8, xpubs: &Vec<ExtendedPubKey>) -> String {
+fn create_descriptor(required_sigs: u8, xpubs: &[ExtendedPubKey]) -> String {
     let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
     let descriptor = format!("wsh(multi({},{}))", required_sigs, xpub_paths.join(","));
     descriptor
@@ -166,7 +166,7 @@ mod tests {
     }
 
     impl WalletJson {
-        pub fn new_random(required_sig: u8, keys: &Vec<MasterSecretJson>) -> Self {
+        pub fn new_random(required_sig: u8, keys: &[MasterSecretJson]) -> Self {
             let xpubs: Vec<_> = keys.iter().map(|k| k.xpub.clone()).collect();
             Self {
                 id: Identifier {

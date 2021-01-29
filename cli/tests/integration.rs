@@ -343,7 +343,7 @@ impl FirmaCommand {
     pub fn online_create_wallet(
         &self,
         required_sig: u8,
-        names: &Vec<String>,
+        names: &[String],
         wallet_name: &str,
         allow_wallet_already_exists: bool,
     ) -> Result<WalletJson> {
