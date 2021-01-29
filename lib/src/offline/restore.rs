@@ -95,7 +95,6 @@ mod tests {
         assert_ne!(key_orig.mnemonic, key_restored.mnemonic);
         let list_options = ListOptions {
             kind: Kind::MasterSecret,
-            verify_wallets_signatures: false,
         };
         let list = context.list(&list_options).unwrap();
         assert!(list.master_secrets.iter().any(|a| &a.id.name == &key_name));

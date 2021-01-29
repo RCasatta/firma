@@ -27,21 +27,26 @@ impl Context {
 #[cfg(test)]
 mod tests {
     use crate::common::context::tests::TestContext;
+    use crate::common::tests::rnd_string;
     use crate::offline::random::RandomOptions;
+
+    impl RandomOptions {
+        pub fn new_random() -> Self {
+            let key_name = rnd_string();
+            RandomOptions { key_name }
+        }
+    }
 
     #[test]
     fn test_random() {
-        let key_name = "random".to_string();
-        let rand_opts_1 = RandomOptions { key_name };
+        let rand_opts_1 = RandomOptions::new_random();
         let context = TestContext::new();
         let key_1 = context.create_key(&rand_opts_1).unwrap();
         let result = context.create_key(&rand_opts_1);
         assert!(result.is_err(), "Overwrite a key");
         assert!(result.unwrap_err().to_string().contains("Cannot overwrite"));
 
-        let key_name = "random_2".to_string();
-        let rand_opts_2 = RandomOptions { key_name };
-        let key_2 = context.create_key(&rand_opts_2).unwrap();
+        let key_2 = context.create_key(&RandomOptions::new_random()).unwrap();
 
         assert_ne!(key_1, key_2);
     }

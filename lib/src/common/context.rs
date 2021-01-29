@@ -112,7 +112,8 @@ impl Context {
     pub fn read_daemon_opts(&self) -> Result<DaemonOpts> {
         let path = self.daemon_opts_path()?;
         debug!("reading daemon_opts from {:?}", path);
-        let bytes = std::fs::read(&path)?;
+        let bytes = std::fs::read(&path)
+            .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path.clone(), e.to_string()))?;
         Ok(serde_json::from_slice(&bytes)?)
     }
 

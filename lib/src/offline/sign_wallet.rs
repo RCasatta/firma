@@ -1,6 +1,7 @@
 use crate::common::json::identifier::{Identifier, Kind};
 use crate::common::list::ListOptions;
 use crate::offline::descriptor::extract_xpubs;
+use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, SignOnly, VerifyOnly};
@@ -8,36 +9,18 @@ use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, PrivateKey, PublicKey};
 use log::debug;
-use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use structopt::StructOpt;
-
-#[derive(Serialize, Deserialize, StructOpt, Debug)]
-pub struct SignWalletOptions {
-    /// Wallet name to be signed
-    #[structopt(long)]
-    pub wallet_name: String,
-}
-
-#[derive(Serialize, Deserialize, StructOpt, Debug)]
-pub struct VerifyWalletOptions {
-    /// Wallet name to be verified
-    #[structopt(long)]
-    pub wallet_name: String,
-}
 
 impl Context {
-    pub fn verify_wallet(&self, opt: &VerifyWalletOptions) -> Result<VerifyWalletResult> {
+    pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
         let secp = Secp256k1::verification_only();
 
         verify_wallet_internal(&wallet, &signature, &secp)
     }
-}
 
-impl Context {
-    pub fn sign_wallet(&self, opt: &SignWalletOptions) -> Result<WalletSignatureJson> {
+    pub fn sign_wallet(&self, opt: &WalletNameOptions) -> Result<WalletSignatureJson> {
         let secp = Secp256k1::signing_only();
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let message = &wallet.descriptor;
@@ -45,10 +28,7 @@ impl Context {
 
         // search a key that is in the wallet descriptor
         let kind = Kind::MasterSecret;
-        let list_opt = ListOptions {
-            kind,
-            verify_wallets_signatures: false,
-        };
+        let list_opt = ListOptions { kind };
         debug!("list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;
         let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
@@ -196,7 +176,11 @@ fn verify_message(address: &str, signature: &str, message: &str) -> Result<bool>
 // json contains signature, the address and descriptor of the address!
 #[cfg(test)]
 mod tests {
+    use crate::context::tests::TestContext;
+    use crate::offline::random::RandomOptions;
     use crate::offline::sign_wallet::{sign_message, verify_message};
+    use crate::online::WalletNameOptions;
+    use crate::WalletJson;
 
     /*
     $ bitcoin-cli signmessagewithprivkey "KwQoPt6dL91fxRBWdt4nkCVrfo4ipeLcaD4ZCLntoTPhKGNgGqGm" ciao
@@ -218,5 +202,47 @@ mod tests {
     #[test]
     fn test_verify_message() {
         assert!(verify_message(ADDRESS, SIGNATURE, MESSAGE).unwrap());
+    }
+
+    #[test]
+    fn test_sign_verify() {
+        let context = TestContext::new();
+        let key = context.create_key(&RandomOptions::new_random()).unwrap();
+        let wallet = WalletJson::new_random(1, &vec![key.clone()]);
+        let wallet_name_opt: WalletNameOptions = wallet.id.name.as_str().into();
+
+        // manually importing the wallet, because context.create_wallet needs the node, not available in unit tests
+        context
+            .import_json(serde_json::to_value(wallet).unwrap())
+            .unwrap();
+
+        let _ = context.verify_wallet(&wallet_name_opt).unwrap_err();
+        let mut signature = context.sign_wallet(&wallet_name_opt).unwrap();
+        let result = context.verify_wallet(&wallet_name_opt).unwrap();
+        assert!(result.verified, "valid signature did not verify");
+
+        let path = signature.id.as_path_buf(&context.datadir, false).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        let _ = context.verify_wallet(&wallet_name_opt).unwrap_err();
+
+        let key_2 = context.create_key(&RandomOptions::new_random()).unwrap();
+        let wallet_2 = WalletJson::new_random(1, &vec![key_2]);
+        let wallet_2_name_opt: WalletNameOptions = wallet_2.id.name.as_str().into();
+        context
+            .import_json(serde_json::to_value(wallet_2).unwrap())
+            .unwrap();
+        let signature_2 = context.sign_wallet(&wallet_2_name_opt).unwrap();
+        let result_2 = context.verify_wallet(&wallet_2_name_opt).unwrap();
+        assert!(result_2.verified, "valid signature did not verify");
+
+        signature.signature = signature_2.signature;
+        context
+            .import_json(serde_json::to_value(signature).unwrap())
+            .unwrap();
+        let result = context.verify_wallet(&wallet_name_opt).unwrap();
+        assert!(
+            !result.verified,
+            "signature of another wallet verified successfully"
+        );
     }
 }

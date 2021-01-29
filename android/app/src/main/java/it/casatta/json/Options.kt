@@ -7,7 +7,7 @@ class Options {
         val verify_wallets_signatures: Boolean
     )
 
-    data class SignWalletOptions(
+    data class WalletNameOptions(
         val wallet_name: String
     )
 
@@ -59,5 +59,11 @@ class Options {
     data class DeriveAddressOpts(
         val descriptor: String,
         val index: Int
+    )
+
+    data class VerifyWalletResult(
+        val descriptor: String,
+        val signature: Data.WalletSignature,
+        val verified: Boolean
     )
 }

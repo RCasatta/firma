@@ -23,7 +23,7 @@ import java.io.Serializable
 class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
 
     private val itemsAdapter = ItemsAdapter()
-    private var listOutput = Data.ListOutput(emptyList(), emptyList(), emptyList())
+    private var listOutput = Data.ListOutput(emptyList(), emptyList(), emptyList(), emptyList())
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
     private var rawData: ArrayList<Data.StringEncoding> = ArrayList()
     private var diceLaunches: ArrayList<Int> = ArrayList()
@@ -160,7 +160,12 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
         update(Data.Kind.WALLET)
         for (wallet in listOutput.wallets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(wallet)
-            itemsAdapter.list.add(Item(wallet.id.name, wallet.fingerprints.toString(), details))
+            try {
+                val ver = Rust().verifyWallet(context(), wallet.id.name)
+                if (ver.verified) {
+                    itemsAdapter.list.add(Item(wallet.id.name, wallet.fingerprints.toString(), details))
+                }
+            } catch (e: RustException) {}
         }
         itemsAdapter.notifyDataSetChanged()
     }

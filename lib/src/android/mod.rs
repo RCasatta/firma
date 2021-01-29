@@ -6,7 +6,7 @@ use crate::offline::print::PrintOptions;
 use crate::offline::random::RandomOptions;
 use crate::offline::restore::RestoreOptions;
 use crate::offline::sign::SignOptions;
-use crate::offline::sign_wallet::SignWalletOptions;
+use crate::online::WalletNameOptions;
 use crate::*;
 use android_logger::Config;
 use common::error::ToJson;
@@ -94,8 +94,13 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
             serde_json::to_value(result)?
         }
         "sign_wallet" => {
-            let opts: SignWalletOptions = serde_json::from_value(args)?;
+            let opts: WalletNameOptions = serde_json::from_value(args)?;
             let result = context.sign_wallet(&opts)?;
+            serde_json::to_value(result)?
+        }
+        "verify_wallet" => {
+            let opts: WalletNameOptions = serde_json::from_value(args)?;
+            let result = context.verify_wallet(&opts)?;
             serde_json::to_value(result)?
         }
         a @ _ => Error::MethodNotExist(a.to_string()).to_json(),

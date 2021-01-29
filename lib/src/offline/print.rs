@@ -30,10 +30,6 @@ pub struct PrintOptions {
     /// PSBT name contained in firma datadir
     #[structopt(long)]
     pub psbt_name: Option<String>,
-
-    /// Return wallets only if wallet signature file is present and signature verifies
-    #[structopt(long)]
-    pub verify_wallets_signatures: bool,
 }
 
 impl Context {
@@ -59,10 +55,7 @@ impl Context {
                 ),
             };
         let kind = Kind::Wallet;
-        let opt = ListOptions {
-            kind,
-            verify_wallets_signatures: opt.verify_wallets_signatures,
-        };
+        let opt = ListOptions { kind };
         let result = self.list(&opt)?;
         let output = pretty_print(&psbt, self.network, &result.wallets)?;
         Ok(output)

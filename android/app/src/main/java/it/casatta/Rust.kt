@@ -59,8 +59,14 @@ class Rust {
     }
 
     fun signWallet(context: Context, walletName: String) {
-        val opt = SignWalletOptions(walletName)
+        val opt = WalletNameOptions(walletName)
         callMethod(context, "sign_wallet", opt)
+    }
+
+    fun verifyWallet(context: Context, walletName: String): VerifyWalletResult {
+        val opt = WalletNameOptions(walletName)
+        val json = callMethod(context, "verify_wallet", opt)
+        return mapper.convertValue(json, VerifyWalletResult::class.java)
     }
 
     fun sign(context: Context, key: String, wallet: String, psbt: String): PsbtPrettyPrint {

@@ -26,7 +26,7 @@ pub struct WalletJson {
     pub id: Identifier,
     pub descriptor: String,
     pub fingerprints: BTreeSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
-    pub required_sig: usize,                 // TODO derive from descriptor?
+    pub required_sig: u8,                    // TODO derive from descriptor?
     pub created_at_height: u64,
 }
 
@@ -122,7 +122,7 @@ pub struct CreateTxOutput {
 pub struct ListOutput {
     pub wallets: Vec<WalletJson>,
     //pub wallets_indexes: Vec<IndexesJson>,
-    //pub wallets_signatures: Vec<WalletSignatureJson>,
+    pub wallets_signatures: Vec<WalletSignatureJson>,
     pub master_secrets: Vec<MasterSecretJson>,
     //pub descriptor_public_keys: Vec<PublicMasterKey>,
     pub psbts: Vec<PsbtJson>,

@@ -18,7 +18,7 @@ pub struct CreateWalletOptions {
 
     /// number of signatures required
     #[structopt(short)]
-    pub r: usize,
+    pub required_sigs: u8,
 
     /// Extended Public Keys (xpub) that are composing the wallet, given as String (xprv...)
     #[structopt(long = "xpub")]
@@ -36,15 +36,16 @@ pub struct CreateWalletOptions {
 
 impl CreateWalletOptions {
     fn validate(&self, context: &Context) -> Result<()> {
-        if self.r == 0 {
+        if self.required_sigs == 0 {
             return Err("required signatures cannot be 0".into());
         }
 
-        if self.r > 15 {
+        if self.required_sigs > 15 {
             return Err("required signatures cannot be greater than 15".into());
         }
 
-        if self.r > (self.xpubs.len() + self.key_names.len()) {
+        if self.required_sigs > (self.xpubs.len() + self.key_names.len()) as u8 {
+            //TODO check overflow
             return Err("required signatures cannot be greater than the number of xpubs".into());
         }
 
@@ -72,7 +73,7 @@ impl CreateWalletOptions {
 }
 
 impl Context {
-    pub fn create(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
+    pub fn create_wallet(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
         debug!("create_wallet {:?}", opt);
         opt.validate(self)?;
 
@@ -97,8 +98,7 @@ impl Context {
         let mut xpubs = self.read_xpubs_from_names(&opt.key_names)?;
         xpubs.extend(&opt.xpubs);
 
-        let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
-        let descriptor = format!("wsh(multi({},{}))", opt.r, xpub_paths.join(","));
+        let descriptor = create_descriptor(opt.required_sigs, &mut xpubs);
         let descriptor = client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
         let multi_request = ImportMultiRequest {
@@ -125,7 +125,7 @@ impl Context {
             id: Identifier::new(self.network, Kind::Wallet, &opt.wallet_name),
             descriptor,
             fingerprints,
-            required_sig: opt.r,
+            required_sig: opt.required_sigs,
             created_at_height: height,
         };
         let indexes = IndexesJson {
@@ -137,5 +137,48 @@ impl Context {
         self.write(&indexes)?;
 
         Ok(wallet)
+    }
+}
+
+fn create_descriptor(required_sigs: u8, xpubs: &Vec<ExtendedPubKey>) -> String {
+    let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
+    let descriptor = format!("wsh(multi({},{}))", required_sigs, xpub_paths.join(","));
+    descriptor
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::common::tests::rnd_string;
+    use crate::online::create_wallet::{create_descriptor, CreateWalletOptions};
+    use crate::{Identifier, Kind, MasterSecretJson, WalletJson};
+    use bitcoin::Network;
+
+    impl CreateWalletOptions {
+        pub fn new_random(required_sigs: u8, key_names: Vec<String>) -> Self {
+            CreateWalletOptions {
+                wallet_name: rnd_string(),
+                required_sigs,
+                xpubs: vec![],
+                key_names,
+                allow_wallet_already_exists: false,
+            }
+        }
+    }
+
+    impl WalletJson {
+        pub fn new_random(required_sig: u8, keys: &Vec<MasterSecretJson>) -> Self {
+            let xpubs: Vec<_> = keys.iter().map(|k| k.xpub.clone()).collect();
+            Self {
+                id: Identifier {
+                    kind: Kind::Wallet,
+                    name: rnd_string(),
+                    network: Network::Testnet,
+                },
+                descriptor: create_descriptor(required_sig, &xpubs),
+                fingerprints: Default::default(),
+                required_sig,
+                created_at_height: 0,
+            }
+        }
     }
 }

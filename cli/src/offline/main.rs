@@ -1,5 +1,5 @@
 use firma::log::debug;
-use firma::online::PathOptions;
+use firma::online::{PathOptions, WalletNameOptions};
 use firma::serde_json::{self, Value};
 use firma::{common, init_logger, offline, Context, Result, ToJson};
 use std::convert::TryInto;
@@ -46,10 +46,10 @@ enum FirmaOfflineSubcommands {
     Decrypt(PathOptions),
 
     /// Sign a wallet json containing the descriptor to avoid tampering
-    SignWallet(offline::sign_wallet::SignWalletOptions),
+    SignWallet(WalletNameOptions),
 
     /// Verify a wallet json containing the descriptor to avoid tampering
-    VerifyWallet(offline::sign_wallet::VerifyWalletOptions),
+    VerifyWallet(WalletNameOptions),
 
     /// Import the file containing a firma json object
     Import(PathOptions),

@@ -88,10 +88,7 @@ impl Context {
         let name = match get_psbt_name(psbt) {
             Some(name) => name,
             None => {
-                let opt = ListOptions {
-                    kind: Kind::PSBT,
-                    verify_wallets_signatures: false,
-                };
+                let opt = ListOptions { kind: Kind::PSBT };
                 let psbts = self.list(&opt)?.psbts;
                 find_or_create(psbt, psbts)?
             }

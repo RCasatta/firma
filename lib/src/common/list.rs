@@ -8,10 +8,6 @@ pub struct ListOptions {
     /// list wallets, keys or psbts
     #[structopt(short, long)]
     pub kind: Kind,
-
-    /// Return wallets only if wallet signature file is present and signature verifies
-    #[structopt(long)]
-    pub verify_wallets_signatures: bool,
 }
 
 impl Context {
@@ -31,6 +27,13 @@ impl Context {
                         debug!("read wallet jsons {:?}", name);
                         match self.read::<WalletJson>(name) {
                             Ok(wallet) => list.wallets.push(wallet),
+                            Err(e) => debug!("can't read {} because {:?}", name, e),
+                        }
+                    }
+                    Kind::WalletSignature => {
+                        debug!("read wallet signature jsons {:?}", name);
+                        match self.read::<WalletSignatureJson>(name) {
+                            Ok(wallet_signature) => list.wallets_signatures.push(wallet_signature),
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
                     }
@@ -82,10 +85,7 @@ mod tests {
         let _key = context.create_key(&rand_opts).unwrap();
 
         let kind = Kind::MasterSecret;
-        let opt = ListOptions {
-            kind,
-            verify_wallets_signatures: false,
-        };
+        let opt = ListOptions { kind };
         let result = context.list(&opt);
         assert!(result.is_ok());
         let list = result.unwrap();

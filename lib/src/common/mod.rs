@@ -169,7 +169,7 @@ pub fn check_compatibility(n1: Network, n2: Network) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{check_compatibility, strip_witness};
     use bitcoin::consensus::deserialize;
     use bitcoin::{Network, Transaction};

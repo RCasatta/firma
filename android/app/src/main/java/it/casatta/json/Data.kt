@@ -64,7 +64,8 @@ class Data {
     data class ListOutput(
         val master_secrets: List<PrivateMasterKey>,
         val wallets: List<WalletJson>,
-        val psbts: List<PsbtJson>
+        val psbts: List<PsbtJson>,
+        val wallets_signatures: List<WalletSignature>
     )
 
     data class Identifier(

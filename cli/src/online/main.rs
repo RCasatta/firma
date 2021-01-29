@@ -88,7 +88,7 @@ fn start() -> Result<Value> {
             let _ = opt.daemon_opts.make_client(None, context.network)?;
             context.write_daemon_opts(opt.daemon_opts)?.try_into()
         }
-        CreateWallet(opt) => context.create(&opt)?.try_into(),
+        CreateWallet(opt) => context.create_wallet(&opt)?.try_into(),
         GetAddress(opt) => context.get_address(&opt)?.try_into(),
         CreateTx(opt) => context.create_tx(&opt)?.try_into(),
         SendTx(opt) => context.send_tx(&opt)?.try_into(),
