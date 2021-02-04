@@ -32,18 +32,14 @@ impl Context {
         debug!("list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;
         let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
-        let master_public_key = ExtendedPubKey::from_private(&secp, &master_private_key);
 
         let signature = sign_message_with_key(&master_private_key.private_key, message, &secp)?;
-        let address = Address::p2pkh(&master_public_key.public_key, master_public_key.network);
 
         xpubs
             .iter()
             .try_for_each(|xpub| check_compatibility(self.network, xpub.network))?;
 
         let wallet_signature = WalletSignatureJson {
-            xpub: master_public_key,
-            address,
             signature,
             id: Identifier::new(self.network, Kind::WalletSignature, &wallet.id.name),
         };
@@ -84,23 +80,26 @@ pub fn verify_wallet_internal(
 ) -> Result<VerifyWalletResult> {
     let xpubs = extract_xpubs(&wallet.descriptor)?;
     let message = &wallet.descriptor;
-    let master_address = Address::p2pkh(&signature.xpub.public_key, signature.xpub.network);
 
-    check_xpub_in_descriptor(&signature.xpub, &xpubs)?;
-    debug!("xpub is in wallet");
-    if master_address != signature.address {
-        return Err("Address in signature does not match master xpub address".into());
+    for xpub in xpubs {
+        let master_address = Address::p2pkh(&xpub.public_key, xpub.network);
+        let verified =
+            verify_message_with_address(&master_address, &signature.signature, message, secp)?;
+        debug!(
+            "xpub {} with master_address {} verified {}",
+            xpub, master_address, verified
+        );
+        if verified {
+            let result = VerifyWalletResult {
+                descriptor: wallet.descriptor.to_string(),
+                signature: signature.clone(),
+                verified,
+            };
+            return Ok(result);
+        }
     }
-    debug!("address matches");
-    let verified =
-        verify_message_with_address(&signature.address, &signature.signature, message, secp)?;
-    debug!("verified {}", verified);
-    let result = VerifyWalletResult {
-        descriptor: wallet.descriptor.to_string(),
-        signature: signature.clone(),
-        verified,
-    };
-    Ok(result)
+
+    Err(Error::WalletSignatureNotVerified)
 }
 
 fn sign_message_with_key(
@@ -239,9 +238,9 @@ mod tests {
         context
             .import_json(serde_json::to_value(signature).unwrap())
             .unwrap();
-        let result = context.verify_wallet(&wallet_name_opt).unwrap();
+        let result = context.verify_wallet(&wallet_name_opt);
         assert!(
-            !result.verified,
+            result.is_err(),
             "signature of another wallet verified successfully"
         );
     }

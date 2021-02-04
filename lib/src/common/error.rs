@@ -51,6 +51,7 @@ pub enum Error {
     MissingIdentifier,
     WalletNotExistsInNode(String),
     WalletAlreadyExistsInNode(String),
+    WalletSignatureNotVerified,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -172,6 +173,10 @@ impl fmt::Display for Error {
             Error::WalletAlreadyExistsInNode(s) => {
                 write!(f, "Wallet {} already exists in the bitcoin node", s)
             }
+            Error::WalletSignatureNotVerified => write!(
+                f,
+                "The wallet signature did not verify with any of the key of the wallet"
+            ),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

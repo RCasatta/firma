@@ -39,8 +39,6 @@ pub struct IndexesJson {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct WalletSignatureJson {
     pub id: Identifier,
-    pub xpub: ExtendedPubKey, // TODO remove
-    pub address: Address,     // TODO remove
     pub signature: String,
 }
 

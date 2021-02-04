@@ -51,10 +51,10 @@ class WalletActivity : ContextActivity() {
         itemsAdapter.list.add(DescItem("Created at height", walletJson.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson) ))
 
-        val signature = exportSignature(walletJson.id.name)
-        itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(signature) ))
-
-        val signatureQrContent = Data.StringEncoding(Data.Encoding.PLAIN, walletString)
+        val signatureJson = exportSignature(walletJson.id.name)
+        val signature = mapper.writeValueAsString(signatureJson)
+        itemsAdapter.list.add(DescItem("Descriptor signature", signature))
+        val signatureQrContent = Data.StringEncoding(Data.Encoding.PLAIN, signature)
         view_signature_qr.setOnClickListener { QrActivity.comeHere(this, walletTitle, signatureQrContent) }
     }
 

@@ -99,8 +99,6 @@ class Data {
 
     data class WalletSignature(
         val id: Identifier,
-        val xpub: String,
-        val address: String,
         val signature: String
     )
 
