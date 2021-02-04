@@ -11,7 +11,7 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import it.casatta.json.Data
 import kotlinx.android.synthetic.main.activity_wallet.*
 
-class WalletActivity : AppCompatActivity() {
+class WalletActivity : ContextActivity() {
     private val mapper = ObjectMapper().registerModule(KotlinModule())
     private val itemsAdapter = DescItemAdapter()
     private var walletDescriptor = ""
@@ -50,7 +50,12 @@ class WalletActivity : AppCompatActivity() {
         itemsAdapter.list.add(DescItem("Required sig", walletJson.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson) ))
-        //itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(walletJson.signature) ))
+
+        val signature = exportSignature(walletJson.id.name)
+        itemsAdapter.list.add(DescItem("Descriptor signature", mapper.writeValueAsString(signature) ))
+
+        val signatureQrContent = Data.StringEncoding(Data.Encoding.PLAIN, walletString)
+        view_signature_qr.setOnClickListener { QrActivity.comeHere(this, walletTitle, signatureQrContent) }
     }
 
     override fun onActivityResult(

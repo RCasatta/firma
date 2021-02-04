@@ -30,7 +30,7 @@ open class ContextActivity : AppCompatActivity() {
     }
 
     fun list(kind: Data.Kind): Data.ListOutput {
-        val opt = Options.ListOptions(kind, true)
+        val opt = Options.ListOptions(kind)
         val json = callMethod( "list",  opt)
         return mapper.convertValue(json, Data.ListOutput::class.java)
     }
@@ -59,6 +59,12 @@ open class ContextActivity : AppCompatActivity() {
 
     fun importWallet(wallet: Data.WalletJson) {
         callMethod("import", wallet)
+    }
+
+    fun exportSignature(name: String): Data.WalletSignature {
+        val opt = Options.ExportOptions(Data.Kind.WALLET_SIGNATURE, name)
+        val json = callMethod("export", opt)
+        return mapper.convertValue(json, Data.WalletSignature::class.java)
     }
 
     fun signWallet(walletName: String) {

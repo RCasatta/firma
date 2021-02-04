@@ -32,6 +32,14 @@
                 />
 
             <Button
+                android:id="@+id/view_signature_qr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="View signature QR"
+                android:layout_margin="4dp"
+                />
+
+            <Button
                 android:id="@+id/get_address"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

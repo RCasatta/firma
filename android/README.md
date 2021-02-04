@@ -45,7 +45,11 @@ To import the following wallet descriptor, go to "select wallet" -> "+" -> "Inse
 
 ```json
 {
-  "name": "alice-and-bob",
+  "id": {
+    "name": "alice-and-bob",
+    "kind": "Wallet",
+    "network": "testnet"
+  },
   "descriptor": "wsh(multi(2,tpubD6NzVbkrYhZ4YhgpmoJrX8fAmFFNCdhEj68qECiPz98iNZ9e3Tm9v3XD3fzHZfBoLqeSm9oLtighoeijQ9jGAFm9raQ4JqHZ1N4BHyaBz6Y/0/*,tpubD6NzVbkrYhZ4YMyEVaR3CzfVuwtaMKUaTVH3NXULYFjkfMTYwka4stDBzHhHkxd4MEMVgyyEV1WBCrpwde72w8LzjAE6oRLARBAiCD8cGQV/0/*))#wss3kl0z",
   "fingerprints": [
     "1f5e43d8",

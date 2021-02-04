@@ -1,3 +1,4 @@
+use crate::common::import_export::ExportOptions;
 use crate::common::list::ListOptions;
 use crate::common::qr::{QrMergeOptions, QrOptions};
 use crate::offline::descriptor::DeriveAddressOptions;
@@ -92,6 +93,10 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         "import" => {
             let result = context.import_json(args)?;
             serde_json::to_value(result)?
+        }
+        "export" => {
+            let opts: ExportOptions = serde_json::from_value(args)?;
+            context.export(&opts)?
         }
         "sign_wallet" => {
             let opts: WalletNameOptions = serde_json::from_value(args)?;

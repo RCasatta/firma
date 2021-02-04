@@ -3,8 +3,7 @@ package it.casatta.json
 class Options {
 
     data class ListOptions(
-        val kind: Data.Kind,
-        val verify_wallets_signatures: Boolean
+        val kind: Data.Kind
     )
 
     data class WalletNameOptions(
@@ -66,4 +65,10 @@ class Options {
         val signature: Data.WalletSignature,
         val verified: Boolean
     )
+
+    data class ExportOptions(
+        val kind: Data.Kind,
+        val name: String
+    )
+
 }
