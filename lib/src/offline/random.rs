@@ -13,7 +13,7 @@ pub struct RandomOptions {
     pub key_name: String,
 }
 
-impl Context {
+impl OfflineContext {
     pub fn create_key(&self, opt: &RandomOptions) -> Result<MasterSecretJson> {
         let sec = rand::thread_rng().gen::<[u8; 32]>();
         let mnemonic = Mnemonic::new(&sec)?;
@@ -40,7 +40,7 @@ mod tests {
     #[test]
     fn test_random() {
         let rand_opts_1 = RandomOptions::new_random();
-        let context = TestContext::new();
+        let context = TestContext::default();
         let key_1 = context.create_key(&rand_opts_1).unwrap();
         let result = context.create_key(&rand_opts_1);
         assert!(result.is_err(), "Overwrite a key");

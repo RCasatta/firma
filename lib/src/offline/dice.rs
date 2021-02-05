@@ -72,7 +72,7 @@ impl DiceOptions {
     }
 }
 
-impl Context {
+impl OfflineContext {
     pub fn roll(&self, opt: &DiceOptions) -> Result<MasterSecretJson> {
         opt.validate()?;
 
@@ -212,7 +212,7 @@ mod tests {
             key_name: "a".to_string(),
             launches,
         };
-        let context = TestContext::new();
+        let context = TestContext::default();
 
         context.roll(&opt).unwrap();
 

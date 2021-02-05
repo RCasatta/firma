@@ -81,7 +81,8 @@ mod tests {
     fn test_list() {
         let key_name = "list".to_string();
         let rand_opts = RandomOptions { key_name };
-        let context = TestContext::new();
+        let context = TestContext::default();
+        let context = &context.context;
         let _key = context.create_key(&rand_opts).unwrap();
 
         let kind = Kind::MasterSecret;

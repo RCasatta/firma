@@ -3,7 +3,7 @@ use crate::*;
 use bitcoin::OutPoint;
 use bitcoincore_rpc::RpcApi;
 
-impl Context {
+impl OnlineContext {
     pub fn list_coins(&self, opt: &WalletNameOptions) -> Result<ListCoinsOutput> {
         let client = self.make_client(&opt.wallet_name)?;
         let mut list_coins = client.list_unspent(Some(0), None, None, None, None)?;

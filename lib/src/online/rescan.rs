@@ -1,4 +1,4 @@
-use crate::Context;
+use crate::OnlineContext;
 use bitcoincore_rpc::RpcApi;
 use serde_json::Value;
 use structopt::StructOpt;
@@ -14,7 +14,7 @@ pub struct RescanOptions {
     pub start_from: usize,
 }
 
-impl Context {
+impl OnlineContext {
     pub fn rescan(&self, opt: &RescanOptions) -> crate::Result<Value> {
         let (_a, b) = self
             .make_client(&opt.wallet_name)?

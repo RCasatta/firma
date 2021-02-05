@@ -32,7 +32,7 @@ impl SendTxOptions {
     }
 }
 
-impl Context {
+impl OnlineContext {
     pub fn send_tx(&self, opt: &SendTxOptions) -> Result<SendTxOutput> {
         opt.validate()?;
         let client = self.make_client(&opt.wallet_name)?;

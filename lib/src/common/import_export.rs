@@ -54,14 +54,14 @@ mod tests {
 
     #[test]
     fn test_import() {
-        let context = TestContext::new();
+        let context = TestContext::default();
         let i = IndexesJson {
             id: Identifier::new_test(Kind::WalletIndexes),
             main: 0,
         };
         context.write(&i).unwrap();
         let path = i.id.as_path_buf(&context.datadir, false).unwrap();
-        let second_context = TestContext::new();
+        let second_context = TestContext::default();
         assert!(second_context.read::<IndexesJson>(&i.id.name).is_err());
         second_context.import(&PathOptions { path }).unwrap();
         let read = second_context.read::<IndexesJson>(&i.id.name).unwrap();

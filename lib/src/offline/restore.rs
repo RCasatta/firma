@@ -1,6 +1,6 @@
 use crate::mnemonic::Mnemonic;
-use crate::MasterSecretJson;
-use crate::{check_compatibility, Context, Result};
+use crate::{check_compatibility, Result};
+use crate::{MasterSecretJson, OfflineContext};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -44,7 +44,7 @@ impl FromStr for Nature {
     }
 }
 
-impl Context {
+impl OfflineContext {
     pub fn restore(&self, opt: &RestoreOptions) -> Result<MasterSecretJson> {
         let master_key = match opt.nature {
             Nature::Xprv => {
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_restore() {
-        let context = TestContext::new();
+        let context = TestContext::default();
         let key_name_random = "test_restore_random".to_string();
         let rand_opts = RandomOptions {
             key_name: key_name_random,

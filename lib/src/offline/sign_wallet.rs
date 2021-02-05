@@ -11,7 +11,7 @@ use bitcoin::{Address, PrivateKey, PublicKey};
 use log::debug;
 use std::str::FromStr;
 
-impl Context {
+impl OfflineContext {
     pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_sign_verify() {
-        let context = TestContext::new();
+        let context = TestContext::default();
         let key = context.create_key(&RandomOptions::new_random()).unwrap();
         let wallet = WalletJson::new_random(1, &vec![key.clone()]);
         let wallet_name_opt: WalletNameOptions = wallet.id.name.as_str().into();

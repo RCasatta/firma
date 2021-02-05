@@ -15,7 +15,7 @@ pub struct GetAddressOptions {
     pub index: Option<u32>,
 }
 
-impl Context {
+impl OnlineContext {
     pub fn get_address(&self, opt: &GetAddressOptions) -> Result<GetAddressOutput> {
         let client = self.make_client(&opt.wallet_name)?;
         let wallet: WalletJson = self.read(&opt.wallet_name)?;

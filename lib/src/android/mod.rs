@@ -34,7 +34,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
         .get("context")
         .ok_or_else(|| Error::MissingContext)?
         .clone();
-    let context: Context = serde_json::from_value(context_value)?;
+    let context: OfflineContext = serde_json::from_value::<Context>(context_value)?.into();
     let args = value.get("args").unwrap_or(&Value::Null).clone();
 
     info!("method:{:?} context:{:?} args:{:?}", method, context, args);

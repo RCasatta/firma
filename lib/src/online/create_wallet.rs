@@ -72,7 +72,7 @@ impl CreateWalletOptions {
     }
 }
 
-impl Context {
+impl OnlineContext {
     pub fn create_wallet(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
         debug!("create_wallet {:?}", opt);
         opt.validate(self)?;

@@ -4,7 +4,7 @@ use bitcoin::util::amount::Denomination;
 use bitcoin::Amount;
 use bitcoincore_rpc::RpcApi;
 
-impl Context {
+impl OnlineContext {
     pub fn balance(&self, opt: &WalletNameOptions) -> Result<BalanceOutput> {
         let client = self.make_client(&opt.wallet_name)?;
         let balances: Balances = client.call("getbalances", &[])?;

@@ -31,7 +31,7 @@ pub struct PrintOptions {
     pub psbt_name: Option<String>,
 }
 
-impl Context {
+impl OfflineContext {
     pub fn print(&self, opt: &PrintOptions) -> Result<PsbtPrettyPrint> {
         let psbt =
             match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {

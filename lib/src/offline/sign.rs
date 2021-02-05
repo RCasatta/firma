@@ -1,11 +1,8 @@
-use crate::common::json::identifier::{Identifier, Kind};
 //use crate::offline::decrypt::{decrypt, DecryptOptions, MaybeEncrypted};
-use crate::common::list::ListOptions;
 use crate::offline::print::pretty_print;
 use crate::*;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
-use bitcoin::consensus::deserialize;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SigHashCache;
@@ -67,52 +64,7 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-impl Context {
-    pub fn save_psbt_options(&self, opt: &SavePSBTOptions) -> Result<()> {
-        info!("save_psbt_options {:?}", opt);
-        let bytes = opt
-            .psbt
-            .as_bytes()
-            .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
-        let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
-
-        self.save_psbt(&mut psbt)?;
-        Ok(())
-    }
-
-    /// psbts_dir is general psbts dir, name is extracted from PSBT
-    /// if file exists a PSBT merge will be attempted
-    pub fn save_psbt(&self, psbt: &mut PSBT) -> Result<String> {
-        debug!("save_psbt");
-
-        let name = match get_psbt_name(psbt) {
-            Some(name) => name,
-            None => {
-                let opt = ListOptions { kind: Kind::PSBT };
-                let psbts = self.list(&opt)?.psbts;
-                find_or_create(psbt, psbts)?
-            }
-        };
-
-        debug!("psbt_name: {}", name);
-        let id = Identifier::new(self.network, Kind::PSBT, &name);
-        if let Ok(existing_psbt) = self.read::<PsbtJson>(&name) {
-            info!("old psbt exist, merging together");
-            let existing_psbt = existing_psbt.psbt()?;
-            psbt.merge(existing_psbt.clone())?;
-            if psbt == &existing_psbt {
-                return Err(Error::PSBTNotChangedAfterMerge);
-            }
-        }
-        let psbt = psbt_to_base64(&psbt).1;
-        let psbt_json = PsbtJson { id, psbt };
-        self.write(&psbt_json)?;
-        debug!("finish");
-        Ok(name)
-    }
-}
-
-fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
+pub fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
     let txid = psbt.global.unsigned_tx.txid();
 
     for psbt in psbts.iter() {
@@ -362,7 +314,7 @@ impl PSBTSigner {
     }
 }
 
-impl Context {
+impl OfflineContext {
     pub fn sign(&self, opt: &SignOptions) -> Result<PsbtPrettyPrint> {
         debug!("sign::start");
         let master_secret: MasterSecretJson = self.read(&opt.key_name)?;
@@ -442,6 +394,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 mod tests {
     use crate::offline::sign::*;
     use crate::{psbt_from_base64, psbt_to_base64, Error, PsbtJson, PSBT};
+    use bitcoin::consensus::deserialize;
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Transaction;
     use flate2::write::ZlibEncoder;

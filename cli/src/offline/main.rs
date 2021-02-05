@@ -2,7 +2,7 @@ use firma::import_export::ExportOptions;
 use firma::log::debug;
 use firma::online::{PathOptions, WalletNameOptions};
 use firma::serde_json::{self, Value};
-use firma::{common, init_logger, offline, Context, Result, ToJson};
+use firma::{common, init_logger, offline, OfflineContext, Result, ToJson};
 use std::convert::TryInto;
 use structopt::StructOpt;
 use FirmaOfflineSubcommands::*;
@@ -12,7 +12,7 @@ use FirmaOfflineSubcommands::*;
 #[structopt(name = "firma-offline")]
 struct FirmaOfflineCommands {
     #[structopt(flatten)]
-    context: Context,
+    context: OfflineContext,
 
     #[structopt(subcommand)]
     subcommand: FirmaOfflineSubcommands,
@@ -85,7 +85,10 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn launch_subcommand(context: &Context, subcommand: FirmaOfflineSubcommands) -> Result<Value> {
+fn launch_subcommand(
+    context: &OfflineContext,
+    subcommand: FirmaOfflineSubcommands,
+) -> Result<Value> {
     match &subcommand {
         Dice(opt) => context.roll(opt)?.try_into(),
         Sign(opt) => context.sign(opt)?.try_into(),

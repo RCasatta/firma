@@ -86,7 +86,7 @@ impl FromStr for AddressAmount {
     }
 }
 
-impl Context {
+impl OnlineContext {
     pub fn create_tx(&self, opt: &CreateTxOptions) -> Result<CreateTxOutput> {
         opt.validate()?;
         let client = self.make_client(&opt.wallet_name)?;

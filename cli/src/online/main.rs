@@ -14,7 +14,7 @@ use FirmaOnlineSubcommands::*;
 #[structopt(name = "firma-online")]
 struct FirmaOnlineCommands {
     #[structopt(flatten)]
-    context: Context,
+    context: OnlineContext,
 
     #[structopt(subcommand)]
     subcommand: FirmaOnlineSubcommands,

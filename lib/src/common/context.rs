@@ -1,7 +1,12 @@
 use crate::common::json::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
+use crate::list::ListOptions;
 use crate::offline::decrypt::EncryptionKey;
+use crate::offline::sign::find_or_create;
+use crate::offline::sign::get_psbt_name;
 use crate::*;
 use bitcoin::blockdata::constants::genesis_block;
+use bitcoin::consensus::deserialize;
+use bitcoin::hashes::core::ops::DerefMut;
 use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
@@ -10,6 +15,7 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::io::Read;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -27,6 +33,45 @@ pub struct Context {
     pub encryption_key: Option<StringEncoding>,
     //TODO phantom data for offline and online, is it doable when parsed from json/structopt?
 }
+
+#[derive(StructOpt, Debug, Clone)]
+pub struct OnlineContext {
+    #[structopt(flatten)]
+    context: Context,
+}
+
+#[derive(StructOpt, Debug, Clone)]
+pub struct OfflineContext {
+    #[structopt(flatten)]
+    context: Context,
+}
+
+macro_rules! impl_context {
+    ( $for:ty ) => {
+        impl Deref for $for {
+            type Target = Context;
+
+            fn deref(&self) -> &Self::Target {
+                &self.context
+            }
+        }
+
+        impl DerefMut for $for {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.context
+            }
+        }
+
+        impl From<Context> for $for {
+            fn from(context: Context) -> Self {
+                Self { context }
+            }
+        }
+    };
+}
+
+impl_context!(OnlineContext);
+impl_context!(OfflineContext);
 
 #[derive(StructOpt, Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct DaemonOpts {
@@ -156,6 +201,49 @@ impl Context {
         self.encryption_key = Some(encoded);
         Ok(())
     }
+
+    pub fn save_psbt_options(&self, opt: &SavePSBTOptions) -> Result<()> {
+        info!("save_psbt_options {:?}", opt);
+        let bytes = opt
+            .psbt
+            .as_bytes()
+            .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
+        let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
+
+        self.save_psbt(&mut psbt)?;
+        Ok(())
+    }
+
+    /// psbts_dir is general psbts dir, name is extracted from PSBT
+    /// if file exists a PSBT merge will be attempted
+    pub fn save_psbt(&self, psbt: &mut PSBT) -> Result<String> {
+        debug!("save_psbt");
+
+        let name = match get_psbt_name(psbt) {
+            Some(name) => name,
+            None => {
+                let opt = ListOptions { kind: Kind::PSBT };
+                let psbts = self.list(&opt)?.psbts;
+                find_or_create(psbt, psbts)?
+            }
+        };
+
+        debug!("psbt_name: {}", name);
+        let id = Identifier::new(self.network, Kind::PSBT, &name);
+        if let Ok(existing_psbt) = self.read::<PsbtJson>(&name) {
+            info!("old psbt exist, merging together");
+            let existing_psbt = existing_psbt.psbt()?;
+            psbt.merge(existing_psbt.clone())?;
+            if psbt == &existing_psbt {
+                return Err(Error::PSBTNotChangedAfterMerge);
+            }
+        }
+        let psbt = psbt_to_base64(&psbt).1;
+        let psbt_json = PsbtJson { id, psbt };
+        self.write(&psbt_json)?;
+        debug!("finish");
+        Ok(name)
+    }
 }
 
 pub fn load_if_unloaded(client: &Client, wallet_name: &str) -> Result<()> {
@@ -196,16 +284,16 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 #[cfg(test)]
 pub mod tests {
     use crate::offline::random::RandomOptions;
-    use crate::{Context, MasterSecretJson, PublicMasterKey};
+    use crate::{Context, MasterSecretJson, OfflineContext, PublicMasterKey};
     use bitcoin::Network;
     use std::ops::Deref;
     use tempfile::TempDir;
 
     #[derive(Debug)]
     pub struct TestContext {
-        context: Context,
+        pub context: OfflineContext,
         #[allow(unused)]
-        datadir: TempDir, // must be here so directory isnt't removed before dropping the object
+        datadir: TempDir, // must be here so directory isn't removed before dropping the object
     }
 
     impl TestContext {
@@ -213,21 +301,26 @@ pub mod tests {
             let datadir = TempDir::new().unwrap();
             let firma_datadir = format!("{}/", datadir.path().display());
             TestContext {
-                context: Context {
-                    network,
-                    datadir: firma_datadir,
-                    encryption_key: None,
+                context: OfflineContext {
+                    context: Context {
+                        network,
+                        datadir: firma_datadir,
+                        encryption_key: None,
+                    },
                 },
                 datadir,
             }
         }
-        pub fn new() -> Self {
+    }
+
+    impl Default for TestContext {
+        fn default() -> Self {
             Self::with_network(Network::Testnet)
         }
     }
 
     impl Deref for TestContext {
-        type Target = Context;
+        type Target = OfflineContext;
 
         fn deref(&self) -> &Self::Target {
             &self.context
@@ -236,9 +329,10 @@ pub mod tests {
 
     #[test]
     fn test_write_keys() {
-        let context = TestContext::new();
+        let context = TestContext::default();
         let key_name = "a";
         let key = context
+            .context
             .create_key(&RandomOptions {
                 key_name: key_name.to_string(),
             })
