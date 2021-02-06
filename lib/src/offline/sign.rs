@@ -325,7 +325,7 @@ impl OfflineContext {
         debug!("read psbt {}", wallet.id.name);
         let mut psbt_signer = PSBTSigner::new(
             &psbt.psbt()?,
-            &master_secret.xprv,
+            &master_secret.key,
             self.network,
             opt.total_derivations,
             opt.allow_any_derivations,
@@ -474,8 +474,8 @@ mod tests {
         );
 
         assert_eq!(
-            key.xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+            key.as_pub(&secp).xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.key).to_string()
         );
 
         assert_eq!(
@@ -513,14 +513,14 @@ mod tests {
         assert_eq!(outputs_len, 106);
 
         assert_eq!(
-            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv)
+            test_sign(&mut psbt_to_sign, &psbt_signed, &key.key)
                 .unwrap_err()
                 .to_string(),
             Error::MissingPrevoutTx.to_string(),
         );
         psbt_to_sign.inputs[1].non_witness_utxo = psbt_to_sign.inputs[0].non_witness_utxo.clone();
         assert_eq!(
-            test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv)
+            test_sign(&mut psbt_to_sign, &psbt_signed, &key.key)
                 .unwrap_err()
                 .to_string(),
             Error::MismatchPrevoutHash.to_string(),
@@ -528,12 +528,12 @@ mod tests {
 
         let mut mut_psbt_signed = psbt_signed.clone();
         assert!(
-            test_sign(&mut mut_psbt_signed, &psbt_signed, &key.xprv).is_err(),
+            test_sign(&mut mut_psbt_signed, &psbt_signed, &key.key).is_err(),
             "trying to sign a psbt which is already signed with this key"
         );
 
         psbt_to_sign.inputs[1].non_witness_utxo = Some(tx2);
-        test_sign(&mut psbt_to_sign, &psbt_signed, &key.xprv).unwrap();
+        test_sign(&mut psbt_to_sign, &psbt_signed, &key.key).unwrap();
 
         assert!(perc_diff_with_core(&psbt_to_sign, 462).unwrap()); // 462 is estimated_vsize from analyzepsbt
 
@@ -545,17 +545,17 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
         let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
         assert_eq!(
-            key.xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+            key.as_pub(&secp).xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.key).to_string()
         );
         assert!(
-            test_sign(&mut psbt_to_sign, &psbt_1, &key.xprv).is_err(),
+            test_sign(&mut psbt_to_sign, &psbt_1, &key.key).is_err(),
             "segwit input missing previous tx"
         );
         let tx_in = "020000000001019e60071916a88cf0f5b9c6f015b7f8eef3ab1ef6ca4929b7236ec74e693f36210000000023220020c3af1472a85b23206da9be4fbef18d0ce5fd965671110d722a816e892d2e5f33fdffffff02801a0600000000002200201148e93e9315e37dbed2121be5239257af35adc03ffdfc5d914b083afa44dab80e07a1010000000017a9142aaba9f43085c5a6f28b0d01a8ed4dbcc0e5ec4f87040047304402203fdaeafde5fc1d1838d4c431abf6672f4cfee996f932187b31a4e3dad04d7b9f0220247d2cee5aabceb029ee6a1809a821fd95aa3ff02627977cbac8d00ff5a4628901473044022026879e4c65462161e2805ca26d392b0aace13906ec5b4776cac99f5e2bfd49f4022072500f1e2818a6738c37b6cedb2fd0a16375df34ce145e3f8fbfef7b7bec99d401475221020ca0e815748c41087075f3840c1edd9400f4db031dbe948b1929b6a93c72386a21026471f666489f80aed63bbbdee4f09ffcd69b40900435633cef5f5a35bf00932752ae4ff21700";
         let tx_in: Transaction = deserialize(&hex::decode(tx_in).unwrap()).unwrap();
         psbt_to_sign.inputs[0].non_witness_utxo = Some(tx_in.clone());
-        test_sign(&mut psbt_to_sign, &psbt_1, &key.xprv).unwrap();
+        test_sign(&mut psbt_to_sign, &psbt_1, &key.key).unwrap();
         assert!(perc_diff_with_core(&psbt_to_sign, 192).unwrap());
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
@@ -564,15 +564,15 @@ mod tests {
         let mut psbt_to_sign = orig.clone();
         let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
         assert_eq!(
-            key.xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.xprv).to_string()
+            key.as_pub(&secp).xpub.to_string(),
+            ExtendedPubKey::from_private(&secp, &key.key).to_string()
         );
         assert!(
-            test_sign(&mut psbt_to_sign, &psbt_2, &key.xprv).is_err(),
+            test_sign(&mut psbt_to_sign, &psbt_2, &key.key).is_err(),
             "segwit input missing previous tx"
         );
         psbt_to_sign.inputs[0].non_witness_utxo = Some(tx_in);
-        test_sign(&mut psbt_to_sign, &psbt_2, &key.xprv).unwrap();
+        test_sign(&mut psbt_to_sign, &psbt_2, &key.key).unwrap();
 
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.signed.json");
         let (psbt_complete_bytes, psbt_complete) = extract_psbt(bytes);

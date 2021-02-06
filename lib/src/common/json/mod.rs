@@ -3,11 +3,11 @@ pub mod identifier;
 use crate::common::json::identifier::{Identifiable, Overwritable, WhichKind};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
-use crate::{psbt_from_base64, psbt_to_base64, DaemonOpts, PSBT};
+use crate::{check_compatibility, psbt_from_base64, psbt_to_base64, DaemonOpts, Result, PSBT};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::util::psbt::{raw, Map};
-use bitcoin::{bech32, Address, Amount, Network, OutPoint, Txid};
+use bitcoin::{bech32, secp256k1, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -16,7 +16,7 @@ use std::convert::TryInto;
 use std::path::PathBuf;
 
 pub use crate::common::json::identifier::{Identifier, Kind};
-
+use bitcoin::secp256k1::Secp256k1;
 //TODO remove json suffix, use it with json namespace
 
 // https://dreampuf.github.io/GraphvizOnline/#digraph%20G%20%7B%0A%20%20%22.firma%22%20-%3E%20%22%5Bnetwork%5D%22%0A%20%20%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20wallets%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20keys%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20psbts%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20%22daemon_opts%22%20%0A%20%20%0A%20%20keys%20-%3E%20%22%5Bkey%20name%5D%22%0A%20%20%22master_secret%22%20%5Bshape%3DSquare%5D%0A%20%20%22descriptor_public_key%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22master_secret%22%20%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22descriptor_public_key%22%20%0A%20%20%0A%20%20wallets%20-%3E%20%22%5Bwallet%20name%5D%22%0A%20%20%22wallet%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_indexes%22%20%5Bshape%3DSquare%5D%0A%20%20%22daemon_opts%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_signature%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_indexes%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_signature%22%20%0A%20%20%0A%20%20psbts%20-%3E%20%22%5Bpsbt%20name%5D%22%0A%20%20%22psbt%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bpsbt%20name%5D%22%20-%3E%20%22psbt%22%20%0A%7D
@@ -45,13 +45,9 @@ pub struct WalletSignatureJson {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MasterSecretJson {
     pub id: Identifier,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mnemonic: Option<Mnemonic>,
-    pub xpub: ExtendedPubKey,
-    pub xprv: ExtendedPrivKey,
+    pub key: ExtendedPrivKey,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dice: Option<Dice>,
-    pub fingerprint: Fingerprint,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -242,7 +238,7 @@ impl StringEncoding {
         StringEncoding::Hex(hex::encode(content))
     }
 
-    pub fn as_bytes(&self) -> crate::Result<Vec<u8>> {
+    pub fn as_bytes(&self) -> Result<Vec<u8>> {
         Ok(match self {
             StringEncoding::Base64(s) => base64::decode(s)?,
             StringEncoding::Hex(s) => hex::decode(s)?,
@@ -254,7 +250,7 @@ impl StringEncoding {
         })
     }
 
-    pub fn get_exactly_32(&self) -> crate::Result<[u8; 32]> {
+    pub fn get_exactly_32(&self) -> Result<[u8; 32]> {
         let bytes = self.as_bytes()?;
         if bytes.len() != 32 {
             return Err(crate::Error::EncryptionKeyNot32Bytes(bytes.len()));
@@ -282,7 +278,7 @@ pub fn get_name_key() -> raw::Key {
     }
 }
 
-pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> crate::Result<PSBT> {
+pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> Result<PSBT> {
     let (_, mut psbt_with_name) = psbt_from_base64(&psbt.psbt)?;
 
     let pair = raw::Pair {
@@ -306,7 +302,7 @@ impl From<(&PSBT, Network)> for PsbtJson {
 }
 
 impl PsbtJson {
-    pub fn psbt(&self) -> crate::Result<PSBT> {
+    pub fn psbt(&self) -> Result<PSBT> {
         Ok(psbt_from_base64(&self.psbt)?.1)
     }
 
@@ -316,38 +312,33 @@ impl PsbtJson {
 }
 
 impl MasterSecretJson {
-    pub fn new(
-        network: Network,
-        mnemonic: &Mnemonic,
-        name: &str,
-    ) -> crate::Result<MasterSecretJson> {
-        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+    pub fn from_mnemonic(network: Network, mnemonic: &Mnemonic, name: &str) -> Result<Self> {
         let seed = mnemonic.to_seed(None);
-
-        let xprv = ExtendedPrivKey::new_master(network, &seed.0)?;
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-
+        let master = ExtendedPrivKey::new_master(network, &seed.0)?;
         Ok(MasterSecretJson {
-            mnemonic: Some(mnemonic.clone()),
-            xprv,
-            xpub,
+            key: master,
             dice: None,
-            fingerprint: xpub.fingerprint(),
             id: Identifier::new(network, Kind::MasterSecret, name),
         })
     }
 
-    pub fn from_xprv(xprv: ExtendedPrivKey, name: &str, network: Network) -> Self {
-        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-        let xpub = ExtendedPubKey::from_private(&secp, &xprv);
-        MasterSecretJson {
-            xprv,
-            xpub,
-            mnemonic: None,
+    pub fn new(network: Network, master: ExtendedPrivKey, name: &str) -> Result<Self> {
+        check_compatibility(network, master.network)?;
+        Ok(MasterSecretJson {
+            key: master,
             dice: None,
-            fingerprint: xpub.fingerprint(),
             id: Identifier::new(network, Kind::MasterSecret, name),
-        }
+        })
+    }
+
+    pub fn as_pub<S: secp256k1::Signing>(&self, secp: &Secp256k1<S>) -> PublicMasterKey {
+        let xpub = ExtendedPubKey::from_private(&secp, &self.key);
+        let id = self.id.with_kind(Kind::DescriptorPublicKey);
+        PublicMasterKey { id, xpub }
+    }
+
+    pub fn fingerprint<S: secp256k1::Signing>(&self, secp: &Secp256k1<S>) -> Fingerprint {
+        self.key.fingerprint(&secp)
     }
 }
 
@@ -356,7 +347,7 @@ macro_rules! impl_try_into {
         impl TryInto<Value> for $for {
             type Error = crate::Error;
 
-            fn try_into(self) -> Result<Value, Self::Error> {
+            fn try_into(self) -> std::result::Result<Value, Self::Error> {
                 Ok(serde_json::to_value(self)?)
             }
         }

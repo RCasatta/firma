@@ -53,9 +53,10 @@ fn find_key<'a>(
     available_keys: &'a ListOutput,
     xpubs: &[ExtendedPubKey],
 ) -> Result<&'a ExtendedPrivKey> {
+    let secp = bitcoin::secp256k1::Secp256k1::signing_only();
     for key in available_keys.master_secrets.iter() {
-        if check_xpub_in_descriptor(&key.xpub, &xpubs).is_ok() {
-            return Ok(&key.xprv);
+        if check_xpub_in_descriptor(&key.as_pub(&secp).xpub, &xpubs).is_ok() {
+            return Ok(&key.key);
         }
     }
     Err("There is No private key participating in the wallet available".into())

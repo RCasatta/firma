@@ -1,5 +1,5 @@
 use crate::mnemonic::Mnemonic;
-use crate::{check_compatibility, Result};
+use crate::Result;
 use crate::{MasterSecretJson, OfflineContext};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use serde::{Deserialize, Serialize};
@@ -49,12 +49,11 @@ impl OfflineContext {
         let master_key = match opt.nature {
             Nature::Xprv => {
                 let key = ExtendedPrivKey::from_str(&opt.value)?;
-                check_compatibility(key.network, self.network)?;
-                MasterSecretJson::from_xprv(key, &opt.key_name, self.network)
+                MasterSecretJson::new(self.network, key, &opt.key_name)?
             }
             Nature::Mnemonic => {
                 let mnemonic = Mnemonic::from_str(&opt.value)?;
-                MasterSecretJson::new(self.network, &mnemonic, &opt.key_name)?
+                MasterSecretJson::from_mnemonic(self.network, &mnemonic, &opt.key_name)?
             }
         };
         self.write_keys(&master_key)?;
@@ -70,35 +69,32 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
     use crate::Kind;
+    use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
 
     #[test]
     fn test_restore() {
         let context = TestContext::default();
-        let key_name_random = "test_restore_random".to_string();
-        let rand_opts = RandomOptions {
-            key_name: key_name_random,
-        };
-        let name_counter = 0;
-
+        let secp = Secp256k1::new();
+        let rand_opts = RandomOptions::new_random();
+        let key_name = rand_opts.key_name.as_str();
         let key_orig = context.create_key(&rand_opts).unwrap();
 
-        let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name.clone(),
+            key_name: "restored".to_string(),
             nature: Nature::Xprv,
-            value: key_orig.xprv.to_string(),
+            value: key_orig.key.to_string(),
         };
         let key_restored = context.restore(&restore_opts).unwrap();
-        assert_eq!(key_orig.xprv, key_restored.xprv);
-        assert_eq!(key_orig.xpub, key_restored.xpub);
-        assert_ne!(key_orig.mnemonic, key_restored.mnemonic);
+        assert_eq!(key_orig.key, key_restored.key);
         let list_options = ListOptions {
             kind: Kind::MasterSecret,
         };
         let list = context.list(&list_options).unwrap();
-        assert!(list.master_secrets.iter().any(|a| &a.id.name == &key_name));
+        assert!(list.master_secrets.iter().any(|a| &a.id.name == key_name));
 
+        /*
+        // TODO add restore mnemonic
         let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
             key_name,
@@ -106,26 +102,21 @@ mod tests {
             value: key_orig.mnemonic.as_ref().unwrap().to_string(),
         };
         let key_restored = context.restore(&restore_opts).unwrap();
-        assert_eq!(key_orig.xprv, key_restored.xprv);
-        assert_eq!(key_orig.xpub, key_restored.xpub);
-        assert_eq!(&key_orig.mnemonic, &key_restored.mnemonic);
+        assert_eq!(key_orig.xprv(), key_restored.xprv());
+        */
 
-        // TODO add restore mnemonic
-
-        let (key_name, name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name,
+            key_name: "err".to_string(),
             nature: Nature::Xprv,
             value: "X".to_string(),
         };
         let result = context.restore(&restore_opts);
         assert!(result.is_err());
 
-        let (key_name, _name_counter) = (format!("{}", name_counter), name_counter + 1);
         let restore_opts = RestoreOptions {
-            key_name: key_name.clone(),
+            key_name: "foo".to_string(),
             nature: Nature::Xprv,
-            value: key_orig.xpub.to_string(),
+            value: key_orig.as_pub(&secp).xpub.to_string(),
         };
         let result = context.restore(&restore_opts);
         assert!(result.is_err());
@@ -133,9 +124,9 @@ mod tests {
         let regtest_context = TestContext::with_network(Network::Regtest);
         let key_orig = regtest_context.create_key(&rand_opts).unwrap();
         let restore_opts = RestoreOptions {
-            key_name: key_name.clone(),
+            key_name: "bar".to_string(),
             nature: Nature::Xprv,
-            value: key_orig.xprv.to_string(),
+            value: key_orig.key.to_string(),
         };
         let _ = regtest_context.restore(&restore_opts).unwrap();
         let list = regtest_context.list(&list_options).unwrap();

@@ -118,7 +118,7 @@ fn calculate_key(
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;
 
-    let mut key = MasterSecretJson::new(network, &mnemonic, name)?;
+    let mut key = MasterSecretJson::from_mnemonic(network, &mnemonic, name)?;
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),
@@ -200,6 +200,7 @@ mod tests {
     use crate::common::context::tests::TestContext;
     use crate::offline::dice::*;
     use crate::MasterSecretJson;
+    use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
     use num_bigint::BigUint;
 
@@ -241,7 +242,7 @@ mod tests {
             master_key.dice.unwrap().value,
             "2825636378947368421052631578947368421"
         );
-        assert_eq!("tprv8ZgxMBicQKsPenW7mFkBsduGNUonToJPhc3zqEQ172j7e1MfRrin9hvsx6bbohBHNkxD63y88dVacu4Vb1vdvd2tZJUBvfry6Gw8dTyM21S", master_key.xprv.to_string());
+        assert_eq!("tprv8ZgxMBicQKsPenW7mFkBsduGNUonToJPhc3zqEQ172j7e1MfRrin9hvsx6bbohBHNkxD63y88dVacu4Vb1vdvd2tZJUBvfry6Gw8dTyM21S", master_key.key.to_string());
     }
 
     #[test]
@@ -300,17 +301,16 @@ mod tests {
 
         assert_eq!(calculated, expected);
         */
-
+        let secp = Secp256k1::signing_only();
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
         let expected: MasterSecretJson = serde_json::from_slice(bytes).unwrap();
         let calculated =
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
         assert_eq!(
-            calculated.fingerprint.to_string(),
-            expected.fingerprint.to_string()
+            calculated.fingerprint(&secp).to_string(),
+            expected.fingerprint(&secp).to_string()
         );
-        assert_eq!(calculated.xprv.to_string(), expected.xprv.to_string());
-        assert_eq!(calculated.xpub.to_string(), expected.xpub.to_string());
+        assert_eq!(calculated.key.to_string(), expected.key.to_string());
         assert_eq!(calculated, expected);
     }
 }

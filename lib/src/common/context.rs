@@ -31,7 +31,7 @@ pub struct Context {
 
     #[structopt(skip)]
     pub encryption_key: Option<StringEncoding>,
-    //TODO phantom data for offline and online, is it doable when parsed from json/structopt?
+    //TODO add secp context all here
 }
 
 #[derive(StructOpt, Debug, Clone)]
@@ -144,7 +144,8 @@ impl Context {
 
     pub fn write_keys(&self, master_key: &MasterSecretJson) -> Result<()> {
         self.write(master_key)?;
-        let public: PublicMasterKey = master_key.clone().into();
+        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
+        let public: PublicMasterKey = master_key.as_pub(&secp);
         self.write(&public)
     }
 
