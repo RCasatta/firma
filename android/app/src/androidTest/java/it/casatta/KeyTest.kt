@@ -98,12 +98,15 @@ class KeyTest : Common() {
 
         val expectedDescPubTestnet =
             "[cabe32d7/48'/1'/0'/2']tpubDERURuyFUBH1qfB38hVJFXRrG4fJ6SQS3jwixLAtvRAierc8pbmLF3wBWpiqeV4kXkCN2QvndGeo5wcWtNXCNymvSmBnWT9NgNcb2nbEWQv/0/*"
-        val expectedXpubMainnet =
+        val expectedDescPubMainnet =
             "[cabe32d7/48'/0'/0'/2']xpub6DhVvf4GfRxVQZxcGTYFxwWPoL7GbXMe7nfP5Uhi5ZWbqvWdJsdJnwKkkcWiWbse2fBZn3RPiSjzpJwqNe8Zwqvv9DSjPqkkdUiegP97SVC/0/*"
+        val expectedDescPubRegtest =
+            "[cabe32d7/48'/2'/0'/2']tpubDEANPi9ucM4k8g549b4f1NUjtisSJz9SaKPxfmvrj3nGJCd9HLn3bpmJu5PLEwLV4rDQqazjwN2rHacjH2W2wV93S9WABHXHJVgHuAAyVHr/0/*"
+
         val expectedXpub = mapOf(
-            "mainnet" to expectedXpubMainnet,
+            "mainnet" to expectedDescPubMainnet,
             "testnet" to expectedDescPubTestnet,
-            "regtest" to expectedDescPubTestnet
+            "regtest" to expectedDescPubRegtest
         )
         val mnemonic =
             "bunker shed useless about build taste comfort acquire food defense nation cement oblige race manual narrow merit lumber slight pattern plate budget armed undo"
@@ -133,14 +136,16 @@ class KeyTest : Common() {
     fun dice() {
         val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
-        val expectedDescPubTestnet =
-            "[9cf794b6/48'/1'/0'/2']tpubDF2XEjMTg94eFNAsX5jEK5nxA4Vs6VVjJQXgztKmSpGy5jiBNBgrmpqxcjTEzdnvfVG5U7SMLndPHJph9EHVMZie6HFYCt6XnXfFpwASqyq/0/*"
         val expectedDescPubMainnet =
             "[9cf794b6/48'/0'/0'/2']xpub6EcBbnjoWQyB2sm1nDpiqymb629pCQmprDp22QWU8NXp81YHzcm98duacrav2s1bw3kCryM6UTknRDJcxHCxkHX3fcXrmsKy6QRWpDDpTqS/0/*"
+        val expectedDescPubTestnet =
+            "[9cf794b6/48'/1'/0'/2']tpubDF2XEjMTg94eFNAsX5jEK5nxA4Vs6VVjJQXgztKmSpGy5jiBNBgrmpqxcjTEzdnvfVG5U7SMLndPHJph9EHVMZie6HFYCt6XnXfFpwASqyq/0/*"
+        val expectedDescPubRegtest =
+            "[9cf794b6/48'/2'/0'/2']tpubDFKHxokA8JTGedRPmkFvCJ8CB2zqcHt3zuP7BwNarwZEkrhRnGpPzC9KkdtGj9KvYdf3hBU8N3CMa43yWMiLuB5W3f95TncHgSZtTaH5TTN/0/*"
         val expectedXpub = mapOf(
             "mainnet" to expectedDescPubMainnet,
             "testnet" to expectedDescPubTestnet,
-            "regtest" to expectedDescPubTestnet
+            "regtest" to expectedDescPubRegtest
         )
         val network = getNetwork()
 
