@@ -331,7 +331,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
             .setPositiveButton("Ok") { _, _ ->
                 val keyName = keyEditText.text.toString()
                 if (keyName.isNotEmpty()) {
-                    val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/PRIVATE.json")
+                    val keyFile = File("$filesDir/${Network.TYPE}/keys/$keyName/master_secret.json")
                     if (keyFile.exists()) {
                         C.showMessageDialog(this, R.string.key_exists)
                     } else {

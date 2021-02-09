@@ -2,7 +2,6 @@ use crate::*;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
-use miniscript::descriptor::DescriptorPublicKey;
 use miniscript::DescriptorPublicKeyCtx;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -20,7 +19,8 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<Ge
         .descriptor
         .find('#')
         .unwrap_or_else(|| opt.descriptor.len());
-    let descriptor: miniscript::Descriptor<DescriptorPublicKey> = opt.descriptor[..end].parse()?;
+    let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
+        opt.descriptor[..end].parse()?;
 
     let secp = Secp256k1::verification_only();
     let context = DescriptorPublicKeyCtx::new(&secp, ChildNumber::from_normal_idx(opt.index)?);
@@ -73,7 +73,7 @@ mod tests {
         let k1 = "[a2ebe04e/48'/1'/0'/2']tpubDEXDRpvW2srXCSjAvC36zYkSE3jxT1wf7JXDo35Ln4NZpmaMNhq8o9coH9U9BQ5bAN4WDGxXV9d426iYKGorFF5wvv4Wv63cZsCotiXGGkD/0/*";
         let k2 = "[1f5e43d8/48'/1'/0'/2']tpubDFU4parcXvV8tBYt4rS4a8rGNF1DA32DCnRfhzVL6b3MSiDomV95rv9mb7W7jAPMTohyEYpbhVS8FbmTsuQsFRxDWPJX2ZFEeRPMFz3R1gh/0/*";
         let desc = format!("wsh(multi(2,{},{}))#szg2xsau", k1, k2);
-        let wallet = WalletJson {
+        let wallet = Wallet {
             id: Identifier {
                 kind: Kind::Wallet,
                 name: "azz".to_string(),

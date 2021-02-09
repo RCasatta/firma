@@ -31,11 +31,11 @@ impl Kind {
 
     fn name(&self) -> &str {
         match self {
-            Kind::Wallet => "descriptor.json",          // "wallet.json",
-            Kind::WalletIndexes => "indexes.json",      //"wallet_indexes.json",
-            Kind::WalletSignature => "signature.json",  //"wallet_signature.json",
-            Kind::MasterSecret => "PRIVATE.json",       //"master_secret.json",
-            Kind::DescriptorPublicKey => "public.json", //"descriptor_public_key.json",
+            Kind::Wallet => "wallet.json",
+            Kind::WalletIndexes => "wallet_indexes.json",
+            Kind::WalletSignature => "wallet_signature.json",
+            Kind::MasterSecret => "master_secret.json",
+            Kind::DescriptorPublicKey => "descriptor_public_key.json",
             Kind::PSBT => "psbt.json",
         }
     }
@@ -167,8 +167,8 @@ impl Identifier {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::json::identifier::{Identifier, Kind};
     use crate::common::tests::rnd_string;
+    use crate::{Identifier, Kind};
     use bitcoin::Network;
 
     impl Identifier {
@@ -188,7 +188,7 @@ mod tests {
             kind: Kind::MasterSecret,
             name: "a1".to_string(),
         };
-        let expected = "\"/bitcoin/keys/a1/PRIVATE.json\""; //TODO master_secret
+        let expected = "\"/bitcoin/keys/a1/master_secret.json\""; //TODO master_secret
         let result = format!("{:?}", id.as_path_buf("/", false).unwrap());
         assert_eq!(expected, result);
 

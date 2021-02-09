@@ -46,7 +46,7 @@ pub struct SignResult {
 
 #[derive(Debug)]
 struct PSBTSigner {
-    pub psbt: PSBT,
+    pub psbt: BitcoinPSBT,
     xprv: ExtendedPrivKey,
     secp: Secp256k1<SignOnly>,
     network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
@@ -55,7 +55,7 @@ struct PSBTSigner {
 }
 
 /// extract field name in the PSBT extra field if present
-pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
+pub fn get_psbt_name(psbt: &BitcoinPSBT) -> Option<String> {
     psbt.global.unknown.get(&get_name_key()).map(|v| {
         std::str::from_utf8(v)
             .expect("PSBT name not utf8")
@@ -63,7 +63,7 @@ pub fn get_psbt_name(psbt: &PSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-pub fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
+pub fn find_or_create(psbt: &mut BitcoinPSBT, psbts: Vec<Psbt>) -> Result<String> {
     let txid = psbt.global.unsigned_tx.txid();
 
     for psbt in psbts.iter() {
@@ -91,7 +91,7 @@ pub fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
 
 impl PSBTSigner {
     fn new(
-        psbt: &PSBT,
+        psbt: &BitcoinPSBT,
         xprv: ExtendedPrivKey,
         network: Network,
         derivations: u32,
@@ -312,7 +312,7 @@ impl PSBTSigner {
         Ok(())
     }
 
-    fn pretty_print(&self, wallets: &[WalletJson]) -> Result<PsbtPrettyPrint> {
+    fn pretty_print(&self, wallets: &[Wallet]) -> Result<PsbtPrettyPrint> {
         pretty_print(&self.psbt, self.network, wallets)
     }
 }
@@ -320,13 +320,13 @@ impl PSBTSigner {
 impl OfflineContext {
     pub fn sign(&self, opt: &SignOptions) -> Result<PsbtPrettyPrint> {
         debug!("sign::start");
-        let secret: MasterSecretJson = self.read(&opt.key_name)?;
+        let secret: MasterSecret = self.read(&opt.key_name)?;
         debug!("read secret key {}", secret.id.name);
-        let public: DescriptorPublicKeyJson = self.read(&opt.key_name)?;
+        let public: DescriptorPublicKey = self.read(&opt.key_name)?;
         debug!("read public key {}", public.id.name);
-        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        let wallet: Wallet = self.read(&opt.wallet_name)?;
         debug!("read wallet {}", wallet.id.name);
-        let mut psbt: PsbtJson = self.read(&opt.psbt_name)?;
+        let mut psbt: Psbt = self.read(&opt.psbt_name)?;
         debug!("read psbt {}", wallet.id.name);
 
         let mut psbt_signer = PSBTSigner::new(
@@ -370,7 +370,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::offline::sign::*;
-    use crate::{psbt_from_base64, psbt_to_base64, Error, PsbtJson, PSBT};
+    use crate::{psbt_from_base64, psbt_to_base64, BitcoinPSBT, Error, Psbt};
     use bitcoin::consensus::deserialize;
     use bitcoin::Transaction;
     use flate2::write::ZlibEncoder;
@@ -378,8 +378,8 @@ mod tests {
     use std::io::Write;
 
     fn test_sign(
-        psbt_to_sign: &mut PSBT,
-        psbt_signed: &PSBT,
+        psbt_to_sign: &mut BitcoinPSBT,
+        psbt_signed: &BitcoinPSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
         let mut psbt_signer = PSBTSigner::new(psbt_to_sign, *xprv, xprv.network, 10, true)?;
@@ -393,15 +393,15 @@ mod tests {
         Ok(())
     }
 
-    fn perc_diff_with_core(psbt: &PSBT, core: usize) -> Result<bool> {
+    fn perc_diff_with_core(psbt: &BitcoinPSBT, core: usize) -> Result<bool> {
         let esteem = (estimate_weight(psbt)? / 4) as f64;
         let core = core as f64;
         let perc = ((esteem - core) / esteem).abs();
         Ok(perc < 0.1) // TODO reduce this 10% by improving estimation of the bip tx
     }
 
-    fn extract_psbt(bytes: &[u8]) -> (Vec<u8>, PSBT) {
-        let psbt_json: PsbtJson = serde_json::from_slice(bytes).unwrap();
+    fn extract_psbt(bytes: &[u8]) -> (Vec<u8>, BitcoinPSBT) {
+        let psbt_json: Psbt = serde_json::from_slice(bytes).unwrap();
         psbt_from_base64(&psbt_json.psbt).unwrap()
     }
 
@@ -432,7 +432,7 @@ mod tests {
         let (_, mut psbt_to_sign) = extract_psbt(bytes);
 
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.key");
-        let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::MasterSecret = serde_json::from_slice(bytes).unwrap();
 
         let tx1 = "0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f618765000000";
         let tx1: Transaction = deserialize(&hex::decode(tx1).unwrap()).unwrap();
@@ -510,7 +510,7 @@ mod tests {
         let (_, orig) = extract_psbt(bytes);
         let mut psbt_to_sign = orig.clone();
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
-        let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::MasterSecret = serde_json::from_slice(bytes).unwrap();
 
         assert!(
             test_sign(&mut psbt_to_sign, &psbt_1, &key.key).is_err(),
@@ -526,7 +526,7 @@ mod tests {
         let (_, psbt_2) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
         let mut psbt_to_sign = orig.clone();
-        let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
+        let key: crate::MasterSecret = serde_json::from_slice(bytes).unwrap();
 
         assert!(
             test_sign(&mut psbt_to_sign, &psbt_2, &key.key).is_err(),

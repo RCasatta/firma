@@ -92,7 +92,7 @@ fn get_cipher(encryption_key: &EncryptionKey) -> Aes256GcmSiv {
 mod tests {
     use crate::common::mnemonic::Mnemonic;
     use crate::offline::decrypt::MaybeEncrypted;
-    use crate::MasterSecretJson;
+    use crate::MasterSecret;
     use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Network;
     use rand::{thread_rng, Rng};
@@ -120,7 +120,7 @@ mod tests {
         let maybe_plain_again = maybe_encrypt.decrypt(&cipher_key).unwrap();
         assert_eq!(maybe_plain, maybe_plain_again);
 
-        let key_json = MasterSecretJson::from_mnemonic(
+        let key_json = MasterSecret::from_mnemonic(
             Network::Testnet,
             &Mnemonic::from_str(
                 "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",

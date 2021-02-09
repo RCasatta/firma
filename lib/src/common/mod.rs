@@ -12,7 +12,6 @@ use std::io::Write;
 pub mod context;
 pub mod error;
 pub mod import_export;
-pub mod json;
 pub mod list;
 pub mod mnemonic;
 pub mod qr;
@@ -54,19 +53,19 @@ pub fn init_logger() {
         .expect("cannot initialize logging");
 }
 
-pub fn psbt_from_base64(s: &str) -> Result<(Vec<u8>, PSBT)> {
+pub fn psbt_from_base64(s: &str) -> Result<(Vec<u8>, BitcoinPSBT)> {
     let bytes = base64::decode(s)?;
     let psbt = deserialize(&bytes)?;
     Ok((bytes, psbt))
 }
 
-pub fn psbt_to_base64(psbt: &PSBT) -> (Vec<u8>, String) {
+pub fn psbt_to_base64(psbt: &BitcoinPSBT) -> (Vec<u8>, String) {
     let bytes = serialize(psbt);
     let string = base64::encode(&bytes);
     (bytes, string)
 }
 
-pub fn estimate_weight(psbt: &PSBT) -> Result<usize> {
+pub fn estimate_weight(psbt: &BitcoinPSBT) -> Result<usize> {
     let unsigned_weight = psbt.global.unsigned_tx.get_weight();
     let mut spending_weight = 0usize;
 

@@ -1,7 +1,6 @@
 use bitcoin::{Address, Amount, Txid};
 use bitcoincore_rpc::{Client, RpcApi};
 use firma::bitcoin::Network;
-use firma::common::json::identifier::{Identifier, Kind};
 use firma::*;
 use rand::distributions::Alphanumeric;
 use rand::{self, thread_rng, Rng};
@@ -346,7 +345,7 @@ impl FirmaCommand {
         names: &[String],
         wallet_name: &str,
         allow_wallet_already_exists: bool,
-    ) -> Result<WalletJson> {
+    ) -> Result<Wallet> {
         let required_sig = format!("{}", required_sig);
         let mut args = vec!["-r", &required_sig, "--wallet-name", wallet_name];
         if allow_wallet_already_exists {
@@ -470,7 +469,7 @@ impl FirmaCommand {
         &self,
         key_name: &str,
         encryption_key: Option<&[u8]>,
-    ) -> Result<MasterSecretJson> {
+    ) -> Result<MasterSecret> {
         let result = self.offline("random", vec!["--key-name", key_name], encryption_key);
         let value = map_json_error(result)?;
         let output = from_value(value).unwrap();
@@ -482,7 +481,7 @@ impl FirmaCommand {
         kind: &str,
         name: &str,
         encryption_key: Option<&[u8]>,
-    ) -> Result<MasterSecretJson> {
+    ) -> Result<MasterSecret> {
         let result = self.offline(
             "export",
             vec!["--kind", kind, "--name", name],
@@ -498,7 +497,7 @@ impl FirmaCommand {
         key_name: &str,
         launches: Vec<u32>,
         faces: u32,
-    ) -> Result<MasterSecretJson> {
+    ) -> Result<MasterSecret> {
         let faces = format!("{}", faces);
         let mut args = vec!["--key-name", key_name, "--faces", &faces];
         let launches: Vec<String> = launches.iter().map(|e| format!("{}", e)).collect();
@@ -517,7 +516,7 @@ impl FirmaCommand {
         key_name: &str,
         nature: &str,
         value: &str,
-    ) -> Result<MasterSecretJson> {
+    ) -> Result<MasterSecret> {
         let result = self.offline(
             "restore",
             vec!["--key-name", key_name, "--nature", nature, value],

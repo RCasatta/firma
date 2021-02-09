@@ -73,7 +73,7 @@ impl DiceOptions {
 }
 
 impl OfflineContext {
-    pub fn roll(&self, opt: &DiceOptions) -> Result<MasterSecretJson> {
+    pub fn roll(&self, opt: &DiceOptions) -> Result<MasterSecret> {
         opt.validate()?;
 
         let master_key =
@@ -112,13 +112,13 @@ fn calculate_key(
     faces: u32,
     network: Network,
     name: &str,
-) -> Result<MasterSecretJson> {
+) -> Result<MasterSecret> {
     let acc = multiply_dice_launches(&launches, faces);
 
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;
 
-    let mut key = MasterSecretJson::from_mnemonic(network, &mnemonic, name)?;
+    let mut key = MasterSecret::from_mnemonic(network, &mnemonic, name)?;
     let dice = Dice {
         faces,
         launches: format!("{:?}", launches),
@@ -199,7 +199,7 @@ impl<'de> Deserialize<'de> for Bits {
 mod tests {
     use crate::common::context::tests::TestContext;
     use crate::offline::dice::*;
-    use crate::MasterSecretJson;
+    use crate::MasterSecret;
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
     use num_bigint::BigUint;
@@ -303,7 +303,7 @@ mod tests {
         */
         let secp = Secp256k1::signing_only();
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
-        let expected: MasterSecretJson = serde_json::from_slice(bytes).unwrap();
+        let expected: MasterSecret = serde_json::from_slice(bytes).unwrap();
         let calculated =
             calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
         assert_eq!(

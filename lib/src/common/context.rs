@@ -1,4 +1,4 @@
-use crate::common::json::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
+use crate::common::entities::identifier::{Identifiable, Identifier, Overwritable, WhichKind};
 use crate::list::ListOptions;
 use crate::offline::decrypt::EncryptionKey;
 use crate::offline::sign::find_or_create;
@@ -10,7 +10,6 @@ use bitcoin::hashes::core::ops::DerefMut;
 use bitcoin::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use log::{debug, info};
-use miniscript::DescriptorPublicKey;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -142,9 +141,9 @@ impl Context {
         )
     }
 
-    pub fn write_keys(&self, master_key: &MasterSecretJson) -> Result<()> {
+    pub fn write_keys(&self, master_key: &MasterSecret) -> Result<()> {
         self.write(master_key)?;
-        let public: DescriptorPublicKeyJson = master_key.as_desc_pub_key()?;
+        let public: DescriptorPublicKey = master_key.as_desc_pub_key()?;
         self.write(&public)
     }
 
@@ -186,11 +185,11 @@ impl Context {
     pub fn read_desc_pub_keys_from_names(
         &self,
         names: &[String],
-    ) -> Result<Vec<DescriptorPublicKey>> {
+    ) -> Result<Vec<miniscript::DescriptorPublicKey>> {
         let mut result = vec![];
         for name in names {
             let id = Identifier::new(self.network, Kind::DescriptorPublicKey, name);
-            let json: DescriptorPublicKeyJson = id.read(&self.datadir, &self.encryption_key)?;
+            let json: DescriptorPublicKey = id.read(&self.datadir, &self.encryption_key)?;
             result.push(json.key()?);
         }
         Ok(result)
@@ -211,7 +210,7 @@ impl Context {
             .psbt
             .as_bytes()
             .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
-        let mut psbt: PSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
+        let mut psbt: BitcoinPSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
 
         self.save_psbt(&mut psbt)?;
         Ok(())
@@ -219,7 +218,7 @@ impl Context {
 
     /// psbts_dir is general psbts dir, name is extracted from PSBT
     /// if file exists a PSBT merge will be attempted
-    pub fn save_psbt(&self, psbt: &mut PSBT) -> Result<String> {
+    pub fn save_psbt(&self, psbt: &mut BitcoinPSBT) -> Result<String> {
         debug!("save_psbt");
 
         let name = match get_psbt_name(psbt) {
@@ -233,7 +232,7 @@ impl Context {
 
         debug!("psbt_name: {}", name);
         let id = Identifier::new(self.network, Kind::PSBT, &name);
-        if let Ok(existing_psbt) = self.read::<PsbtJson>(&name) {
+        if let Ok(existing_psbt) = self.read::<Psbt>(&name) {
             info!("old psbt exist, merging together");
             let existing_psbt = existing_psbt.psbt()?;
             psbt.merge(existing_psbt.clone())?;
@@ -242,7 +241,7 @@ impl Context {
             }
         }
         let psbt = psbt_to_base64(&psbt).1;
-        let psbt_json = PsbtJson { id, psbt };
+        let psbt_json = Psbt { id, psbt };
         self.write(&psbt_json)?;
         debug!("finish");
         Ok(name)
@@ -262,6 +261,11 @@ pub fn load_if_unloaded(client: &Client, wallet_name: &str) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SavePSBTOptions {
+    pub psbt: StringEncoding,
 }
 
 // from https://stackoverflow.com/questions/54267608/expand-tilde-in-rust-path-idiomatically
@@ -287,7 +291,7 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 #[cfg(test)]
 pub mod tests {
     use crate::offline::random::RandomOptions;
-    use crate::{Context, DescriptorPublicKeyJson, MasterSecretJson, OfflineContext};
+    use crate::{Context, DescriptorPublicKey, MasterSecret, OfflineContext};
     use bitcoin::Network;
     use std::ops::Deref;
     use tempfile::TempDir;
@@ -344,8 +348,8 @@ pub mod tests {
             context.write_keys(&key).is_err(),
             "can overwrite key material"
         );
-        let key_read: MasterSecretJson = context.read(&key_name).unwrap();
+        let key_read: MasterSecret = context.read(&key_name).unwrap();
         assert_eq!(key, key_read);
-        let _: DescriptorPublicKeyJson = context.read(&key_name).unwrap();
+        let _: DescriptorPublicKey = context.read(&key_name).unwrap();
     }
 }

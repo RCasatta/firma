@@ -1,4 +1,3 @@
-use crate::common::json::identifier::{Identifier, Kind};
 use crate::*;
 use bitcoincore_rpc::bitcoincore_rpc_json::{
     ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince,
@@ -6,7 +5,6 @@ use bitcoincore_rpc::bitcoincore_rpc_json::{
 use bitcoincore_rpc::RpcApi;
 use log::debug;
 use log::info;
-use miniscript::DescriptorPublicKey;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -35,10 +33,10 @@ pub struct CreateWalletOptions {
 }
 
 impl CreateWalletOptions {
-    fn desc_pub_keys(&self) -> Result<Vec<DescriptorPublicKey>> {
+    fn desc_pub_keys(&self) -> Result<Vec<miniscript::DescriptorPublicKey>> {
         let mut result = vec![];
         for s in self.desc_pub_keys.iter() {
-            let k: DescriptorPublicKey = s.parse()?;
+            let k: miniscript::DescriptorPublicKey = s.parse()?;
             result.push(k);
         }
         Ok(result)
@@ -83,7 +81,7 @@ impl CreateWalletOptions {
 }
 
 impl OnlineContext {
-    pub fn create_wallet(&self, opt: &CreateWalletOptions) -> Result<WalletJson> {
+    pub fn create_wallet(&self, opt: &CreateWalletOptions) -> Result<Wallet> {
         debug!("create_wallet {:?}", opt);
         opt.validate(self)?;
 
@@ -130,12 +128,12 @@ impl OnlineContext {
 
         let height = client.get_blockchain_info()?.blocks;
 
-        let wallet = WalletJson {
+        let wallet = Wallet {
             id: Identifier::new(self.network, Kind::Wallet, &opt.wallet_name),
             descriptor,
             created_at_height: height,
         };
-        let indexes = IndexesJson {
+        let indexes = WalletIndexes {
             id: Identifier::new(self.network, Kind::WalletIndexes, &opt.wallet_name),
             main: 0u32,
         };
@@ -147,7 +145,10 @@ impl OnlineContext {
     }
 }
 
-fn create_descriptor(required_sigs: u8, desc_pub_keys: &[DescriptorPublicKey]) -> String {
+fn create_descriptor(
+    required_sigs: u8,
+    desc_pub_keys: &[miniscript::DescriptorPublicKey],
+) -> String {
     let keys: Vec<String> = desc_pub_keys.iter().map(|d| d.to_string()).collect();
     let descriptor = format!("wsh(multi({},{}))", required_sigs, keys.join(","));
     descriptor
@@ -157,9 +158,8 @@ fn create_descriptor(required_sigs: u8, desc_pub_keys: &[DescriptorPublicKey]) -
 mod tests {
     use crate::common::tests::rnd_string;
     use crate::online::create_wallet::{create_descriptor, CreateWalletOptions};
-    use crate::{Identifier, Kind, MasterSecretJson, WalletJson};
+    use crate::{Identifier, Kind, MasterSecret, Wallet};
     use bitcoin::Network;
-    use miniscript::DescriptorPublicKey;
 
     impl CreateWalletOptions {
         pub fn new_random(required_sigs: u8, key_names: Vec<String>) -> Self {
@@ -173,15 +173,15 @@ mod tests {
         }
     }
 
-    impl WalletJson {
-        pub fn new_random(required_sig: u8, keys: &[MasterSecretJson]) -> Self {
+    impl Wallet {
+        pub fn new_random(required_sig: u8, keys: &[MasterSecret]) -> Self {
             let desc_pub_keys: Vec<_> = keys
                 .iter()
                 .map(|k| {
                     k.as_desc_pub_key()
                         .unwrap()
                         .desc_pub_key
-                        .parse::<DescriptorPublicKey>()
+                        .parse::<miniscript::DescriptorPublicKey>()
                         .unwrap()
                 })
                 .collect();

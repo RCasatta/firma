@@ -13,7 +13,6 @@ pub enum Error {
     // Internal
     FileExist(PathBuf),
     DiceValueErr(u32, u32),
-    WrongKeyFileName,
     MissingPrevoutTx,
     MismatchPrevoutHash,
     MissingContext,
@@ -128,7 +127,6 @@ impl fmt::Display for Error {
             Error::DiceValueErr(n, max) => {
                 write!(f, "Got {} but must be from 1 to {} included", n, max)
             }
-            Error::WrongKeyFileName => write!(f, "Private file name MUST be PRIVATE.json"),
             Error::MissingPrevoutTx => write!(f, "Missing prevout tx"),
             Error::MismatchPrevoutHash => write!(f, "Prevout hash doesn't match previous tx"),
             Error::MissingContext => write!(f, "Missing context"),

@@ -25,28 +25,28 @@ impl Context {
                 match opt.kind {
                     Kind::Wallet => {
                         debug!("read wallet jsons {:?}", name);
-                        match self.read::<WalletJson>(name) {
+                        match self.read::<Wallet>(name) {
                             Ok(wallet) => list.wallets.push(wallet),
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
                     }
                     Kind::WalletSignature => {
                         debug!("read wallet signature jsons {:?}", name);
-                        match self.read::<WalletSignatureJson>(name) {
+                        match self.read::<WalletSignature>(name) {
                             Ok(wallet_signature) => list.wallets_signatures.push(wallet_signature),
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
                     }
                     Kind::PSBT => {
                         debug!("read psbt json {:?}", name);
-                        match self.read::<PsbtJson>(name) {
+                        match self.read::<Psbt>(name) {
                             Ok(psbt_json) => list.psbts.push(psbt_json),
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
                     }
                     Kind::MasterSecret => {
                         debug!("read keys jsons {:?}", name);
-                        match self.read::<MasterSecretJson>(name) {
+                        match self.read::<MasterSecret>(name) {
                             Ok(secret_key) => list.master_secrets.push(secret_key),
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
@@ -73,7 +73,7 @@ fn _signatures_needed(inputs: &[TxIn]) -> String {
 #[cfg(test)]
 mod tests {
     use crate::common::context::tests::TestContext;
-    use crate::common::json::identifier::Kind;
+    use crate::common::entities::identifier::Kind;
     use crate::common::list::ListOptions;
     use crate::offline::random::RandomOptions;
 

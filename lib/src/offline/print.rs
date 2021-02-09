@@ -36,12 +36,12 @@ impl OfflineContext {
         let psbt =
             match (&opt.psbt_file, &opt.psbt_base64, &opt.psbt_name) {
                 (Some(path), None, None) => {
-                    let psbt_json: PsbtJson = decrypt(path, &self.encryption_key)?;
+                    let psbt_json: Psbt = decrypt(path, &self.encryption_key)?;
                     psbt_json.psbt()?
                 }
                 (None, Some(base64), None) => psbt_from_base64(base64)?.1,
                 (None, None, Some(name)) => {
-                    let psbt_json: PsbtJson = self.read(name)?;
+                    let psbt_json: Psbt = self.read(name)?;
                     psbt_json.psbt()?
                 }
                 (None, None, None) => {
@@ -61,9 +61,9 @@ impl OfflineContext {
 }
 
 pub fn pretty_print(
-    psbt: &PSBT,
+    psbt: &BitcoinPSBT,
     network: Network,
-    wallets: &[WalletJson],
+    wallets: &[Wallet],
 ) -> Result<PsbtPrettyPrint> {
     let mut result = PsbtPrettyPrint::default();
     let mut previous_outputs: Vec<TxOut> = vec![];
@@ -101,7 +101,7 @@ pub fn pretty_print(
         if let Some((wallet, _)) = &wallet_if_any {
             *balances.entry(wallet.clone()).or_insert(0i64) -= previous_outputs[i].value as i64
         }
-        let txin = json::TxIn {
+        let txin = entities::TxIn {
             outpoint: input.previous_output.to_string(),
             signatures,
             common: TxCommonInOut {
@@ -120,7 +120,7 @@ pub fn pretty_print(
         if let Some((wallet, _)) = &wallet_if_any {
             *balances.entry(wallet.clone()).or_insert(0i64) += output.value as i64
         }
-        let txout = json::TxOut {
+        let txout = entities::TxOut {
             address: addr.to_string(),
             common: TxCommonInOut {
                 value: Amount::from_sat(output.value).to_string(),
@@ -227,7 +227,7 @@ fn script_type(script: &Script) -> Option<usize> {
 /// returns a wallet name and a derivation iif the address parameter is the same as the one derived from the wallet
 fn wallet_with_path(
     hd_keypaths: &HDKeypaths,
-    wallets: &[WalletJson],
+    wallets: &[Wallet],
     address: &Address,
 ) -> Option<(String, DerivationPath)> {
     for wallet in wallets {

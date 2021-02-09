@@ -18,8 +18,8 @@ pub struct GetAddressOptions {
 impl OnlineContext {
     pub fn get_address(&self, opt: &GetAddressOptions) -> Result<GetAddressOutput> {
         let client = self.make_client(&opt.wallet_name)?;
-        let wallet: WalletJson = self.read(&opt.wallet_name)?;
-        let mut indexes: IndexesJson = self.read(&opt.wallet_name)?;
+        let wallet: Wallet = self.read(&opt.wallet_name)?;
+        let mut indexes: WalletIndexes = self.read(&opt.wallet_name)?;
 
         let index = opt.index.unwrap_or(indexes.main);
         let descriptor = wallet.descriptor;

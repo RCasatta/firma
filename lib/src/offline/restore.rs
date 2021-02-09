@@ -1,6 +1,6 @@
 use crate::mnemonic::Mnemonic;
 use crate::Result;
-use crate::{MasterSecretJson, OfflineContext};
+use crate::{MasterSecret, OfflineContext};
 use bitcoin::util::bip32::ExtendedPrivKey;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -45,15 +45,15 @@ impl FromStr for Nature {
 }
 
 impl OfflineContext {
-    pub fn restore(&self, opt: &RestoreOptions) -> Result<MasterSecretJson> {
+    pub fn restore(&self, opt: &RestoreOptions) -> Result<MasterSecret> {
         let master_key = match opt.nature {
             Nature::Xprv => {
                 let key = ExtendedPrivKey::from_str(&opt.value)?;
-                MasterSecretJson::new(self.network, key, &opt.key_name)?
+                MasterSecret::new(self.network, key, &opt.key_name)?
             }
             Nature::Mnemonic => {
                 let mnemonic = Mnemonic::from_str(&opt.value)?;
-                MasterSecretJson::from_mnemonic(self.network, &mnemonic, &opt.key_name)?
+                MasterSecret::from_mnemonic(self.network, &mnemonic, &opt.key_name)?
             }
         };
         self.write_keys(&master_key)?;

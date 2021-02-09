@@ -1,4 +1,4 @@
-use crate::common::json::identifier::Identifier;
+use crate::common::entities::identifier::Identifier;
 use crate::offline::decrypt::decrypt;
 use crate::online::PathOptions;
 use crate::*;
@@ -29,12 +29,12 @@ impl Context {
         let id: Identifier = from_value(id_value.clone())?;
         let c = value.clone();
         match id.kind {
-            Kind::Wallet => self.write(&from_value::<WalletJson>(c)?)?,
-            Kind::WalletIndexes => self.write(&from_value::<IndexesJson>(c)?)?,
-            Kind::WalletSignature => self.write(&from_value::<WalletSignatureJson>(c)?)?,
-            Kind::MasterSecret => self.write(&from_value::<MasterSecretJson>(c)?)?,
-            Kind::DescriptorPublicKey => self.write(&from_value::<DescriptorPublicKeyJson>(c)?)?,
-            Kind::PSBT => self.write(&from_value::<PsbtJson>(c)?)?,
+            Kind::Wallet => self.write(&from_value::<Wallet>(c)?)?,
+            Kind::WalletIndexes => self.write(&from_value::<WalletIndexes>(c)?)?,
+            Kind::WalletSignature => self.write(&from_value::<WalletSignature>(c)?)?,
+            Kind::MasterSecret => self.write(&from_value::<MasterSecret>(c)?)?,
+            Kind::DescriptorPublicKey => self.write(&from_value::<DescriptorPublicKey>(c)?)?,
+            Kind::PSBT => self.write(&from_value::<Psbt>(c)?)?,
         }
         Ok(value)
     }
@@ -50,21 +50,21 @@ impl Context {
 mod tests {
     use crate::context::tests::TestContext;
     use crate::online::PathOptions;
-    use crate::{Identifier, IndexesJson, Kind};
+    use crate::{Identifier, Kind, WalletIndexes};
 
     #[test]
     fn test_import() {
         let context = TestContext::default();
-        let i = IndexesJson {
+        let i = WalletIndexes {
             id: Identifier::new_test(Kind::WalletIndexes),
             main: 0,
         };
         context.write(&i).unwrap();
         let path = i.id.as_path_buf(&context.datadir, false).unwrap();
         let second_context = TestContext::default();
-        assert!(second_context.read::<IndexesJson>(&i.id.name).is_err());
+        assert!(second_context.read::<WalletIndexes>(&i.id.name).is_err());
         second_context.import(&PathOptions { path }).unwrap();
-        let read = second_context.read::<IndexesJson>(&i.id.name).unwrap();
+        let read = second_context.read::<WalletIndexes>(&i.id.name).unwrap();
         assert_eq!(i, read);
     }
 }

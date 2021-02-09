@@ -1,4 +1,3 @@
-use crate::common::json::identifier::{Identifier, Kind};
 use crate::common::list::ListOptions;
 use crate::online::WalletNameOptions;
 use crate::*;
@@ -16,15 +15,15 @@ pub const WALLET_SIGN_DERIVATION: u32 = u32::max_value() >> 1;
 impl OfflineContext {
     pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
         let secp = Secp256k1::verification_only();
-        let wallet: WalletJson = self.read(&opt.wallet_name)?;
-        let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
+        let wallet: Wallet = self.read(&opt.wallet_name)?;
+        let signature: WalletSignature = self.read(&opt.wallet_name)?;
 
         verify_wallet_internal(&secp, &wallet, &signature, self.network)
     }
 
-    pub fn sign_wallet(&self, opt: &WalletNameOptions) -> Result<WalletSignatureJson> {
+    pub fn sign_wallet(&self, opt: &WalletNameOptions) -> Result<WalletSignature> {
         let secp = Secp256k1::signing_only();
-        let wallet: WalletJson = self.read(&opt.wallet_name)?;
+        let wallet: Wallet = self.read(&opt.wallet_name)?;
         let message = &wallet.descriptor;
         let desc_pub_keys: Vec<PublicKey> = wallet.extract_wallet_sign_keys()?;
 
@@ -43,7 +42,7 @@ impl OfflineContext {
            .try_for_each(|xpub| check_compatibility(self.network, xpub.network))?;
         */
 
-        let wallet_signature = WalletSignatureJson {
+        let wallet_signature = WalletSignature {
             signature,
             id: Identifier::new(self.network, Kind::WalletSignature, &wallet.id.name),
         };
@@ -57,7 +56,7 @@ fn find_key<'a, T: Signing>(
     secp: &Secp256k1<T>,
     available_keys: &'a ListOutput,
     desc_pub_keys: &[PublicKey],
-) -> Result<&'a MasterSecretJson> {
+) -> Result<&'a MasterSecret> {
     for key in available_keys.master_secrets.iter() {
         let k = key.as_wallet_sign_pub_key(&secp)?;
         if desc_pub_keys.contains(&k) {
@@ -69,8 +68,8 @@ fn find_key<'a, T: Signing>(
 
 pub fn verify_wallet_internal<T: Verification>(
     secp: &Secp256k1<T>,
-    wallet: &WalletJson,
-    signature: &WalletSignatureJson,
+    wallet: &Wallet,
+    signature: &WalletSignature,
     network: Network,
 ) -> Result<VerifyWalletResult> {
     let desc_pub_keys = wallet.extract_desc_pub_keys()?;
@@ -185,7 +184,7 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::sign_wallet::{sign_message, verify_message};
     use crate::online::WalletNameOptions;
-    use crate::WalletJson;
+    use crate::Wallet;
     use bitcoin::secp256k1::Secp256k1;
 
     /*
@@ -216,7 +215,7 @@ mod tests {
     fn test_sign_verify() {
         let context = TestContext::default();
         let key = context.create_key(&RandomOptions::new_random()).unwrap();
-        let wallet = WalletJson::new_random(1, &vec![key.clone()]);
+        let wallet = Wallet::new_random(1, &vec![key.clone()]);
         let wallet_name_opt: WalletNameOptions = wallet.id.name.as_str().into();
 
         // manually importing the wallet, because context.create_wallet needs the node, not available in unit tests
@@ -234,7 +233,7 @@ mod tests {
         let _ = context.verify_wallet(&wallet_name_opt).unwrap_err();
 
         let key_2 = context.create_key(&RandomOptions::new_random()).unwrap();
-        let wallet_2 = WalletJson::new_random(1, &vec![key_2]);
+        let wallet_2 = Wallet::new_random(1, &vec![key_2]);
         let wallet_2_name_opt: WalletNameOptions = wallet_2.id.name.as_str().into();
         context
             .import_json(serde_json::to_value(wallet_2).unwrap())
