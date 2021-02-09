@@ -58,9 +58,9 @@ class KeyTest : Common() {
             "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"
         )
         val xpubs = mapOf(
-            "mainnet" to "xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk",
-            "testnet" to "tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj",
-            "regtest" to "tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj"
+            "mainnet" to "[dd0847bb/48'/0'/0'/2']xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*",
+            "testnet" to "[d90c6a4f/48'/1'/0'/2']tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*",
+            "regtest" to "[d90c6a4f/48'/1'/0'/2']tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*"
         )
         val importsText = mapOf(
             "mainnet" to "Import xprv",
@@ -96,14 +96,14 @@ class KeyTest : Common() {
         val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
 
-        val expectedXpubTestnet =
-            "tpubD6NzVbkrYhZ4WUShmaCWa9ZQwAVe2kKxyfY1sENpyNfaQhjLHuS82RLjz19gaFTRknZhmSVAbzbeE79RjTb5coEjsjA4yg9seCLK8EFm5Q6"
+        val expectedDescPubTestnet =
+            "[cabe32d7/48'/1'/0'/2']tpubDERURuyFUBH1qfB38hVJFXRrG4fJ6SQS3jwixLAtvRAierc8pbmLF3wBWpiqeV4kXkCN2QvndGeo5wcWtNXCNymvSmBnWT9NgNcb2nbEWQv/0/*"
         val expectedXpubMainnet =
-            "xpub661MyMwAqRbcEgFrKPDRNEE3c3Pz3MpuS2wiWgKgdTugfR4dDgb2syfujy4u3kWBxt2o9ryJ4tmbXvepLbjqjMnSp8QmJ9Ve4EjuNBkPMy1"
+            "[cabe32d7/48'/0'/0'/2']xpub6DhVvf4GfRxVQZxcGTYFxwWPoL7GbXMe7nfP5Uhi5ZWbqvWdJsdJnwKkkcWiWbse2fBZn3RPiSjzpJwqNe8Zwqvv9DSjPqkkdUiegP97SVC/0/*"
         val expectedXpub = mapOf(
             "mainnet" to expectedXpubMainnet,
-            "testnet" to expectedXpubTestnet,
-            "regtest" to expectedXpubTestnet
+            "testnet" to expectedDescPubTestnet,
+            "regtest" to expectedDescPubTestnet
         )
         val mnemonic =
             "bunker shed useless about build taste comfort acquire food defense nation cement oblige race manual narrow merit lumber slight pattern plate budget armed undo"
@@ -133,14 +133,14 @@ class KeyTest : Common() {
     fun dice() {
         val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
-        val expectedXpubTestnet =
-            "tpubD6NzVbkrYhZ4YSC7guz8W7xZW1ftPPwsB9bAcEHrmdvmzyUSfhTDE8YV3M8WYegAmGorTpGvVGVKdXS5gWkCQ7GPZNUABkchvCyNpA51h5b"
-        val expectedXpubMainnet =
-            "xpub661MyMwAqRbcGe1GEj13JCdCAtaEQ1SodWzsFgEiRjAtFgojbUc85gseoK3j29ivyNGwrEm3xAfGwLwUHetxWfp6VmirWDxULFNy4CD94UP"
+        val expectedDescPubTestnet =
+            "[9cf794b6/48'/1'/0'/2']tpubDF2XEjMTg94eFNAsX5jEK5nxA4Vs6VVjJQXgztKmSpGy5jiBNBgrmpqxcjTEzdnvfVG5U7SMLndPHJph9EHVMZie6HFYCt6XnXfFpwASqyq/0/*"
+        val expectedDescPubMainnet =
+            "[9cf794b6/48'/0'/0'/2']xpub6EcBbnjoWQyB2sm1nDpiqymb629pCQmprDp22QWU8NXp81YHzcm98duacrav2s1bw3kCryM6UTknRDJcxHCxkHX3fcXrmsKy6QRWpDDpTqS/0/*"
         val expectedXpub = mapOf(
-            "mainnet" to expectedXpubMainnet,
-            "testnet" to expectedXpubTestnet,
-            "regtest" to expectedXpubTestnet
+            "mainnet" to expectedDescPubMainnet,
+            "testnet" to expectedDescPubTestnet,
+            "regtest" to expectedDescPubTestnet
         )
         val network = getNetwork()
 

@@ -1,13 +1,12 @@
 use crate::common::json::identifier::{Identifier, Kind};
 use crate::*;
-use bitcoin::util::bip32::ExtendedPubKey;
-use bitcoin::Network;
 use bitcoincore_rpc::bitcoincore_rpc_json::{
     ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince,
 };
 use bitcoincore_rpc::RpcApi;
 use log::debug;
 use log::info;
+use miniscript::DescriptorPublicKey;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -20,9 +19,10 @@ pub struct CreateWalletOptions {
     #[structopt(short)]
     pub required_sigs: u8,
 
-    /// Extended Public Keys (xpub) that are composing the wallet, given as String (xprv...)
-    #[structopt(long = "xpub")]
-    pub xpubs: Vec<ExtendedPubKey>, //TODO change in DescriptorPubKey
+    /// DescriptorPubKey that are composing the wallet, given as String (xprv...).
+    /// Could be an Extended Public Keys (xpub) but it could also contain origin path and fingerprint and path
+    #[structopt(long)]
+    pub desc_pub_keys: Vec<String>, // DescriptorPubKey
 
     /// Key name that are composing the wallet, must be found in firma datadir
     #[structopt(long = "key-name")]
@@ -35,6 +35,14 @@ pub struct CreateWalletOptions {
 }
 
 impl CreateWalletOptions {
+    fn desc_pub_keys(&self) -> Result<Vec<DescriptorPublicKey>> {
+        let mut result = vec![];
+        for s in self.desc_pub_keys.iter() {
+            let k: DescriptorPublicKey = s.parse()?;
+            result.push(k);
+        }
+        Ok(result)
+    }
     fn validate(&self, context: &Context) -> Result<()> {
         if self.required_sigs == 0 {
             return Err("required signatures cannot be 0".into());
@@ -44,15 +52,17 @@ impl CreateWalletOptions {
             return Err("required signatures cannot be greater than 15".into());
         }
 
-        if self.required_sigs > (self.xpubs.len() + self.key_names.len()) as u8 {
+        if self.required_sigs > (self.desc_pub_keys.len() + self.key_names.len()) as u8 {
             //TODO check overflow
             return Err("required signatures cannot be greater than the number of xpubs".into());
         }
 
-        let mut xpubs = context.read_xpubs_from_names(&self.key_names)?;
-        xpubs.extend(&self.xpubs);
+        let mut desc_pub_keys = context.read_desc_pub_keys_from_names(&self.key_names)?;
+        desc_pub_keys.extend(self.desc_pub_keys()?);
 
-        for xpub in xpubs.iter() {
+        for xpub in desc_pub_keys.iter() {
+            /*
+            TODO check only if key is xkey
             if !(context.network == xpub.network
                 || (context.network == Network::Regtest && xpub.network == Network::Testnet))
             {
@@ -61,9 +71,9 @@ impl CreateWalletOptions {
                     context.network, xpub.network
                 )
                 .into());
-            }
+            }*/
 
-            if xpubs.iter().filter(|xpub2| *xpub2 == xpub).count() > 1 {
+            if desc_pub_keys.iter().filter(|xpub2| *xpub2 == xpub).count() > 1 {
                 return Err("Cannot use same xpub twice".into());
             }
         }
@@ -95,10 +105,10 @@ impl OnlineContext {
         };
         let client = self.make_client(&opt.wallet_name)?;
 
-        let mut xpubs = self.read_xpubs_from_names(&opt.key_names)?;
-        xpubs.extend(&opt.xpubs);
+        let mut desc_pub_keys = self.read_desc_pub_keys_from_names(&opt.key_names)?;
+        desc_pub_keys.extend(opt.desc_pub_keys()?);
 
-        let descriptor = create_descriptor(opt.required_sigs, &xpubs);
+        let descriptor = create_descriptor(opt.required_sigs, &desc_pub_keys);
         let descriptor = client.get_descriptor_info(&descriptor)?.descriptor; // adds checksum
 
         let multi_request = ImportMultiRequest {
@@ -118,14 +128,11 @@ impl OnlineContext {
         let import_multi_result = client.import_multi(&[multi_request], Some(&multi_options));
         info!("import_multi_result {:?}", import_multi_result);
 
-        let fingerprints = xpubs.iter().map(|x| x.fingerprint()).collect();
         let height = client.get_blockchain_info()?.blocks;
 
         let wallet = WalletJson {
             id: Identifier::new(self.network, Kind::Wallet, &opt.wallet_name),
             descriptor,
-            fingerprints,
-            required_sig: opt.required_sigs,
             created_at_height: height,
         };
         let indexes = IndexesJson {
@@ -140,9 +147,9 @@ impl OnlineContext {
     }
 }
 
-fn create_descriptor(required_sigs: u8, xpubs: &[ExtendedPubKey]) -> String {
-    let xpub_paths: Vec<String> = xpubs.iter().map(|xpub| format!("{}/0/*", xpub)).collect();
-    let descriptor = format!("wsh(multi({},{}))", required_sigs, xpub_paths.join(","));
+fn create_descriptor(required_sigs: u8, desc_pub_keys: &[DescriptorPublicKey]) -> String {
+    let keys: Vec<String> = desc_pub_keys.iter().map(|d| d.to_string()).collect();
+    let descriptor = format!("wsh(multi({},{}))", required_sigs, keys.join(","));
     descriptor
 }
 
@@ -153,13 +160,14 @@ mod tests {
     use crate::{Identifier, Kind, MasterSecretJson, WalletJson};
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
+    use miniscript::DescriptorPublicKey;
 
     impl CreateWalletOptions {
         pub fn new_random(required_sigs: u8, key_names: Vec<String>) -> Self {
             CreateWalletOptions {
                 wallet_name: rnd_string(),
                 required_sigs,
-                xpubs: vec![],
+                desc_pub_keys: vec![],
                 key_names,
                 allow_wallet_already_exists: false,
             }
@@ -169,16 +177,24 @@ mod tests {
     impl WalletJson {
         pub fn new_random(required_sig: u8, keys: &[MasterSecretJson]) -> Self {
             let secp = Secp256k1::signing_only();
-            let xpubs: Vec<_> = keys.iter().map(|k| k.as_pub(&secp).xpub.clone()).collect();
+            let desc_pub_keys: Vec<_> = keys
+                .iter()
+                .map(|k| {
+                    k.as_desc_pub_key(&secp)
+                        .unwrap()
+                        .desc_pub_key
+                        .parse::<DescriptorPublicKey>()
+                        .unwrap()
+                })
+                .collect();
+
             Self {
                 id: Identifier {
                     kind: Kind::Wallet,
                     name: rnd_string(),
                     network: Network::Testnet,
                 },
-                descriptor: create_descriptor(required_sig, &xpubs),
-                fingerprints: Default::default(),
-                required_sig,
+                descriptor: create_descriptor(required_sig, &desc_pub_keys),
                 created_at_height: 0,
             }
         }

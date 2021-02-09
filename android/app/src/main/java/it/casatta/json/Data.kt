@@ -76,11 +76,8 @@ class Data {
 
     data class PrivateMasterKey(
         val id: Identifier,
-        val xpub: String,
-        val xprv: String,
-        val mnemonic: String?,
-        val dice: Dice?,
-        val fingerprint: String
+        val key: String,
+        val dice: Dice?
     )
 
     data class Dice(
@@ -89,11 +86,14 @@ class Data {
         val value: String
     )
 
+    data class DescriptorPublicKeyJson(
+        val id: Identifier,
+        val desc_pub_key: String
+    )
+
     data class WalletJson(
         val id: Identifier,
         val descriptor: String,
-        val fingerprints: List<String>,
-        val required_sig: Int,
         val created_at_height: Int
     )
 

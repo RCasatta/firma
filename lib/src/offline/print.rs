@@ -232,7 +232,7 @@ fn wallet_with_path(
 ) -> Option<(String, DerivationPath)> {
     for wallet in wallets {
         for (_, (finger, path)) in hd_keypaths.iter() {
-            if wallet.fingerprints.contains(finger) {
+            if wallet.fingerprints().contains(finger) {
                 let path_vec: Vec<ChildNumber> = path.clone().into();
                 if let ChildNumber::Normal { index } = path_vec.first()? {
                     let descriptor = match index {

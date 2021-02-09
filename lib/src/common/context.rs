@@ -7,10 +7,10 @@ use crate::*;
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::consensus::deserialize;
 use bitcoin::hashes::core::ops::DerefMut;
-use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::Network;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use log::{debug, info};
+use miniscript::DescriptorPublicKey;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -145,7 +145,7 @@ impl Context {
     pub fn write_keys(&self, master_key: &MasterSecretJson) -> Result<()> {
         self.write(master_key)?;
         let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-        let public: PublicMasterKey = master_key.as_pub(&secp);
+        let public: DescriptorPublicKeyJson = master_key.as_desc_pub_key(&secp)?;
         self.write(&public)
     }
 
@@ -184,12 +184,15 @@ impl Context {
         Ok(client)
     }
 
-    pub fn read_xpubs_from_names(&self, names: &[String]) -> Result<Vec<ExtendedPubKey>> {
+    pub fn read_desc_pub_keys_from_names(
+        &self,
+        names: &[String],
+    ) -> Result<Vec<DescriptorPublicKey>> {
         let mut result = vec![];
         for name in names {
-            let k: PublicMasterKey = Identifier::new(self.network, Kind::DescriptorPublicKey, name)
-                .read(&self.datadir, &self.encryption_key)?;
-            result.push(k.xpub);
+            let id = Identifier::new(self.network, Kind::DescriptorPublicKey, name);
+            let json: DescriptorPublicKeyJson = id.read(&self.datadir, &self.encryption_key)?;
+            result.push(json.key()?);
         }
         Ok(result)
     }
@@ -285,7 +288,7 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 #[cfg(test)]
 pub mod tests {
     use crate::offline::random::RandomOptions;
-    use crate::{Context, MasterSecretJson, OfflineContext, PublicMasterKey};
+    use crate::{Context, DescriptorPublicKeyJson, MasterSecretJson, OfflineContext};
     use bitcoin::Network;
     use std::ops::Deref;
     use tempfile::TempDir;
@@ -344,6 +347,6 @@ pub mod tests {
         );
         let key_read: MasterSecretJson = context.read(&key_name).unwrap();
         assert_eq!(key, key_read);
-        let _: PublicMasterKey = context.read(&key_name).unwrap();
+        let _: DescriptorPublicKeyJson = context.read(&key_name).unwrap();
     }
 }

@@ -52,6 +52,7 @@ pub enum Error {
     WalletNotExistsInNode(String),
     WalletAlreadyExistsInNode(String),
     WalletSignatureNotVerified,
+    WrongKeyType,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -75,6 +76,7 @@ pub enum Error {
     Nul(std::ffi::NulError),
     ParseInt(std::num::ParseIntError),
     Miniscript(miniscript::Error),
+    MiniscriptDescriptor(miniscript::descriptor::DescriptorKeyParseError),
     Bmp(qr_code::bmp_monochrome::BmpError),
 }
 
@@ -112,6 +114,10 @@ impl_error!(miniscript::Error, Miniscript);
 impl_error!(crate::common::mnemonic::Error, Mnemonic);
 impl_error!(qr_code::bmp_monochrome::BmpError, Bmp);
 impl_error!(aes_gcm_siv::aead::Error, Encryption);
+impl_error!(
+    miniscript::descriptor::DescriptorKeyParseError,
+    MiniscriptDescriptor
+);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -177,6 +183,7 @@ impl fmt::Display for Error {
                 f,
                 "The wallet signature did not verify with any of the key of the wallet"
             ),
+            Error::WrongKeyType => write!(f, "Expected another key type"),
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),
@@ -199,6 +206,7 @@ impl fmt::Display for Error {
             Error::Nul(e) => write!(f, "{:?}", e),
             Error::ParseInt(e) => write!(f, "{:?}", e),
             Error::Miniscript(e) => write!(f, "{:?}", e),
+            Error::MiniscriptDescriptor(e) => write!(f, "{:?}", e),
             Error::Mnemonic(e) => write!(f, "{:?}", e),
             Error::Bmp(e) => write!(f, "{:?}", e),
         }

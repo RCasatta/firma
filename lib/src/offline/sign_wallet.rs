@@ -1,15 +1,17 @@
 use crate::common::json::identifier::{Identifier, Kind};
 use crate::common::list::ListOptions;
-use crate::offline::descriptor::extract_xpubs;
 use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, SignOnly, VerifyOnly};
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::ChildNumber;
 use bitcoin::util::misc::signed_msg_hash;
-use bitcoin::{Address, PrivateKey, PublicKey};
+use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
+use miniscript::{DescriptorPublicKeyCtx, ToPublicKey};
 use std::str::FromStr;
+
+pub const WALLET_SIGN_DERIVATION: u32 = u32::max_value() >> 1;
 
 impl OfflineContext {
     pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
@@ -17,27 +19,29 @@ impl OfflineContext {
         let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
         let secp = Secp256k1::verification_only();
 
-        verify_wallet_internal(&wallet, &signature, &secp)
+        verify_wallet_internal(&wallet, &signature, &secp, self.network)
     }
 
     pub fn sign_wallet(&self, opt: &WalletNameOptions) -> Result<WalletSignatureJson> {
         let secp = Secp256k1::signing_only();
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let message = &wallet.descriptor;
-        let xpubs: Vec<ExtendedPubKey> = extract_xpubs(&wallet.descriptor)?;
+        let desc_pub_keys: Vec<PublicKey> = wallet.extract_wallet_sign_keys()?;
 
         // search a key that is in the wallet descriptor
         let kind = Kind::MasterSecret;
         let list_opt = ListOptions { kind };
         debug!("list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;
-        let master_private_key = find_key(&available_keys, &xpubs)?; // TODO should be added a derivation?
+        let master_private_key = find_key(&available_keys, &desc_pub_keys)?;
+        let key = master_private_key.as_wallet_sign_prv_key(&secp)?;
 
-        let signature = sign_message_with_key(&master_private_key.private_key, message, &secp)?;
+        let signature = sign_message_with_key(&key.private_key, message, &secp)?;
 
-        xpubs
-            .iter()
-            .try_for_each(|xpub| check_compatibility(self.network, xpub.network))?;
+        /*desc_pub_keys
+           .iter()
+           .try_for_each(|xpub| check_compatibility(self.network, xpub.network))?;
+        */
 
         let wallet_signature = WalletSignatureJson {
             signature,
@@ -51,44 +55,38 @@ impl OfflineContext {
 
 fn find_key<'a>(
     available_keys: &'a ListOutput,
-    xpubs: &[ExtendedPubKey],
-) -> Result<&'a ExtendedPrivKey> {
+    desc_pub_keys: &[PublicKey],
+) -> Result<&'a MasterSecretJson> {
     let secp = bitcoin::secp256k1::Secp256k1::signing_only();
     for key in available_keys.master_secrets.iter() {
-        if check_xpub_in_descriptor(&key.as_pub(&secp).xpub, &xpubs).is_ok() {
-            return Ok(&key.key);
+        let k = key.as_wallet_sign_pub_key(&secp)?;
+        if desc_pub_keys.contains(&k) {
+            return Ok(key);
         }
     }
     Err("There is No private key participating in the wallet available".into())
-}
-
-fn check_xpub_in_descriptor(
-    master_public_key: &ExtendedPubKey,
-    xpubs: &[ExtendedPubKey],
-) -> Result<()> {
-    let is_wallet_key = xpubs.iter().any(|e| e == master_public_key);
-    if !is_wallet_key {
-        Err("Provided key is not part of this multisig wallet".into())
-    } else {
-        Ok(())
-    }
 }
 
 pub fn verify_wallet_internal(
     wallet: &WalletJson,
     signature: &WalletSignatureJson,
     secp: &Secp256k1<VerifyOnly>,
+    network: Network,
 ) -> Result<VerifyWalletResult> {
-    let xpubs = extract_xpubs(&wallet.descriptor)?;
+    let desc_pub_keys = wallet.extract_desc_pub_keys()?;
     let message = &wallet.descriptor;
 
-    for xpub in xpubs {
-        let master_address = Address::p2pkh(&xpub.public_key, xpub.network);
+    for desc_pub_key in desc_pub_keys {
+        let context = DescriptorPublicKeyCtx::new(
+            &secp,
+            ChildNumber::from_normal_idx(u32::max_value() >> 1)?,
+        );
+        let master_address = Address::p2pkh(&desc_pub_key.to_public_key(context), network);
         let verified =
             verify_message_with_address(&master_address, &signature.signature, message, secp)?;
         debug!(
-            "xpub {} with master_address {} verified {}",
-            xpub, master_address, verified
+            "desc_pub_key {} with master_address {} verified {}",
+            desc_pub_key, master_address, verified
         );
         if verified {
             let result = VerifyWalletResult {

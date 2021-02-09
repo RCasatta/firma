@@ -17,7 +17,7 @@ import kotlinx.android.synthetic.main.activity_key.select
 import kotlinx.android.synthetic.main.activity_key.view_qr
 import java.nio.charset.Charset
 
-class KeyActivity : AppCompatActivity() {
+class KeyActivity : ContextActivity() {
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
     private val itemsAdapter = DescItemAdapter()
     private val hiddenItemsAdapter = DescItemAdapter()
@@ -31,7 +31,8 @@ class KeyActivity : AppCompatActivity() {
         val keyTitle = "key: ${keyJson.id.name}"
         title = keyTitle
 
-        val qrContent = StringEncoding(Encoding.PLAIN, keyJson.xpub)
+        val descJson = exportDescriptorPublicKey(keyJson.id.name)
+        val qrContent = StringEncoding(Encoding.PLAIN, descJson.desc_pub_key)
         view_qr.setOnClickListener { QrActivity.comeHere(this, keyTitle, qrContent) }
         select.setOnClickListener {
             val returnIntent = Intent()
@@ -54,16 +55,12 @@ class KeyActivity : AppCompatActivity() {
         items.layoutManager = LinearLayoutManager(this)
         items.adapter = itemsAdapter
 
-        itemsAdapter.list.add(DescItem("Fingerprint", keyJson.fingerprint))
-        itemsAdapter.list.add(DescItem("Xpub", keyJson.xpub))
+        //itemsAdapter.list.add(DescItem("Fingerprint", keyJson.fingerprint))
+        itemsAdapter.list.add(DescItem("Descriptor Public Key", descJson.desc_pub_key))
 
         hidden_items.layoutManager = LinearLayoutManager(this)
         hidden_items.adapter = hiddenItemsAdapter
-        hiddenItemsAdapter.list.add(DescItem("Xpriv", keyJson.xprv))
-
-        if (keyJson.mnemonic != null) {
-            hiddenItemsAdapter.list.add(DescItem("Mnemonic", keyJson.mnemonic))
-        }
+        hiddenItemsAdapter.list.add(DescItem("Xpriv", keyJson.key))
 
         if (keyJson.dice != null) {
             hiddenItemsAdapter.list.add(DescItem("Faces", keyJson.dice.faces.toString() ))

@@ -67,6 +67,12 @@ open class ContextActivity : AppCompatActivity() {
         return mapper.convertValue(json, Data.WalletSignature::class.java)
     }
 
+    fun exportDescriptorPublicKey(name: String): Data.DescriptorPublicKeyJson {
+        val opt = Options.ExportOptions(Data.Kind.DESCRIPTOR_PUBLIC_KEY, name)
+        val json = callMethod("export", opt)
+        return mapper.convertValue(json, Data.DescriptorPublicKeyJson::class.java)
+    }
+
     fun signWallet(walletName: String) {
         val opt = Options.WalletNameOptions(walletName)
         callMethod( "sign_wallet", opt)

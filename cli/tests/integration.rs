@@ -1,7 +1,6 @@
 use bitcoin::{Address, Amount, Txid};
 use bitcoincore_rpc::{Client, RpcApi};
 use firma::bitcoin::Network;
-use firma::bitcoincore_rpc::bitcoincore_rpc_json::bitcoin::secp256k1::Secp256k1;
 use firma::common::json::identifier::{Identifier, Kind};
 use firma::*;
 use rand::distributions::Alphanumeric;
@@ -25,7 +24,6 @@ fn integration_test() {
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
 
     let mut bitcoind = bitcoind::BitcoinD::new();
-    let secp = Secp256k1::new();
 
     // fund the bitcoind default wallet
     let address = bitcoind.client.get_new_address(None, None).unwrap();
@@ -50,7 +48,7 @@ fn integration_test() {
     let r3 = firma_2of2
         .offline_restore("r4", "xprv", &r1.key.to_string())
         .unwrap();
-    assert_eq!(r3.as_pub(&secp).xpub, r1.as_pub(&secp).xpub);
+    assert_eq!(r3.key, r1.key);
     let key_names = vec![r1.id.name.to_string(), r2.id.name.to_string()];
 
     let created_2of2_wallet = firma_2of2

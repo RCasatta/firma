@@ -33,7 +33,7 @@ impl Context {
             Kind::WalletIndexes => self.write(&from_value::<IndexesJson>(c)?)?,
             Kind::WalletSignature => self.write(&from_value::<WalletSignatureJson>(c)?)?,
             Kind::MasterSecret => self.write(&from_value::<MasterSecretJson>(c)?)?,
-            Kind::DescriptorPublicKey => self.write(&from_value::<PublicMasterKey>(c)?)?,
+            Kind::DescriptorPublicKey => self.write(&from_value::<DescriptorPublicKeyJson>(c)?)?,
             Kind::PSBT => self.write(&from_value::<PsbtJson>(c)?)?,
         }
         Ok(value)

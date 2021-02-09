@@ -55,9 +55,9 @@ class WalletTest : Common() {
 
         // import the wallet
         val descriptorMainMainnet =
-            "wsh(multi(2,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*,xpub661MyMwAqRbcFL1pGULVsWqCN3tRyneHcTKq8rzvt6Mh9vwG5sPM2QPU4pFdRkqi9SMu7S35CNve2gjxPLtHhQVKhMuUoEtfPnjePzX2xWk/0/*))#q0agyfvx";
+            "wsh(multi(1,[dd0847bb/48'/0'/0'/2']xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*))#7kvyp5du";
         val descriptorMainTestnet =
-            "wsh(multi(2,tpubD6NzVbkrYhZ4WcVS4H3kcnSZYJfNbofW2oF3AWFXSK86vwRwiB2EqfF9vUyxVC9ZxDkVGZo9xvSLYxfVsBWdcQHKbN9xbE7iPp9eRgbgpfj/0/*,tpubD6NzVbkrYhZ4WrwU2gJn1bJ1UrZ4kPnGAwXY384rpDhHJmcs2xJkmLm17dF1zpvC1roPWVXqiy2U4Up5dQp94ep1hjjQYS5vUArfT5kP92y/0/*))#q0agyfvx";
+            "wsh(multi(1,[d90c6a4f/48'/1'/0'/2']tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*))#02gvp2va";
         val mainDescriptors = mapOf(
             "mainnet" to descriptorMainMainnet,
             "testnet" to descriptorMainTestnet,
@@ -69,8 +69,6 @@ class WalletTest : Common() {
         val wallet = Data.WalletJson(
             identifier,
             mainDescriptors[network]!!,
-            listOf("8f335370", "6b9128bc"),
-            2,
             1718227
         )
         val walletString = mapper.writeValueAsString(wallet)
@@ -96,8 +94,6 @@ class WalletTest : Common() {
         val invalidWallet = Data.WalletJson(
             identifier2,
             mainDescriptors[invalidNetwork]!!,
-            listOf("8f335370", "6b9128bc"),
-            2,
             1718227
         )
         val invalidWalletString = mapper.writeValueAsString(invalidWallet)

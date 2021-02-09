@@ -151,7 +151,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
         update(Data.Kind.MASTER_SECRET)
         for (key in listOutput.master_secrets) {
             val details = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(key)
-            itemsAdapter.list.add(Item(key.id.name, key.fingerprint, details))
+            itemsAdapter.list.add(Item(key.id.name, null, details))
         }
         itemsAdapter.notifyDataSetChanged()
     }
@@ -163,7 +163,7 @@ class ListActivity : ContextActivity() , ItemsAdapter.ItemGesture {
             try {
                 val ver = verifyWallet(wallet.id.name)
                 if (ver.verified) {
-                    itemsAdapter.list.add(Item(wallet.id.name, wallet.fingerprints.toString(), details))
+                    itemsAdapter.list.add(Item(wallet.id.name, null, details))
                 }
             } catch (e: RustException) {}
         }

@@ -116,7 +116,12 @@ mod tests {
         let restore_opts = RestoreOptions {
             key_name: "foo".to_string(),
             nature: Nature::Xprv,
-            value: key_orig.as_pub(&secp).xpub.to_string(),
+            value: key_orig
+                .as_desc_pub_key(&secp)
+                .unwrap()
+                .xpub()
+                .unwrap()
+                .to_string(),
         };
         let result = context.restore(&restore_opts);
         assert!(result.is_err());

@@ -12,7 +12,6 @@ use bitcoin::{Network, Script, SigHashType};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::StructOpt;
 
@@ -93,18 +92,17 @@ pub fn find_or_create(psbt: &mut PSBT, psbts: Vec<PsbtJson>) -> Result<String> {
 impl PSBTSigner {
     fn new(
         psbt: &PSBT,
-        xprv: &ExtendedPrivKey,
+        xprv: ExtendedPrivKey,
         network: Network,
         derivations: u32,
         allow_any_derivations: bool,
     ) -> Result<Self> {
-        check_compatibility(network, xprv.network)?;
-
         let secp = Secp256k1::signing_only();
+        check_compatibility(network, xprv.network)?;
 
         Ok(PSBTSigner {
             psbt: psbt.clone(),
-            xprv: *xprv,
+            xprv,
             secp,
             derivations,
             network,
@@ -117,7 +115,7 @@ impl PSBTSigner {
         let added_paths = self.init_hd_keypath_if_absent()?;
 
         for (i, input) in self.psbt.inputs.clone().iter().enumerate() {
-            debug!("{} {:?}", i, input);
+            debug!("sign input #{} {:?}", i, input);
             let is_segwit = input.witness_utxo.is_some();
 
             match input.non_witness_utxo.as_ref() {
@@ -247,23 +245,28 @@ impl PSBTSigner {
     }
 
     fn sign_input(&mut self, script: &Script, input_index: usize) -> Result<()> {
+        debug!("sign_input #{} script:{:?}", input_index, script);
         let input = &mut self.psbt.inputs[input_index];
         let tx = &self.psbt.global.unsigned_tx;
         let is_segwit = input.witness_utxo.is_some();
-        let my_fing = self.xprv.fingerprint(&self.secp);
         let mut sig_hash_cache = SigHashCache::new(tx);
+        let my_fing = self.xprv.fingerprint(&self.secp);
 
         for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
             if fing != &my_fing {
                 continue;
             }
+            debug!("found key fingerprint {:?}", fing);
 
             if !self.allow_any_derivations {
+                //TODO recheck
                 let path_slice = child.as_ref();
-                if path_slice.len() != 2 {
-                    return Err(format!("{} only two derivation paths allowed", child).into());
-                } else if !(path_slice[0] == 0.into() || path_slice[0] == 1.into()) {
-                    return Err(format!("{} first derivation must be Soft 0 or 1", child).into());
+                if path_slice.len() != 6 {
+                    return Err(format!("{} only 6 derivation paths allowed", child).into());
+                } else if !(path_slice[4] == 0.into() || path_slice[4] == 1.into()) {
+                    return Err(
+                        format!("{} second-last derivation must be Soft 0 or 1", child).into(),
+                    );
                 }
             }
             let privkey = self.xprv.derive_priv(&self.secp, &child)?;
@@ -317,15 +320,18 @@ impl PSBTSigner {
 impl OfflineContext {
     pub fn sign(&self, opt: &SignOptions) -> Result<PsbtPrettyPrint> {
         debug!("sign::start");
-        let master_secret: MasterSecretJson = self.read(&opt.key_name)?;
-        debug!("read key {}", master_secret.id.name);
+        let secret: MasterSecretJson = self.read(&opt.key_name)?;
+        debug!("read secret key {}", secret.id.name);
+        let public: DescriptorPublicKeyJson = self.read(&opt.key_name)?;
+        debug!("read public key {}", public.id.name);
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         debug!("read wallet {}", wallet.id.name);
         let mut psbt: PsbtJson = self.read(&opt.psbt_name)?;
         debug!("read psbt {}", wallet.id.name);
+
         let mut psbt_signer = PSBTSigner::new(
             &psbt.psbt()?,
-            &master_secret.key,
+            secret.key,
             self.network,
             opt.total_derivations,
             opt.allow_any_derivations,
@@ -350,35 +356,6 @@ impl OfflineContext {
         Ok(psbt_print)
     }
 }
-pub fn read_key(
-    path: &PathBuf,
-    _encryption_key: Option<&StringEncoding>,
-) -> Result<MasterSecretJson> {
-    let is_key = path
-        .file_name()
-        .ok_or(Error::WrongKeyFileName)?
-        .to_str()
-        .ok_or(Error::WrongKeyFileName)?
-        == "PRIVATE.json";
-    if !is_key {
-        return Err(Error::WrongKeyFileName);
-    }
-    /*
-    let decrypted = match encryption_key {
-        encryption_key @ Some(_) => {
-            MaybeEncrypted::Plain(decrypt(&DecryptOptions::new(path, encryption_key))?)
-        }
-        None => serde_json::from_slice(&std::fs::read(path)?)?,
-    };
-    match decrypted {
-        MaybeEncrypted::Plain(value) => Ok(value),
-        MaybeEncrypted::Encrypted(_) => Err(Error::MaybeEncryptedWrongState),
-    }
-
-     */
-    let key = std::fs::read(path)?;
-    Ok(serde_json::from_slice(&key)?)
-}
 
 fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
     Builder::new()
@@ -395,7 +372,6 @@ mod tests {
     use crate::offline::sign::*;
     use crate::{psbt_from_base64, psbt_to_base64, Error, PsbtJson, PSBT};
     use bitcoin::consensus::deserialize;
-    use bitcoin::util::bip32::ExtendedPubKey;
     use bitcoin::Transaction;
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
@@ -406,7 +382,7 @@ mod tests {
         psbt_signed: &PSBT,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, xprv, xprv.network, 10, true)?;
+        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, *xprv, xprv.network, 10, true)?;
         psbt_signer.sign()?;
 
         assert_eq!(
@@ -450,7 +426,6 @@ mod tests {
 
     #[test]
     fn test_psbt() {
-        let secp = Secp256k1::signing_only();
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.signed.json");
         let (_, psbt_signed) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_bip.json");
@@ -471,11 +446,6 @@ mod tests {
         assert_eq!(
             format!("{}", tx2.txid()),
             "1dea7cd05979072a3578cab271c02244ea8a090bbb46aa680a65ecd027048d83"
-        );
-
-        assert_eq!(
-            key.as_pub(&secp).xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.key).to_string()
         );
 
         assert_eq!(
@@ -527,10 +497,7 @@ mod tests {
         );
 
         let mut mut_psbt_signed = psbt_signed.clone();
-        assert!(
-            test_sign(&mut mut_psbt_signed, &psbt_signed, &key.key).is_err(),
-            "trying to sign a psbt which is already signed with this key"
-        );
+        test_sign(&mut mut_psbt_signed, &psbt_signed, &key.key).unwrap_err();
 
         psbt_to_sign.inputs[1].non_witness_utxo = Some(tx2);
         test_sign(&mut psbt_to_sign, &psbt_signed, &key.key).unwrap();
@@ -544,10 +511,7 @@ mod tests {
         let mut psbt_to_sign = orig.clone();
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.key");
         let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
-        assert_eq!(
-            key.as_pub(&secp).xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.key).to_string()
-        );
+
         assert!(
             test_sign(&mut psbt_to_sign, &psbt_1, &key.key).is_err(),
             "segwit input missing previous tx"
@@ -563,10 +527,7 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
         let mut psbt_to_sign = orig.clone();
         let key: crate::MasterSecretJson = serde_json::from_slice(bytes).unwrap();
-        assert_eq!(
-            key.as_pub(&secp).xpub.to_string(),
-            ExtendedPubKey::from_private(&secp, &key.key).to_string()
-        );
+
         assert!(
             test_sign(&mut psbt_to_sign, &psbt_2, &key.key).is_err(),
             "segwit input missing previous tx"

@@ -45,9 +45,7 @@ class WalletActivity : ContextActivity() {
         items.layoutManager = LinearLayoutManager(this)
         items.adapter = itemsAdapter
 
-        itemsAdapter.list.add(DescItem("Fingerprints", walletJson.fingerprints.toString() ))
         itemsAdapter.list.add(DescItem("Descriptor main", walletJson.descriptor ))
-        itemsAdapter.list.add(DescItem("Required sig", walletJson.required_sig.toString() ))
         itemsAdapter.list.add(DescItem("Created at height", walletJson.created_at_height.toString() ))
         itemsAdapter.list.add(DescItem("Wallet json", mapper.writeValueAsString(walletJson) ))
 

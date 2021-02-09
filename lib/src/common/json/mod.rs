@@ -3,20 +3,28 @@ pub mod identifier;
 use crate::common::json::identifier::{Identifiable, Overwritable, WhichKind};
 use crate::common::mnemonic::Mnemonic;
 use crate::offline::sign::get_psbt_name;
-use crate::{check_compatibility, psbt_from_base64, psbt_to_base64, DaemonOpts, Result, PSBT};
+use crate::offline::sign_wallet::WALLET_SIGN_DERIVATION;
+use crate::{
+    check_compatibility, psbt_from_base64, psbt_to_base64, DaemonOpts, Error, Result, PSBT,
+};
 use bitcoin::bech32::FromBase32;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
+use bitcoin::util::bip32::{
+    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
+};
 use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{bech32, secp256k1, Address, Amount, Network, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::{BTreeSet, HashSet};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::PathBuf;
 
 pub use crate::common::json::identifier::{Identifier, Kind};
-use bitcoin::secp256k1::Secp256k1;
+use bitcoin::secp256k1::{Secp256k1, Signing};
+use miniscript::descriptor::DescriptorXKey;
+use miniscript::{Descriptor, DescriptorPublicKey, DescriptorPublicKeyCtx, ToPublicKey};
+use std::str::FromStr;
 //TODO remove json suffix, use it with json namespace
 
 // https://dreampuf.github.io/GraphvizOnline/#digraph%20G%20%7B%0A%20%20%22.firma%22%20-%3E%20%22%5Bnetwork%5D%22%0A%20%20%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20wallets%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20keys%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20psbts%0A%20%20%22%5Bnetwork%5D%22%20-%3E%20%22daemon_opts%22%20%0A%20%20%0A%20%20keys%20-%3E%20%22%5Bkey%20name%5D%22%0A%20%20%22master_secret%22%20%5Bshape%3DSquare%5D%0A%20%20%22descriptor_public_key%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22master_secret%22%20%0A%20%20%22%5Bkey%20name%5D%22%20-%3E%20%22descriptor_public_key%22%20%0A%20%20%0A%20%20wallets%20-%3E%20%22%5Bwallet%20name%5D%22%0A%20%20%22wallet%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_indexes%22%20%5Bshape%3DSquare%5D%0A%20%20%22daemon_opts%22%20%5Bshape%3DSquare%5D%0A%20%20%22wallet_signature%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_indexes%22%20%0A%20%20%22%5Bwallet%20name%5D%22%20-%3E%20%22wallet_signature%22%20%0A%20%20%0A%20%20psbts%20-%3E%20%22%5Bpsbt%20name%5D%22%0A%20%20%22psbt%22%20%5Bshape%3DSquare%5D%0A%20%20%22%5Bpsbt%20name%5D%22%20-%3E%20%22psbt%22%20%0A%7D
@@ -25,8 +33,6 @@ use bitcoin::secp256k1::Secp256k1;
 pub struct WalletJson {
     pub id: Identifier,
     pub descriptor: String,
-    pub fingerprints: BTreeSet<Fingerprint>, // TODO derive from descriptor, or include in descriptor?
-    pub required_sig: u8,                    // TODO derive from descriptor?
     pub created_at_height: u64,
 }
 
@@ -51,10 +57,13 @@ pub struct MasterSecretJson {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct PublicMasterKey {
+pub struct DescriptorPublicKeyJson {
     //TODO make it DescriptorPublicKeyJson
     pub id: Identifier,
-    pub xpub: ExtendedPubKey,
+    /// ToString of [miniscript::descriptor::DescriptorPublicKey]
+    /// Example: `[28645006/48'/1'/0'/2']tpubDEwqCvJxKwKWX9xvRe48uofWJn1Y89Jn8UeH1Efrjb1UEVjUDy3URYTiqWaVCW7WdvHrL8XrSihHEhTwv5H3VDJoakjuCHiAnr6xcF2Xm4s/0/*`
+    /// TODO use DescriptorPublicKey when implement Serialize
+    pub desc_pub_key: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -331,14 +340,121 @@ impl MasterSecretJson {
         })
     }
 
-    pub fn as_pub<S: secp256k1::Signing>(&self, secp: &Secp256k1<S>) -> PublicMasterKey {
-        let xpub = ExtendedPubKey::from_private(&secp, &self.key);
+    fn path(&self) -> DerivationPath {
+        let n = match self.key.network {
+            Network::Bitcoin => "0",
+            Network::Testnet => "1",
+            Network::Regtest => "2", // bip48 skip this
+        };
+        DerivationPath::from_str(&format!("m/48'/{}'/0'/2'", n)).unwrap()
+    }
+
+    pub fn as_desc_prv_key<T: Signing>(&self, secp: &Secp256k1<T>) -> Result<ExtendedPrivKey> {
+        Ok(self.key.derive_priv(&secp, &self.path())?)
+    }
+
+    pub fn as_wallet_sign_prv_key<T: Signing>(
+        &self,
+        secp: &Secp256k1<T>,
+    ) -> Result<ExtendedPrivKey> {
+        let k = self.as_desc_prv_key(secp)?;
+        Ok(k.derive_priv(
+            secp,
+            &DerivationPath::from_str(&format!("m/0/{}", WALLET_SIGN_DERIVATION))?,
+        )?)
+    }
+
+    pub fn as_wallet_sign_pub_key<T: Signing>(
+        &self,
+        secp: &Secp256k1<T>,
+    ) -> Result<bitcoin::PublicKey> {
+        let k = self.as_wallet_sign_prv_key(secp)?;
+        let xpub = ExtendedPubKey::from_private(&secp, &k);
+        Ok(xpub.public_key)
+    }
+
+    pub fn as_desc_pub_key<T: Signing>(
+        &self,
+        secp: &Secp256k1<T>,
+    ) -> Result<DescriptorPublicKeyJson> {
+        let xprv_derived = self.as_desc_prv_key(secp)?;
+        let xpub = ExtendedPubKey::from_private(&secp, &xprv_derived);
+        let desc_pub_key = DescriptorPublicKey::XPub(DescriptorXKey {
+            origin: Some((self.key.fingerprint(&secp), self.path())),
+            xkey: xpub,
+            derivation_path: DerivationPath::from_str("m/0")?,
+            is_wildcard: true,
+        });
         let id = self.id.with_kind(Kind::DescriptorPublicKey);
-        PublicMasterKey { id, xpub }
+        Ok(DescriptorPublicKeyJson {
+            id,
+            desc_pub_key: desc_pub_key.to_string(),
+        })
     }
 
     pub fn fingerprint<S: secp256k1::Signing>(&self, secp: &Secp256k1<S>) -> Fingerprint {
         self.key.fingerprint(&secp)
+    }
+}
+
+impl DescriptorPublicKeyJson {
+    pub fn key(&self) -> Result<DescriptorPublicKey> {
+        Ok(self.desc_pub_key.parse()?)
+    }
+    fn xkey(&self) -> Result<DescriptorXKey<ExtendedPubKey>> {
+        if let Ok(DescriptorPublicKey::XPub(x)) = self.key() {
+            return Ok(x);
+        }
+        Err(Error::WrongKeyType)
+    }
+    pub fn origin_path(&self) -> Result<DerivationPath> {
+        Ok(self.xkey()?.origin.ok_or(Error::WrongKeyType)?.1)
+    }
+    pub fn xpub(&self) -> Result<ExtendedPubKey> {
+        Ok(self.xkey()?.xkey)
+    }
+}
+
+impl WalletJson {
+    pub fn extract_desc_pub_keys(&self) -> Result<Vec<DescriptorPublicKey>> {
+        let mut desc_pub_keys = vec![];
+        let end = self
+            .descriptor
+            .find('#')
+            .unwrap_or_else(|| self.descriptor.len());
+        let descriptor: miniscript::Descriptor<DescriptorPublicKey> =
+            self.descriptor[..end].parse().unwrap();
+        if let Descriptor::Wsh(miniscript) = descriptor {
+            for el in miniscript.get_leaf_pk() {
+                desc_pub_keys.push(el);
+            }
+        }
+        Ok(desc_pub_keys)
+    }
+    pub fn extract_wallet_sign_keys(&self) -> Result<Vec<bitcoin::PublicKey>> {
+        let secp = Secp256k1::new();
+        let mut keys = vec![];
+        for k in self.extract_desc_pub_keys()? {
+            let context = DescriptorPublicKeyCtx::new(
+                &secp,
+                ChildNumber::from_normal_idx(WALLET_SIGN_DERIVATION)?,
+            );
+            keys.push(k.to_public_key(context));
+        }
+        Ok(keys)
+    }
+    pub fn fingerprints(&self) -> Vec<Fingerprint> {
+        let mut result = vec![];
+        if let Ok(v) = self.extract_desc_pub_keys() {
+            for k in v {
+                if let DescriptorPublicKey::XPub(x) = k {
+                    if let Some(f) = x.origin {
+                        result.push(f.0);
+                    }
+                }
+            }
+        }
+        result
     }
 }
 
@@ -393,7 +509,7 @@ impl_traits!(WalletSignatureJson, false, Kind::WalletSignature);
 impl_traits!(MasterSecretJson, false, Kind::MasterSecret);
 impl_traits!(WalletJson, false, Kind::Wallet);
 impl_traits!(IndexesJson, true, Kind::WalletIndexes);
-impl_traits!(PublicMasterKey, false, Kind::DescriptorPublicKey);
+impl_traits!(DescriptorPublicKeyJson, false, Kind::DescriptorPublicKey);
 impl_traits!(PsbtJson, true, Kind::PSBT);
 
 #[cfg(test)]
@@ -407,7 +523,7 @@ mod tests {
         let vec_json = serde_json::to_vec(&wallet).unwrap();
         let vec_cbor = serde_cbor::to_vec(&wallet).unwrap();
 
-        assert_eq!(vec_json.len(), 793);
-        assert_eq!(vec_cbor.len(), 735);
+        assert_eq!(vec_json.len(), 704);
+        assert_eq!(vec_cbor.len(), 682);
     }
 }
