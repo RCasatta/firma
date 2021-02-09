@@ -47,7 +47,6 @@ impl Display for Kind {
     }
 }
 
-
 impl FromStr for Kind {
     type Err = io::Error;
 

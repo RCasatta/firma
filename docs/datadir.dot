@@ -1,0 +1,27 @@
+digraph G {
+  ".firma" -> "[network]"
+
+  "[network]" -> wallets
+  "[network]" -> keys
+  "[network]" -> psbts
+  "[network]" -> "daemon_opts"
+
+  keys -> "[key name]"
+  "master_secret" [shape=Square]
+  "descriptor_public_key" [shape=Square]
+  "[key name]" -> "master_secret"
+  "[key name]" -> "descriptor_public_key"
+
+  wallets -> "[wallet name]"
+  "wallet" [shape=Square]
+  "wallet_indexes" [shape=Square]
+  "daemon_opts" [shape=Square]
+  "wallet_signature" [shape=Square]
+  "[wallet name]" -> "wallet"
+  "[wallet name]" -> "wallet_indexes"
+  "[wallet name]" -> "wallet_signature"
+
+  psbts -> "[psbt name]"
+  "psbt" [shape=Square]
+  "[psbt name]" -> "psbt"
+}
