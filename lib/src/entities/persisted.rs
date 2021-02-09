@@ -153,8 +153,9 @@ impl MasterSecret {
         let n = match self.key.network {
             Network::Bitcoin => "0",
             Network::Testnet => "1",
-            Network::Regtest => "2", // bip48 skip this
+            Network::Regtest => "2",
         };
+        // m / 48' / coin_type' / account' / script_type' / change / address_index
         DerivationPath::from_str(&format!("m/48'/{}'/0'/2'", n)).unwrap()
     }
 

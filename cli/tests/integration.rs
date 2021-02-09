@@ -275,12 +275,12 @@ fn integration_test() {
         "can't see private key with encryption_key"
     );
     assert!(firma_2of2
-        .offline_export("keys", &e1.id.name, None)
+        .offline_export("MasterSecret", &e1.id.name, None)
         .is_err());
     let d1 = firma_2of2
-        .offline_export("keys", &e1.id.name, encryption_key)
+        .offline_export("MasterSecret", &e1.id.name, encryption_key)
         .unwrap();
-    assert_eq!(d1.key, e1.key);
+    assert_eq!(d1.get("key").unwrap().as_str().unwrap(), e1.key.to_string());
 
     // stop bitcoind
     bitcoind.client.stop().unwrap();
@@ -481,7 +481,7 @@ impl FirmaCommand {
         kind: &str,
         name: &str,
         encryption_key: Option<&[u8]>,
-    ) -> Result<MasterSecret> {
+    ) -> Result<Value> {
         let result = self.offline(
             "export",
             vec!["--kind", kind, "--name", name],

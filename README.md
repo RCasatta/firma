@@ -94,9 +94,10 @@ Check the bin [readme](cli/README.md) for an example with CLI
 <details>
   <summary>How Firma handle attacks on the online wallet generating receive addresses?</summary>
 
-  The offline app could generate addresses as well. The receive process should take into account both an online and an offline device, checking the receiving address generated matches.  
-</details>
+  The offline app could generate addresses as well. The receive process should take into account both an online and an offline device, checking the receiving address generated matches.
 
+  Moreover, wallet signature is supported in the offline devices. This signature could be imported in the online device and verified, to ensure the watch-only wallet is not tampered. 
+</details>
 
 <details>
   <summary>How Firma offline know the change address is mine?</summary>
@@ -107,7 +108,7 @@ Check the bin [readme](cli/README.md) for an example with CLI
 <details>
   <summary>How Firma tackle physical attacks on the device?</summary>
 
-  Secret informations, such as bitcoin extended private key could be encrypted.
+  Anything that is persisted to disk can be optionally encrypted.
   
   On cli, user could leverage their existing gpg infrastructure with:
   ```
@@ -119,14 +120,12 @@ Check the bin [readme](cli/README.md) for an example with CLI
   ```
 
   On android, system keystore is used to encrypt 32 random bytes, so that physical attacks need to break the secure element if the device has one.
-
-  A possible attack on the device is tampering with the wallet descriptor, however this is signed with a key partecipating in the multisig wallet when imported, thus any tampering is detected.
 </details>
 
 <details>
   <summary>Why do I need the wallet descriptor in the offline device?</summary>
 
-  While the wallet descriptor isn't strictly necessary in the offline, it allows some safety checks like the address checking.
+  While the wallet descriptor isn't strictly necessary in the offline signer, it allows some safety checks like the address checking.
   Most importantly the descriptor is absolutely necessary as a part of the backup, for example in 3of5 scheme, 3 master private keys are not enough to sign transactions because we need 5 master public keys.
   For this reason the flow requires every offline device store also the wallet descriptor containing all the master public keys.
   
@@ -137,10 +136,15 @@ Check the bin [readme](cli/README.md) for an example with CLI
 
   Logs output is disabled in release build, but you may see secrets in logs if you are using a debug builds.
   Actively redacting sensible data has been pursued, however, it could always be printed the json used to communicate with the lib
-  that must containing this secret data to work, so the disable logs in release build approach has been taken. 
+  that must containing this secret data to work, so the approach to disable logs in release build has been taken. 
 
 </details>
 
+## Sponsor
+
+Project sponsored by [Squarecrypto](https://squarecrypto.org/)
+
 ## Donations
 
-I am the maintainer of one of the OpenTimestamps calendar, you can donate [there](https://finney.calendar.eternitywall.com/) (onchain or lightning) if you want to support this work.
+I am the maintainer of one of the [OpenTimestamps](https://opentimestamps.org) calendar, if you feel, you can donate [there](https://finney.calendar.eternitywall.com/) 
+

@@ -43,23 +43,22 @@ impl Kind {
 
 impl Display for Kind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Kind::Wallet => write!(f, "wallets"),
-            Kind::MasterSecret => write!(f, "keys"),
-            Kind::PSBT => write!(f, "psbts"),
-            _ => unimplemented!(),
-        }
+        write!(f, "{:?}", self)
     }
 }
+
 
 impl FromStr for Kind {
     type Err = io::Error;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
-            "wallets" => Ok(Kind::Wallet),
-            "keys" => Ok(Kind::MasterSecret),
-            "psbts" => Ok(Kind::PSBT),
+            "Wallet" => Ok(Kind::Wallet),
+            "WalletIndexes" => Ok(Kind::WalletIndexes),
+            "WalletSignature" => Ok(Kind::WalletSignature),
+            "MasterSecret" => Ok(Kind::MasterSecret),
+            "DescriptorPublicKey" => Ok(Kind::DescriptorPublicKey),
+            "PSBT" => Ok(Kind::PSBT),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("({}) valid values are: wallets, keys, psbts", s),
