@@ -69,13 +69,11 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::restore::{Nature, RestoreOptions};
     use crate::Kind;
-    use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
 
     #[test]
     fn test_restore() {
         let context = TestContext::default();
-        let secp = Secp256k1::new();
         let rand_opts = RandomOptions::new_random();
         let key_name = rand_opts.key_name.as_str();
         let key_orig = context.create_key(&rand_opts).unwrap();
@@ -117,7 +115,7 @@ mod tests {
             key_name: "foo".to_string(),
             nature: Nature::Xprv,
             value: key_orig
-                .as_desc_pub_key(&secp)
+                .as_desc_pub_key()
                 .unwrap()
                 .xpub()
                 .unwrap()

@@ -373,11 +373,11 @@ impl MasterSecretJson {
         Ok(xpub.public_key)
     }
 
-    pub fn as_desc_pub_key<T: Signing>(
-        &self,
-        secp: &Secp256k1<T>,
-    ) -> Result<DescriptorPublicKeyJson> {
-        let xprv_derived = self.as_desc_prv_key(secp)?;
+    /// returns the public part of the key, it is an expensive method cause it's initializing a
+    /// secp context
+    pub fn as_desc_pub_key(&self) -> Result<DescriptorPublicKeyJson> {
+        let secp = Secp256k1::signing_only();
+        let xprv_derived = self.as_desc_prv_key(&secp)?;
         let xpub = ExtendedPubKey::from_private(&secp, &xprv_derived);
         let desc_pub_key = DescriptorPublicKey::XPub(DescriptorXKey {
             origin: Some((self.key.fingerprint(&secp), self.path())),
@@ -432,7 +432,7 @@ impl WalletJson {
         Ok(desc_pub_keys)
     }
     pub fn extract_wallet_sign_keys(&self) -> Result<Vec<bitcoin::PublicKey>> {
-        let secp = Secp256k1::new();
+        let secp = Secp256k1::verification_only();
         let mut keys = vec![];
         for k in self.extract_desc_pub_keys()? {
             let context = DescriptorPublicKeyCtx::new(

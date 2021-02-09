@@ -144,8 +144,7 @@ impl Context {
 
     pub fn write_keys(&self, master_key: &MasterSecretJson) -> Result<()> {
         self.write(master_key)?;
-        let secp = bitcoin::secp256k1::Secp256k1::signing_only();
-        let public: DescriptorPublicKeyJson = master_key.as_desc_pub_key(&secp)?;
+        let public: DescriptorPublicKeyJson = master_key.as_desc_pub_key()?;
         self.write(&public)
     }
 

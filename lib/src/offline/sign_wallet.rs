@@ -3,7 +3,7 @@ use crate::common::list::ListOptions;
 use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
-use bitcoin::secp256k1::{Message, Secp256k1, SignOnly, VerifyOnly};
+use bitcoin::secp256k1::{Message, Secp256k1, Signing, Verification};
 use bitcoin::util::bip32::ChildNumber;
 use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
@@ -15,11 +15,11 @@ pub const WALLET_SIGN_DERIVATION: u32 = u32::max_value() >> 1;
 
 impl OfflineContext {
     pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
+        let secp = Secp256k1::verification_only();
         let wallet: WalletJson = self.read(&opt.wallet_name)?;
         let signature: WalletSignatureJson = self.read(&opt.wallet_name)?;
-        let secp = Secp256k1::verification_only();
 
-        verify_wallet_internal(&wallet, &signature, &secp, self.network)
+        verify_wallet_internal(&secp, &wallet, &signature, self.network)
     }
 
     pub fn sign_wallet(&self, opt: &WalletNameOptions) -> Result<WalletSignatureJson> {
@@ -33,10 +33,10 @@ impl OfflineContext {
         let list_opt = ListOptions { kind };
         debug!("list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;
-        let master_private_key = find_key(&available_keys, &desc_pub_keys)?;
+        let master_private_key = find_key(&secp, &available_keys, &desc_pub_keys)?;
         let key = master_private_key.as_wallet_sign_prv_key(&secp)?;
 
-        let signature = sign_message_with_key(&key.private_key, message, &secp)?;
+        let signature = sign_message_with_key(&secp, &key.private_key, message)?;
 
         /*desc_pub_keys
            .iter()
@@ -53,11 +53,11 @@ impl OfflineContext {
     }
 }
 
-fn find_key<'a>(
+fn find_key<'a, T: Signing>(
+    secp: &Secp256k1<T>,
     available_keys: &'a ListOutput,
     desc_pub_keys: &[PublicKey],
 ) -> Result<&'a MasterSecretJson> {
-    let secp = bitcoin::secp256k1::Secp256k1::signing_only();
     for key in available_keys.master_secrets.iter() {
         let k = key.as_wallet_sign_pub_key(&secp)?;
         if desc_pub_keys.contains(&k) {
@@ -67,10 +67,10 @@ fn find_key<'a>(
     Err("There is No private key participating in the wallet available".into())
 }
 
-pub fn verify_wallet_internal(
+pub fn verify_wallet_internal<T: Verification>(
+    secp: &Secp256k1<T>,
     wallet: &WalletJson,
     signature: &WalletSignatureJson,
-    secp: &Secp256k1<VerifyOnly>,
     network: Network,
 ) -> Result<VerifyWalletResult> {
     let desc_pub_keys = wallet.extract_desc_pub_keys()?;
@@ -83,7 +83,7 @@ pub fn verify_wallet_internal(
         );
         let master_address = Address::p2pkh(&desc_pub_key.to_public_key(context), network);
         let verified =
-            verify_message_with_address(&master_address, &signature.signature, message, secp)?;
+            verify_message_with_address(&secp, &master_address, &signature.signature, message)?;
         debug!(
             "desc_pub_key {} with master_address {} verified {}",
             desc_pub_key, master_address, verified
@@ -101,10 +101,10 @@ pub fn verify_wallet_internal(
     Err(Error::WalletSignatureNotVerified)
 }
 
-fn sign_message_with_key(
+fn sign_message_with_key<T: Signing>(
+    secp: &Secp256k1<T>,
     private_key: &PrivateKey,
     message: &str,
-    secp: &Secp256k1<SignOnly>,
 ) -> Result<String> {
     let hash = signed_msg_hash(&message);
     debug!("Signed message hash:{}", hash);
@@ -126,17 +126,20 @@ fn sign_message_with_key(
 
 /// Sign a `message` with the given `private_key` in wif format
 /// compatible with bitcoin core `signmessagewithprivkey`
-pub fn sign_message(private_key: &str, message: &str) -> Result<String> {
-    let secp = Secp256k1::signing_only();
+pub fn sign_message<T: Signing>(
+    secp: &Secp256k1<T>,
+    private_key: &str,
+    message: &str,
+) -> Result<String> {
     let private_key = PrivateKey::from_wif(&private_key)?;
-    sign_message_with_key(&private_key, message, &secp)
+    sign_message_with_key(&secp, &private_key, message)
 }
 
-fn verify_message_with_address(
+fn verify_message_with_address<T: Verification>(
+    secp: &Secp256k1<T>,
     address: &Address,
     signature: &str,
     message: &str,
-    secp: &Secp256k1<VerifyOnly>,
 ) -> Result<bool> {
     let sig = base64::decode(&signature)?;
     if sig.len() != 65 {
@@ -165,10 +168,14 @@ fn verify_message_with_address(
 /// Verify the `signature` on a `message` has been made from the private key behind `address`
 /// signature made must be recoverable
 /// compatible with bitcoin core `verifymessage`
-fn verify_message(address: &str, signature: &str, message: &str) -> Result<bool> {
-    let secp = Secp256k1::verification_only();
+fn verify_message<T: Verification>(
+    secp: &Secp256k1<T>,
+    address: &str,
+    signature: &str,
+    message: &str,
+) -> Result<bool> {
     let address = Address::from_str(&address)?;
-    verify_message_with_address(&address, signature, message, &secp)
+    verify_message_with_address(&secp, &address, signature, message)
 }
 
 // json contains signature, the address and descriptor of the address!
@@ -179,6 +186,7 @@ mod tests {
     use crate::offline::sign_wallet::{sign_message, verify_message};
     use crate::online::WalletNameOptions;
     use crate::WalletJson;
+    use bitcoin::secp256k1::Secp256k1;
 
     /*
     $ bitcoin-cli signmessagewithprivkey "KwQoPt6dL91fxRBWdt4nkCVrfo4ipeLcaD4ZCLntoTPhKGNgGqGm" ciao
@@ -194,12 +202,14 @@ mod tests {
 
     #[test]
     fn test_sign_message() {
-        assert_eq!(SIGNATURE, sign_message(PRIV_WIF, MESSAGE).unwrap());
+        let secp = Secp256k1::signing_only();
+        assert_eq!(SIGNATURE, sign_message(&secp, PRIV_WIF, MESSAGE).unwrap());
     }
 
     #[test]
     fn test_verify_message() {
-        assert!(verify_message(ADDRESS, SIGNATURE, MESSAGE).unwrap());
+        let secp = Secp256k1::verification_only();
+        assert!(verify_message(&secp, ADDRESS, SIGNATURE, MESSAGE).unwrap());
     }
 
     #[test]

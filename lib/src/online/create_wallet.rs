@@ -158,7 +158,6 @@ mod tests {
     use crate::common::tests::rnd_string;
     use crate::online::create_wallet::{create_descriptor, CreateWalletOptions};
     use crate::{Identifier, Kind, MasterSecretJson, WalletJson};
-    use bitcoin::secp256k1::Secp256k1;
     use bitcoin::Network;
     use miniscript::DescriptorPublicKey;
 
@@ -176,11 +175,10 @@ mod tests {
 
     impl WalletJson {
         pub fn new_random(required_sig: u8, keys: &[MasterSecretJson]) -> Self {
-            let secp = Secp256k1::signing_only();
             let desc_pub_keys: Vec<_> = keys
                 .iter()
                 .map(|k| {
-                    k.as_desc_pub_key(&secp)
+                    k.as_desc_pub_key()
                         .unwrap()
                         .desc_pub_key
                         .parse::<DescriptorPublicKey>()
