@@ -2,7 +2,7 @@ use crate::*;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
-use miniscript::DescriptorPublicKeyCtx;
+use miniscript::{DescriptorTrait, TranslatePk2};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -12,8 +12,16 @@ pub struct DeriveAddressOptions {
     pub index: u32,
 }
 
+impl DeriveAddressOptions {
+    fn validate(&self) -> Result<()> {
+        ChildNumber::from_normal_idx(self.index)?;
+        Ok(())
+    }
+}
+
 /// derive address from descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
 pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<GetAddressOutput> {
+    opt.validate()?;
     // checksum not supported at the moment, stripping out
     let end = opt
         .descriptor
@@ -23,10 +31,15 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<Ge
         opt.descriptor[..end].parse()?;
 
     let secp = Secp256k1::verification_only();
-    let context = DescriptorPublicKeyCtx::new(&secp, ChildNumber::from_normal_idx(opt.index)?);
+    //let context = DescriptorPublicKeyCtx::new(&secp, ChildNumber::from_normal_idx(opt.index)?);
     let address = descriptor
-        .address(network, context)
-        .ok_or(Error::AddressFromDescriptorFails)?;
+        .derive(opt.index)
+        .translate_pk2(|xpk| xpk.derive_public_key(&secp))
+        .unwrap()
+        .address(network)?;
+    /*let address = descriptor
+    .address(network, context)
+    .ok_or(Error::AddressFromDescriptorFails)?;*/
     let path = DerivationPath::from_str(&format!("m/0/{}", opt.index))?;
 
     Ok(GetAddressOutput {

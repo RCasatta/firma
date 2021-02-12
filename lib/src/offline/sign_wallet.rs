@@ -3,11 +3,9 @@ use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, Signing, Verification};
-use bitcoin::util::bip32::ChildNumber;
 use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
-use miniscript::{DescriptorPublicKeyCtx, ToPublicKey};
 use std::str::FromStr;
 
 pub const WALLET_SIGN_DERIVATION: u32 = u32::max_value() >> 1;
@@ -76,16 +74,16 @@ pub fn verify_wallet_internal<T: Verification>(
     let message = &wallet.descriptor;
 
     for desc_pub_key in desc_pub_keys {
-        let context = DescriptorPublicKeyCtx::new(
-            &secp,
-            ChildNumber::from_normal_idx(u32::max_value() >> 1)?,
-        );
-        let master_address = Address::p2pkh(&desc_pub_key.to_public_key(context), network);
+        let pubkey = desc_pub_key
+            .derive(WALLET_SIGN_DERIVATION)
+            .derive_public_key(&secp)
+            .unwrap(); //TODO
+        let master_address = Address::p2pkh(&pubkey, network);
         let verified =
             verify_message_with_address(&secp, &master_address, &signature.signature, message)?;
         debug!(
-            "desc_pub_key {} with master_address {} verified {}",
-            desc_pub_key, master_address, verified
+            "with master_address {} verified {}",
+            master_address, verified
         );
         if verified {
             let result = VerifyWalletResult {

@@ -7,7 +7,6 @@ use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::util::psbt::{raw, Map};
 use bitcoin::{Network, Script, SigHashType};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
@@ -56,7 +55,7 @@ struct PSBTSigner {
 
 /// extract field name in the PSBT extra field if present
 pub fn get_psbt_name(psbt: &BitcoinPSBT) -> Option<String> {
-    psbt.global.unknown.get(&get_name_key()).map(|v| {
+    psbt.global.proprietary.get(&get_name_key()).map(|v| {
         std::str::from_utf8(v)
             .expect("PSBT name not utf8")
             .to_string()
@@ -78,11 +77,9 @@ pub fn find_or_create(psbt: &mut BitcoinPSBT, psbts: Vec<Psbt>) -> Result<String
         let new_name = format!("psbt-{}", counter);
         if !names.contains(&new_name) {
             info!("PSBT without name, giving one: {}", new_name);
-            let pair = raw::Pair {
-                key: get_name_key(),
-                value: new_name.as_bytes().to_vec(),
-            };
-            let _ = psbt.global.insert_pair(pair);
+            psbt.global
+                .proprietary
+                .insert(get_name_key(), new_name.as_bytes().to_vec());
             return Ok(new_name);
         }
         counter += 1;
@@ -187,8 +184,16 @@ impl PSBTSigner {
 
     fn init_hd_keypath_if_absent(&mut self) -> Result<bool> {
         // temp code for handling psbt generated from core without hd paths
-        let outputs_empty = self.psbt.inputs.iter().any(|i| i.hd_keypaths.is_empty());
-        let inputs_empty = self.psbt.outputs.iter().any(|o| o.hd_keypaths.is_empty());
+        let outputs_empty = self
+            .psbt
+            .inputs
+            .iter()
+            .any(|i| i.bip32_derivation.is_empty());
+        let inputs_empty = self
+            .psbt
+            .outputs
+            .iter()
+            .any(|o| o.bip32_derivation.is_empty());
 
         let mut added = false;
         if outputs_empty || inputs_empty {
@@ -216,7 +221,7 @@ impl PSBTSigner {
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             input
-                                .hd_keypaths
+                                .bip32_derivation
                                 .insert(key, keys.get(&key).ok_or(Error::MissingKey)?.clone());
                             added = true;
                         }
@@ -230,7 +235,7 @@ impl PSBTSigner {
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             output
-                                .hd_keypaths
+                                .bip32_derivation
                                 .insert(key, keys.get(&key).ok_or(Error::MissingKey)?.clone());
                             added = true;
                         }
@@ -252,7 +257,7 @@ impl PSBTSigner {
         let mut sig_hash_cache = SigHashCache::new(tx);
         let my_fing = self.xprv.fingerprint(&self.secp);
 
-        for (pubkey, (fing, child)) in input.hd_keypaths.iter() {
+        for (pubkey, (fing, child)) in input.bip32_derivation.iter() {
             if fing != &my_fing {
                 continue;
             }

@@ -8,12 +8,10 @@ use crate::{
     Result,
 };
 use bitcoin::secp256k1::{Secp256k1, Signing};
-use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
-};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::{secp256k1, Network};
-use miniscript::descriptor::DescriptorXKey;
-use miniscript::{Descriptor, DescriptorPublicKeyCtx, ToPublicKey};
+use miniscript::descriptor::{DescriptorXKey, Wildcard};
+use miniscript::{Descriptor, ForEachKey};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -78,9 +76,10 @@ impl Wallet {
         let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
             self.descriptor[..end].parse().unwrap();
         if let Descriptor::Wsh(miniscript) = descriptor {
-            for el in miniscript.get_leaf_pk() {
-                desc_pub_keys.push(el);
-            }
+            miniscript.for_each_key(|k| {
+                desc_pub_keys.push(k.as_key().clone());
+                true
+            });
         }
         Ok(desc_pub_keys)
     }
@@ -88,11 +87,11 @@ impl Wallet {
         let secp = Secp256k1::verification_only();
         let mut keys = vec![];
         for k in self.extract_desc_pub_keys()? {
-            let context = DescriptorPublicKeyCtx::new(
-                &secp,
-                ChildNumber::from_normal_idx(WALLET_SIGN_DERIVATION)?,
-            );
-            keys.push(k.to_public_key(context));
+            let key = k
+                .derive(WALLET_SIGN_DERIVATION)
+                .derive_public_key(&secp)
+                .unwrap(); //TODO
+            keys.push(key);
         }
         Ok(keys)
     }
@@ -154,6 +153,7 @@ impl MasterSecret {
             Network::Bitcoin => "0",
             Network::Testnet => "1",
             Network::Regtest => "2",
+            Network::Signet => "3",
         };
         // m / 48' / coin_type' / account' / script_type' / change / address_index
         DerivationPath::from_str(&format!("m/48'/{}'/0'/2'", n)).unwrap()
@@ -193,7 +193,7 @@ impl MasterSecret {
             origin: Some((self.key.fingerprint(&secp), self.path())),
             xkey: xpub,
             derivation_path: DerivationPath::from_str("m/0")?,
-            is_wildcard: true,
+            wildcard: Wildcard::Unhardened,
         });
         let id = self.id.with_kind(Kind::DescriptorPublicKey);
         Ok(DescriptorPublicKey {

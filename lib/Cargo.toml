@@ -12,8 +12,8 @@ keywords = ["sign", "bitcoin", "cold", "offline"]
 
 [dependencies]
 hex = "0.4.2"
-bitcoin = { version = "0.25.2", features = [ "use-serde", "secp-recovery" ] }
-bitcoincore-rpc = "0.12.0"
+bitcoin = { version = "0.26.0", features = [ "use-serde", "secp-recovery" ] }
+bitcoincore-rpc = "0.13.0"
 base64 = "0.13.0"
 num-bigint = "0.3.1"
 qr_code = { version= "1.1.0", features = ["bmp"] }
@@ -23,7 +23,7 @@ serde = { version = "1.0.117", features = [ "derive" ] }
 serde_json = "1.0.59"
 dirs-next = "2.0.0"
 rand = "0.7.3"
-miniscript = "4.0"
+miniscript = "5.1.0"
 aes-gcm-siv = "0.9.0"
 tempfile = "3.1.0"
 

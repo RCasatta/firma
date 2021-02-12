@@ -91,7 +91,7 @@ pub fn pretty_print(
     for (i, input) in tx.input.iter().enumerate() {
         let addr = Address::from_script(&previous_outputs[i].script_pubkey, network)
             .ok_or(Error::NonDefaultScript)?;
-        let keypaths = &psbt.inputs[i].hd_keypaths;
+        let keypaths = &psbt.inputs[i].bip32_derivation;
         let signatures: HashSet<Fingerprint> = psbt.inputs[i]
             .partial_sigs
             .iter()
@@ -115,7 +115,7 @@ pub fn pretty_print(
     for (i, output) in tx.output.iter().enumerate() {
         let addr =
             Address::from_script(&output.script_pubkey, network).ok_or(Error::NonDefaultScript)?;
-        let keypaths = &psbt.outputs[i].hd_keypaths;
+        let keypaths = &psbt.outputs[i].bip32_derivation;
         let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
         if let Some((wallet, _)) = &wallet_if_any {
             *balances.entry(wallet.clone()).or_insert(0i64) += output.value as i64

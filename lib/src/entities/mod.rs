@@ -4,7 +4,7 @@ pub mod persisted;
 use crate::{psbt_from_base64, BitcoinPSBT, DaemonOpts, Result};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use bitcoin::util::psbt::{raw, Map};
+use bitcoin::util::psbt::raw;
 use bitcoin::{bech32, Address, Amount, OutPoint, Txid};
 use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use std::convert::TryInto;
 use std::path::PathBuf;
 
+use bitcoin::util::psbt::raw::ProprietaryKey;
 pub use identifier::*;
 pub use persisted::*;
 
@@ -205,9 +206,10 @@ impl StringEncoding {
     }
 }
 
-pub fn get_name_key() -> raw::Key {
-    raw::Key {
-        type_value: 0xFC,
+pub fn get_name_key() -> raw::ProprietaryKey {
+    ProprietaryKey {
+        prefix: b"firma".to_vec(),
+        subtype: 0u8,
         key: b"name".to_vec(),
     }
 }
@@ -215,11 +217,11 @@ pub fn get_name_key() -> raw::Key {
 pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> Result<BitcoinPSBT> {
     let (_, mut psbt_with_name) = psbt_from_base64(&psbt.psbt)?;
 
-    let pair = raw::Pair {
-        key: get_name_key(),
-        value: name.as_bytes().to_vec(),
-    };
-    psbt_with_name.global.insert_pair(pair)?;
+    psbt_with_name
+        .global
+        .proprietary
+        .insert(get_name_key(), name.as_bytes().to_vec());
+
     Ok(psbt_with_name)
 }
 
