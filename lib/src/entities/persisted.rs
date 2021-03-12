@@ -39,6 +39,8 @@ pub struct MasterSecret {
     pub id: Identifier,
     pub key: ExtendedPrivKey,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub mnemonic: Option<Mnemonic>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dice: Option<Dice>,
 }
 
@@ -126,20 +128,24 @@ impl DescriptorPublicKey {
 }
 
 impl MasterSecret {
-    pub fn from_mnemonic(network: Network, mnemonic: &Mnemonic, name: &str) -> Result<Self> {
-        let seed = mnemonic.to_seed(None);
-        let master = ExtendedPrivKey::new_master(network, &seed.0)?;
+    pub fn from_xprv(network: Network, key: ExtendedPrivKey, name: &str) -> Result<Self> {
+        check_compatibility(network, key.network)?;
+
         Ok(MasterSecret {
-            key: master,
+            key,
+            mnemonic: None,
             dice: None,
             id: Identifier::new(network, Kind::MasterSecret, name),
         })
     }
 
-    pub fn new(network: Network, master: ExtendedPrivKey, name: &str) -> Result<Self> {
-        check_compatibility(network, master.network)?;
+    pub fn new(network: Network, mnemonic: Mnemonic, name: &str) -> Result<Self> {
+        let seed = mnemonic.to_seed(None);
+        let key = ExtendedPrivKey::new_master(network, &seed.0)?;
+
         Ok(MasterSecret {
-            key: master,
+            key,
+            mnemonic: Some(mnemonic),
             dice: None,
             id: Identifier::new(network, Kind::MasterSecret, name),
         })

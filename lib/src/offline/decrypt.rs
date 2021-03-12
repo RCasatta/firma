@@ -120,9 +120,9 @@ mod tests {
         let maybe_plain_again = maybe_encrypt.decrypt(&cipher_key).unwrap();
         assert_eq!(maybe_plain, maybe_plain_again);
 
-        let key_json = MasterSecret::from_mnemonic(
+        let key_json = MasterSecret::new(
             Network::Testnet,
-            &Mnemonic::from_str(
+            Mnemonic::from_str(
                 "letter advice cage absurd amount doctor acoustic avoid letter advice cage above",
             )
             .unwrap(),

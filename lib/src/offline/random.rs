@@ -1,5 +1,4 @@
-use crate::*;
-use bitcoin::util::bip32::ExtendedPrivKey;
+use crate::{mnemonic, MasterSecret, OfflineContext, Result};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
@@ -16,8 +15,8 @@ pub struct RandomOptions {
 impl OfflineContext {
     pub fn create_key(&self, opt: &RandomOptions) -> Result<MasterSecret> {
         let sec = rand::thread_rng().gen::<[u8; 32]>();
-        let xpriv = ExtendedPrivKey::new_master(self.network, &sec)?;
-        let master_key = MasterSecret::new(self.network, xpriv, &opt.key_name)?;
+        let mnemonic = mnemonic::Mnemonic::new(&sec)?;
+        let master_key = MasterSecret::new(self.network, mnemonic, &opt.key_name)?;
         self.write_keys(&master_key)?;
 
         Ok(master_key)

@@ -49,11 +49,11 @@ impl OfflineContext {
         let master_key = match opt.nature {
             Nature::Xprv => {
                 let key = ExtendedPrivKey::from_str(&opt.value)?;
-                MasterSecret::new(self.network, key, &opt.key_name)?
+                MasterSecret::from_xprv(self.network, key, &opt.key_name)?
             }
             Nature::Mnemonic => {
                 let mnemonic = Mnemonic::from_str(&opt.value)?;
-                MasterSecret::from_mnemonic(self.network, &mnemonic, &opt.key_name)?
+                MasterSecret::new(self.network, mnemonic, &opt.key_name)?
             }
         };
         self.write_keys(&master_key)?;
