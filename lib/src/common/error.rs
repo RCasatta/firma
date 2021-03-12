@@ -1,6 +1,7 @@
 use crate::ErrorJson;
 use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::BlockHash;
+use miniscript::descriptor;
 use qr_code::types::QrError;
 use serde_json::Value;
 use std::fmt;
@@ -75,7 +76,8 @@ pub enum Error {
     Nul(std::ffi::NulError),
     ParseInt(std::num::ParseIntError),
     Miniscript(miniscript::Error),
-    MiniscriptDescriptor(miniscript::descriptor::DescriptorKeyParseError),
+    MiniscriptDescriptor(descriptor::DescriptorKeyParseError),
+    MiniscriptConversion(descriptor::ConversionError),
     Bmp(qr_code::bmp_monochrome::BmpError),
 }
 
@@ -113,10 +115,8 @@ impl_error!(miniscript::Error, Miniscript);
 impl_error!(crate::common::mnemonic::Error, Mnemonic);
 impl_error!(qr_code::bmp_monochrome::BmpError, Bmp);
 impl_error!(aes_gcm_siv::aead::Error, Encryption);
-impl_error!(
-    miniscript::descriptor::DescriptorKeyParseError,
-    MiniscriptDescriptor
-);
+impl_error!(descriptor::DescriptorKeyParseError, MiniscriptDescriptor);
+impl_error!(descriptor::ConversionError, MiniscriptConversion);
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -205,6 +205,7 @@ impl fmt::Display for Error {
             Error::ParseInt(e) => write!(f, "{:?}", e),
             Error::Miniscript(e) => write!(f, "{:?}", e),
             Error::MiniscriptDescriptor(e) => write!(f, "{:?}", e),
+            Error::MiniscriptConversion(e) => write!(f, "{:?}", e),
             Error::Mnemonic(e) => write!(f, "{:?}", e),
             Error::Bmp(e) => write!(f, "{:?}", e),
         }

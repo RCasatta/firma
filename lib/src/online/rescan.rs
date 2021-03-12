@@ -19,7 +19,7 @@ pub struct RescanOptions {
 impl OnlineContext {
     pub fn rescan(&self, opt: &RescanOptions) -> crate::Result<Value> {
         let start_from = opt.start_from.unwrap_or_else(|| {
-            // segwith activation block
+            // segwit activation block
             match self.network {
                 Network::Bitcoin => 481824,
                 Network::Testnet => 834624,

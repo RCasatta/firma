@@ -87,10 +87,7 @@ impl Wallet {
         let secp = Secp256k1::verification_only();
         let mut keys = vec![];
         for k in self.extract_desc_pub_keys()? {
-            let key = k
-                .derive(WALLET_SIGN_DERIVATION)
-                .derive_public_key(&secp)
-                .unwrap(); //TODO
+            let key = k.derive(WALLET_SIGN_DERIVATION).derive_public_key(&secp)?;
             keys.push(key);
         }
         Ok(keys)

@@ -23,7 +23,8 @@ serde = { version = "1.0.117", features = [ "derive" ] }
 serde_json = "1.0.59"
 dirs-next = "2.0.0"
 rand = "0.7.3"
-miniscript = "5.1.0"
+#miniscript = "5.1.0"
+miniscript = {git="https://github.com/RCasatta/rust-miniscript/", branch="export_error"}
 aes-gcm-siv = "0.9.0"
 tempfile = "3.1.0"
 

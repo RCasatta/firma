@@ -186,7 +186,7 @@ mod tests {
             kind: Kind::MasterSecret,
             name: "a1".to_string(),
         };
-        let expected = "\"/bitcoin/keys/a1/master_secret.json\""; //TODO master_secret
+        let expected = "\"/bitcoin/keys/a1/master_secret.json\"";
         let result = format!("{:?}", id.as_path_buf("/", false).unwrap());
         assert_eq!(expected, result);
 
