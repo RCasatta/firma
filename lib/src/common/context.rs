@@ -291,7 +291,7 @@ pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
 #[cfg(test)]
 pub mod tests {
     use crate::offline::random::RandomOptions;
-    use crate::{Context, DescriptorPublicKey, MasterSecret, OfflineContext};
+    use crate::{psbt_from_base64, Context, DescriptorPublicKey, MasterSecret, OfflineContext};
     use bitcoin::Network;
     use std::ops::Deref;
     use tempfile::TempDir;
@@ -351,5 +351,26 @@ pub mod tests {
         let key_read: MasterSecret = context.read(&key_name).unwrap();
         assert_eq!(key, key_read);
         let _: DescriptorPublicKey = context.read(&key_name).unwrap();
+    }
+
+    #[test]
+    fn test_save_psbt() {
+        let context = TestContext::default();
+        let without_name= "cHNidP8BAH4CAAAAAQQYGYyRDjWA/D08BEjU3Q9P34Sv8q0mW9UV5niEqBZ4AQAAAAD+////AiDLAAAAAAAAF6kUaV+OwCj7iV87pOHOFXNLuZMc7tyHBwIAAAAAAAAiACAGYNwSo/z0dYfDuCUPL2Li/SSY10gjxu8hZ9pREpEaCwAAAAAAAQChAgAAAAEbuYvreUkM84tDJuxdjxZmErxAyO/PkP+ozooG1kBiZAAAAAAjIgAg/KddPamHVwK3NnYT58PR3q+a5k9zwFC8zJXE6Nwr5zX9////AkyLBgAAAAAAF6kUZ3Eos+P2CT0g41zAxb+TPZLthgiHpM4AAAAAAAAiACD1kVciHGvQL+7uoaNv7Llt2eZU+dje0fnze3ZLwfI+qn6FHQABASukzgAAAAAAACIAIPWRVyIca9Av7u6ho2/suW3Z5lT52N7R+fN7dkvB8j6qAQVHUiECkrOcW23z58qUY5yOArPCYSDLw7Z63tq2U190DltvzS4hA310Wde+Bx0Dh+YtZuXAolu7NrO6BLd3Nzo+uUOrZ93gUq4iBgKSs5xbbfPnypRjnI4Cs8JhIMvDtnre2rZTX3QOW2/NLhyi6+BOMAAAgAEAAIAAAACAAgAAgAAAAAAAAAAAIgYDfXRZ174HHQOH5i1m5cCiW7s2s7oEt3c3Oj65Q6tn3eAcH15D2DAAAIABAACAAAAAgAIAAIAAAAAAAAAAAAAAAQFHUiEC44KejAc2m+q4YRPxJQIeqbuVLKapKyW7ZTgHZV1n2EAhA6jiEl6pWjkOeUk/P/ZhSfeh3ItYgcjUYE4RvN2iQlF/Uq4iAgLjgp6MBzab6rhhE/ElAh6pu5UspqkrJbtlOAdlXWfYQByi6+BOMAAAgAEAAIAAAACAAgAAgAAAAAABAAAAIgIDqOISXqlaOQ55ST8/9mFJ96Hci1iByNRgThG83aJCUX8cH15D2DAAAIABAACAAAAAgAIAAIAAAAAAAQAAAAA=";
+        let (_, mut psbt) = psbt_from_base64(without_name).unwrap();
+        let name = context.save_psbt(&mut psbt).unwrap();
+        assert_eq!(name, "psbt-0");
+
+        let context = TestContext::default(); // new context, so I don't get PSBTNotChangedAfterMerge
+        let with_name = "cHNidP8BAH4CAAAAAQQYGYyRDjWA/D08BEjU3Q9P34Sv8q0mW9UV5niEqBZ4AQAAAAD+////AiDLAAAAAAAAF6kUaV+OwCj7iV87pOHOFXNLuZMc7tyHBwIAAAAAAAAiACAGYNwSo/z0dYfDuCUPL2Li/SSY10gjxu8hZ9pREpEaCwAAAAAM/AVmaXJtYQBuYW1lCHRvLWNhcm9sAAEAoQIAAAABG7mL63lJDPOLQybsXY8WZhK8QMjvz5D/qM6KBtZAYmQAAAAAIyIAIPynXT2ph1cCtzZ2E+fD0d6vmuZPc8BQvMyVxOjcK+c1/f///wJMiwYAAAAAABepFGdxKLPj9gk9IONcwMW/kz2S7YYIh6TOAAAAAAAAIgAg9ZFXIhxr0C/u7qGjb+y5bdnmVPnY3tH583t2S8HyPqp+hR0AAQErpM4AAAAAAAAiACD1kVciHGvQL+7uoaNv7Llt2eZU+dje0fnze3ZLwfI+qgEFR1IhApKznFtt8+fKlGOcjgKzwmEgy8O2et7atlNfdA5bb80uIQN9dFnXvgcdA4fmLWblwKJbuzazugS3dzc6PrlDq2fd4FKuIgYCkrOcW23z58qUY5yOArPCYSDLw7Z63tq2U190DltvzS4couvgTjAAAIABAACAAAAAgAIAAIAAAAAAAAAAACIGA310Wde+Bx0Dh+YtZuXAolu7NrO6BLd3Nzo+uUOrZ93gHB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAAAAAAAAAEBR1IhAuOCnowHNpvquGET8SUCHqm7lSymqSslu2U4B2VdZ9hAIQOo4hJeqVo5DnlJPz/2YUn3odyLWIHI1GBOEbzdokJRf1KuIgIC44KejAc2m+q4YRPxJQIeqbuVLKapKyW7ZTgHZV1n2EAcouvgTjAAAIABAACAAAAAgAIAAIAAAAAAAQAAACICA6jiEl6pWjkOeUk/P/ZhSfeh3ItYgcjUYE4RvN2iQlF/HB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAEAAAAA";
+        let (_, mut psbt) = psbt_from_base64(with_name).unwrap();
+        let name = context.save_psbt(&mut psbt).unwrap();
+        assert_eq!(name, "to-carol");
+
+        let context = TestContext::default(); // new context, so I don't get PSBTNotChangedAfterMerge
+        let with_name = "cHNidP8BAH4CAAAAAQQYGYyRDjWA/D08BEjU3Q9P34Sv8q0mW9UV5niEqBZ4AQAAAAD+////AiDLAAAAAAAAF6kUaV+OwCj7iV87pOHOFXNLuZMc7tyHBwIAAAAAAAAiACAGYNwSo/z0dYfDuCUPL2Li/SSY10gjxu8hZ9pREpEaCwAAAAAM/AVmaXJtYQBuYW1lCHRvLWNhcm9sAAEAoQIAAAABG7mL63lJDPOLQybsXY8WZhK8QMjvz5D/qM6KBtZAYmQAAAAAIyIAIPynXT2ph1cCtzZ2E+fD0d6vmuZPc8BQvMyVxOjcK+c1/f///wJMiwYAAAAAABepFGdxKLPj9gk9IONcwMW/kz2S7YYIh6TOAAAAAAAAIgAg9ZFXIhxr0C/u7qGjb+y5bdnmVPnY3tH583t2S8HyPqp+hR0AAQErpM4AAAAAAAAiACD1kVciHGvQL+7uoaNv7Llt2eZU+dje0fnze3ZLwfI+qgEFR1IhApKznFtt8+fKlGOcjgKzwmEgy8O2et7atlNfdA5bb80uIQN9dFnXvgcdA4fmLWblwKJbuzazugS3dzc6PrlDq2fd4FKuIgYCkrOcW23z58qUY5yOArPCYSDLw7Z63tq2U190DltvzS4couvgTjAAAIABAACAAAAAgAIAAIAAAAAAAAAAACIGA310Wde+Bx0Dh+YtZuXAolu7NrO6BLd3Nzo+uUOrZ93gHB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAAAAAAAAAEBR1IhAuOCnowHNpvquGET8SUCHqm7lSymqSslu2U4B2VdZ9hAIQOo4hJeqVo5DnlJPz/2YUn3odyLWIHI1GBOEbzdokJRf1KuIgIC44KejAc2m+q4YRPxJQIeqbuVLKapKyW7ZTgHZV1n2EAcouvgTjAAAIABAACAAAAAgAIAAIAAAAAAAQAAACICA6jiEl6pWjkOeUk/P/ZhSfeh3ItYgcjUYE4RvN2iQlF/HB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAEAAAAA";
+        let (_, mut psbt) = psbt_from_base64(with_name).unwrap();
+        let name = context.save_psbt(&mut psbt).unwrap();
+        assert_eq!(name, "to-carol");
     }
 }

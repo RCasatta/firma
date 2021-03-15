@@ -77,6 +77,7 @@ class Data {
     data class PrivateMasterKey(
         val id: Identifier,
         val key: String,
+        val mnemonic: String?,
         val dice: Dice?
     )
 

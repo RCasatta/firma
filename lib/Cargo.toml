@@ -13,6 +13,7 @@ keywords = ["sign", "bitcoin", "cold", "offline"]
 [dependencies]
 hex = "0.4.2"
 bitcoin = { version = "0.26.0", features = [ "use-serde", "secp-recovery" ] }
+#bitcoin = { git ="https://github.com/RCasatta/rust-bitcoin", branch="proprietary_key", features = [ "use-serde", "secp-recovery" ] }
 bitcoincore-rpc = "0.13.0"
 base64 = "0.13.0"
 num-bigint = "0.3.1"
@@ -23,14 +24,15 @@ serde = { version = "1.0.117", features = [ "derive" ] }
 serde_json = "1.0.59"
 dirs-next = "2.0.0"
 rand = "0.7.3"
-#miniscript = "5.1.0"
-miniscript = {git="https://github.com/RCasatta/rust-miniscript/", branch="export_error"}
+miniscript = "5.1.0"
+#miniscript = { path="../../rust-miniscript" }
 aes-gcm-siv = "0.9.0"
 tempfile = "3.1.0"
 
 [dev-dependencies]
 flate2 = "1.0"
 serde_cbor = "0.11.1"
+bitcoin_025 = { package="bitcoin", version = "0.25.0", features = [ "use-serde", "secp-recovery" ] }
 
 [target.'cfg(target_os="android")'.dependencies]
 jni = { version = "0.16", default-features = false }
