@@ -55,9 +55,9 @@ class WalletTest : Common() {
 
         // import the wallet
         val descriptorMainMainnet =
-            "wsh(multi(1,[dd0847bb/48'/0'/0'/2']xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*))#7kvyp5du";
+            "wsh(multi(1,[dd0847bb/48h/0h/0h/2h]xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*))#7kvyp5du";
         val descriptorMainTestnet =
-            "wsh(multi(1,[d90c6a4f/48'/1'/0'/2']tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*))#02gvp2va";
+            "wsh(multi(1,[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*))#02gvp2va";
         val mainDescriptors = mapOf(
             "mainnet" to descriptorMainMainnet,
             "testnet" to descriptorMainTestnet,
