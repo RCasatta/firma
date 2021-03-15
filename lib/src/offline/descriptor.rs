@@ -6,6 +6,8 @@ use miniscript::{DescriptorTrait, TranslatePk2};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+pub type ExtendedDescriptor = miniscript::Descriptor<miniscript::DescriptorPublicKey>;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeriveAddressOptions {
     pub descriptor: String,
@@ -19,16 +21,19 @@ impl DeriveAddressOptions {
     }
 }
 
+pub fn parse_descriptor_with_checksum(descriptor: &str) -> Result<ExtendedDescriptor> {
+    // checksum not supported at the moment, stripping out
+    // TODO check
+    let end = descriptor.find('#').unwrap_or_else(|| descriptor.len());
+    let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
+        descriptor[..end].parse()?;
+    Ok(descriptor)
+}
+
 /// derive address from descriptor in the form "wsh(multi({n},{x}/{c}/*,{y}/{c}/*,...))#5wstxmwd"
 pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<GetAddressOutput> {
     opt.validate()?;
-    // checksum not supported at the moment, stripping out
-    let end = opt
-        .descriptor
-        .find('#')
-        .unwrap_or_else(|| opt.descriptor.len());
-    let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
-        opt.descriptor[..end].parse()?;
+    let descriptor = parse_descriptor_with_checksum(&opt.descriptor)?;
 
     let secp = Secp256k1::verification_only();
     //let context = DescriptorPublicKeyCtx::new(&secp, ChildNumber::from_normal_idx(opt.index)?);
@@ -37,9 +42,7 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<Ge
         .translate_pk2(|xpk| xpk.derive_public_key(&secp))
         .unwrap()
         .address(network)?;
-    /*let address = descriptor
-    .address(network, context)
-    .ok_or(Error::AddressFromDescriptorFails)?;*/
+
     let path = DerivationPath::from_str(&format!("m/0/{}", opt.index))?;
 
     Ok(GetAddressOutput {

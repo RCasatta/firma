@@ -189,6 +189,6 @@ pub mod tests {
     }
 
     pub fn rnd_string() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+        thread_rng().sample_iter(&Alphanumeric).take(10).collect()
     }
 }

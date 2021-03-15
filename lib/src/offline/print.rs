@@ -234,7 +234,8 @@ fn wallet_with_path(
         for (_, (finger, path)) in hd_keypaths.iter() {
             if wallet.fingerprints().contains(finger) {
                 let path_vec: Vec<ChildNumber> = path.clone().into();
-                if let ChildNumber::Normal { index } = path_vec.first()? {
+                let len = path_vec.len();
+                if let ChildNumber::Normal { index } = path_vec.get(len - 2)? {
                     let descriptor = match index {
                         0 => &wallet.descriptor,
                         _ => return None,
@@ -259,7 +260,9 @@ fn wallet_with_path(
 
 #[cfg(test)]
 mod tests {
-    use crate::offline::print::{biggest_dividing_pow, script_type};
+    use crate::offline::print::{biggest_dividing_pow, pretty_print, script_type};
+    use crate::{psbt_from_base64, Wallet};
+    use bitcoin::Network;
 
     #[test]
     fn test_biggest_dividing_pow() {
@@ -290,5 +293,22 @@ mod tests {
 
         let s = hex_script!("00201775ead41acefa14d2d534d6272da610cc35855d0de4cab0f5c1a3f894921989");
         assert_eq!(script_type(&s), Some(4usize));
+    }
+
+    #[test]
+    fn test_pretty_print() {
+        let (_, to_carol_psbt) = psbt_from_base64("cHNidP8BAH4CAAAAAQQYGYyRDjWA/D08BEjU3Q9P34Sv8q0mW9UV5niEqBZ4AQAAAAD+////AiDLAAAAAAAAF6kUaV+OwCj7iV87pOHOFXNLuZMc7tyHBwIAAAAAAAAiACAGYNwSo/z0dYfDuCUPL2Li/SSY10gjxu8hZ9pREpEaCwAAAAAM/AVmaXJtYQBuYW1lCHRvLWNhcm9sAAEAoQIAAAABG7mL63lJDPOLQybsXY8WZhK8QMjvz5D/qM6KBtZAYmQAAAAAIyIAIPynXT2ph1cCtzZ2E+fD0d6vmuZPc8BQvMyVxOjcK+c1/f///wJMiwYAAAAAABepFGdxKLPj9gk9IONcwMW/kz2S7YYIh6TOAAAAAAAAIgAg9ZFXIhxr0C/u7qGjb+y5bdnmVPnY3tH583t2S8HyPqp+hR0AAQErpM4AAAAAAAAiACD1kVciHGvQL+7uoaNv7Llt2eZU+dje0fnze3ZLwfI+qgEFR1IhApKznFtt8+fKlGOcjgKzwmEgy8O2et7atlNfdA5bb80uIQN9dFnXvgcdA4fmLWblwKJbuzazugS3dzc6PrlDq2fd4FKuIgYCkrOcW23z58qUY5yOArPCYSDLw7Z63tq2U190DltvzS4couvgTjAAAIABAACAAAAAgAIAAIAAAAAAAAAAACIGA310Wde+Bx0Dh+YtZuXAolu7NrO6BLd3Nzo+uUOrZ93gHB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAAAAAAAAAEBR1IhAuOCnowHNpvquGET8SUCHqm7lSymqSslu2U4B2VdZ9hAIQOo4hJeqVo5DnlJPz/2YUn3odyLWIHI1GBOEbzdokJRf1KuIgIC44KejAc2m+q4YRPxJQIeqbuVLKapKyW7ZTgHZV1n2EAcouvgTjAAAIABAACAAAAAgAIAAIAAAAAAAQAAACICA6jiEl6pWjkOeUk/P/ZhSfeh3ItYgcjUYE4RvN2iQlF/HB9eQ9gwAACAAQAAgAAAAIACAACAAAAAAAEAAAAA").unwrap();
+        let wallet = Wallet::new("wsh(multi(2,[a2ebe04e/48'/1'/0'/2']tpubDEXDRpvW2srXCSjAvC36zYkSE3jxT1wf7JXDo35Ln4NZpmaMNhq8o9coH9U9BQ5bAN4WDGxXV9d426iYKGorFF5wvv4Wv63cZsCotiXGGkD/0/*,[1f5e43d8/48'/1'/0'/2']tpubDFU4parcXvV8tBYt4rS4a8rGNF1DA32DCnRfhzVL6b3MSiDomV95rv9mb7W7jAPMTohyEYpbhVS8FbmTsuQsFRxDWPJX2ZFEeRPMFz3R1gh/0/*))#szg2xsau", Network::Testnet);
+        let name = wallet.id.name.clone();
+
+        let result = pretty_print(&to_carol_psbt, Network::Testnet, &[wallet]).unwrap();
+        assert_eq!(format!("{}: -0.00052381 BTC", name), result.balances);
+
+        assert_eq!("Privacy: outputs have different script types https://en.bitcoin.it/wiki/Privacy#Sending_to_a_different_script_type", result.info[0]);
+        assert_eq!("Privacy: outputs have different precision https://en.bitcoin.it/wiki/Privacy#Round_numbers", result.info[1]);
+
+        assert_eq!(result.fee.absolute, 381);
+
+        dbg!(result);
     }
 }

@@ -174,6 +174,13 @@ mod tests {
     }
 
     impl Wallet {
+        pub fn new(descriptor: &str, network: Network) -> Self {
+            Wallet {
+                id: Identifier::new(network, Kind::Wallet, &rnd_string()),
+                descriptor: descriptor.to_string(),
+                created_at_height: 0,
+            }
+        }
         pub fn new_random(required_sig: u8, keys: &[MasterSecret]) -> Self {
             let desc_pub_keys: Vec<_> = keys
                 .iter()
