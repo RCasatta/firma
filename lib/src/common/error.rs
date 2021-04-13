@@ -40,9 +40,9 @@ pub enum Error {
     IncompatibleNetworks,
     IncompatibleGenesis { node: BlockHash, firma: BlockHash },
     Mnemonic(crate::common::mnemonic::Error),
-    PSBTNotChangedAfterMerge,
-    PSBTBadStringEncoding(String),
-    PSBTCannotDeserialize(bitcoin::consensus::encode::Error),
+    PsbtNotChangedAfterMerge,
+    PsbtBadStringEncoding(String),
+    PsbtCannotDeserialize(bitcoin::consensus::encode::Error),
     MaybeEncryptedWrongState,
     Encryption(aes_gcm_siv::aead::Error),
     EncryptionKeyNot32Bytes(usize),
@@ -59,12 +59,12 @@ pub enum Error {
     BitcoinEncode(bitcoin::consensus::encode::Error),
     BitcoinKey(bitcoin::util::key::Error),
     BitcoinSecp256k1(bitcoin::secp256k1::Error),
-    BitcoinPSBT(bitcoin::util::psbt::Error),
+    BitcoinPsbt(bitcoin::util::psbt::Error),
     BitcoinAddress(bitcoin::util::address::Error),
     BitcoinBech32(bitcoin::bech32::Error),
     BitcoinScriptError(bitcoin::blockdata::script::Error),
     Serde(serde_json::error::Error),
-    IO(std::io::Error),
+    Io(std::io::Error),
     Base58(bitcoin::util::base58::Error),
     Bip32(bitcoin::util::bip32::Error),
     Base64(base64::DecodeError),
@@ -97,12 +97,12 @@ impl_error!(bitcoin::util::bip32::Error, Bip32);
 impl_error!(bitcoin::consensus::encode::Error, BitcoinEncode);
 impl_error!(bitcoin::util::key::Error, BitcoinKey);
 impl_error!(bitcoin::secp256k1::Error, BitcoinSecp256k1);
-impl_error!(bitcoin::util::psbt::Error, BitcoinPSBT);
+impl_error!(bitcoin::util::psbt::Error, BitcoinPsbt);
 impl_error!(bitcoin::util::address::Error, BitcoinAddress);
 impl_error!(bitcoin::bech32::Error, BitcoinBech32);
 impl_error!(bitcoin::blockdata::script::Error, BitcoinScriptError);
 impl_error!(serde_json::error::Error, Serde);
-impl_error!(std::io::Error, IO);
+impl_error!(std::io::Error, Io);
 impl_error!(base64::DecodeError, Base64);
 impl_error!(std::path::StripPrefixError, PathStrip);
 impl_error!(qr_code::types::QrError, Qr);
@@ -157,11 +157,11 @@ impl fmt::Display for Error {
                 "Incompatible genesis block node:{} firma:{}",
                 node, firma
             ),
-            Error::PSBTNotChangedAfterMerge => write!(f, "PSBT did not change after merge"),
-            Error::PSBTBadStringEncoding(kind) => {
+            Error::PsbtNotChangedAfterMerge => write!(f, "PSBT did not change after merge"),
+            Error::PsbtBadStringEncoding(kind) => {
                 write!(f, "PSBT has bad {} string encoding", kind)
             }
-            Error::PSBTCannotDeserialize(e) => write!(f, "Cannot deserialize PSBT ({})", e),
+            Error::PsbtCannotDeserialize(e) => write!(f, "Cannot deserialize PSBT ({})", e),
             Error::MaybeEncryptedWrongState => write!(f, "Wrong State"),
             Error::Encryption(e) => write!(f, "Encryption ({})", e),
             Error::EncryptionKeyNot32Bytes(s) => {
@@ -185,14 +185,14 @@ impl fmt::Display for Error {
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),
-            Error::IO(e) => write!(f, "{:?}", e),
+            Error::Io(e) => write!(f, "{:?}", e),
             Error::Base58(e) => write!(f, "{:?}", e),
             Error::Bip32(e) => write!(f, "{:?}", e),
             Error::Base64(e) => write!(f, "{:?}", e),
             Error::BitcoinEncode(e) => write!(f, "{:?}", e),
             Error::BitcoinKey(e) => write!(f, "{:?}", e),
             Error::BitcoinSecp256k1(e) => write!(f, "{:?}", e),
-            Error::BitcoinPSBT(e) => write!(f, "{:?}", e),
+            Error::BitcoinPsbt(e) => write!(f, "{:?}", e),
             Error::BitcoinAddress(e) => write!(f, "{:?}", e),
             Error::BitcoinBech32(e) => write!(f, "{:?}", e),
             Error::BitcoinScriptError(e) => write!(f, "{:?}", e),

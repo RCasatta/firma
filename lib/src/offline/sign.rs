@@ -44,8 +44,8 @@ pub struct SignResult {
 }
 
 #[derive(Debug)]
-struct PSBTSigner {
-    pub psbt: BitcoinPSBT,
+struct PsbtSigner {
+    pub psbt: BitcoinPsbt,
     xprv: ExtendedPrivKey,
     secp: Secp256k1<SignOnly>,
     network: Network, // even if network is included in xprv, regtest is equal to testnet there, so we need this
@@ -54,7 +54,7 @@ struct PSBTSigner {
 }
 
 /// extract field name in the PSBT extra field if present
-pub fn get_psbt_name(psbt: &BitcoinPSBT) -> Option<String> {
+pub fn get_psbt_name(psbt: &BitcoinPsbt) -> Option<String> {
     psbt.global.proprietary.get(&get_name_key()).map(|v| {
         std::str::from_utf8(v)
             .expect("PSBT name not utf8")
@@ -62,7 +62,7 @@ pub fn get_psbt_name(psbt: &BitcoinPSBT) -> Option<String> {
     }) // TODO remove expect
 }
 
-pub fn find_or_create(psbt: &mut BitcoinPSBT, psbts: Vec<Psbt>) -> Result<String> {
+pub fn find_or_create(psbt: &mut BitcoinPsbt, psbts: Vec<Psbt>) -> Result<String> {
     let txid = psbt.global.unsigned_tx.txid();
 
     for psbt in psbts.iter() {
@@ -86,9 +86,9 @@ pub fn find_or_create(psbt: &mut BitcoinPSBT, psbts: Vec<Psbt>) -> Result<String
     }
 }
 
-impl PSBTSigner {
+impl PsbtSigner {
     fn new(
-        psbt: &BitcoinPSBT,
+        psbt: &BitcoinPsbt,
         xprv: ExtendedPrivKey,
         network: Network,
         derivations: u32,
@@ -97,7 +97,7 @@ impl PSBTSigner {
         let secp = Secp256k1::signing_only();
         check_compatibility(network, xprv.network)?;
 
-        Ok(PSBTSigner {
+        Ok(PsbtSigner {
             psbt: psbt.clone(),
             xprv,
             secp,
@@ -334,7 +334,7 @@ impl OfflineContext {
         let mut psbt: Psbt = self.read(&opt.psbt_name)?;
         debug!("read psbt {}", wallet.id.name);
 
-        let mut psbt_signer = PSBTSigner::new(
+        let mut psbt_signer = PsbtSigner::new(
             &psbt.psbt()?,
             secret.key,
             self.network,
@@ -375,7 +375,7 @@ fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
 #[cfg(test)]
 mod tests {
     use crate::offline::sign::*;
-    use crate::{psbt_from_base64, psbt_to_base64, BitcoinPSBT, Error, Psbt};
+    use crate::{psbt_from_base64, psbt_to_base64, BitcoinPsbt, Error, Psbt};
     use bitcoin::consensus::deserialize;
     use bitcoin::Transaction;
     use flate2::write::ZlibEncoder;
@@ -383,11 +383,11 @@ mod tests {
     use std::io::Write;
 
     fn test_sign(
-        psbt_to_sign: &mut BitcoinPSBT,
-        psbt_signed: &BitcoinPSBT,
+        psbt_to_sign: &mut BitcoinPsbt,
+        psbt_signed: &BitcoinPsbt,
         xprv: &ExtendedPrivKey,
     ) -> Result<()> {
-        let mut psbt_signer = PSBTSigner::new(psbt_to_sign, *xprv, xprv.network, 10, true)?;
+        let mut psbt_signer = PsbtSigner::new(psbt_to_sign, *xprv, xprv.network, 10, true)?;
         psbt_signer.sign()?;
 
         assert_eq!(
@@ -398,14 +398,14 @@ mod tests {
         Ok(())
     }
 
-    fn perc_diff_with_core(psbt: &BitcoinPSBT, core: usize) -> Result<bool> {
+    fn perc_diff_with_core(psbt: &BitcoinPsbt, core: usize) -> Result<bool> {
         let esteem = (estimate_weight(psbt)? / 4) as f64;
         let core = core as f64;
         let perc = ((esteem - core) / esteem).abs();
         Ok(perc < 0.1) // TODO reduce this 10% by improving estimation of the bip tx
     }
 
-    fn extract_psbt(bytes: &[u8]) -> (Vec<u8>, BitcoinPSBT) {
+    fn extract_psbt(bytes: &[u8]) -> (Vec<u8>, BitcoinPsbt) {
         let psbt_json: Psbt = serde_json::from_slice(bytes).unwrap();
         psbt_from_base64(&psbt_json.psbt).unwrap()
     }

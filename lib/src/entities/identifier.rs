@@ -17,7 +17,7 @@ pub enum Kind {
     WalletSignature,
     MasterSecret,
     DescriptorPublicKey,
-    PSBT,
+    Psbt,
 }
 
 impl Kind {
@@ -25,7 +25,7 @@ impl Kind {
         match self {
             Kind::Wallet | Kind::WalletIndexes | Kind::WalletSignature => "wallets",
             Kind::MasterSecret | Kind::DescriptorPublicKey => "keys",
-            Kind::PSBT => "psbts",
+            Kind::Psbt => "psbts",
         }
     }
 
@@ -36,7 +36,7 @@ impl Kind {
             Kind::WalletSignature => "wallet_signature.json",
             Kind::MasterSecret => "master_secret.json",
             Kind::DescriptorPublicKey => "descriptor_public_key.json",
-            Kind::PSBT => "psbt.json",
+            Kind::Psbt => "psbt.json",
         }
     }
 }
@@ -57,7 +57,7 @@ impl FromStr for Kind {
             "WalletSignature" => Ok(Kind::WalletSignature),
             "MasterSecret" => Ok(Kind::MasterSecret),
             "DescriptorPublicKey" => Ok(Kind::DescriptorPublicKey),
-            "PSBT" => Ok(Kind::PSBT),
+            "Psbt" => Ok(Kind::Psbt),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
                 format!("({}) valid values are: wallets, keys, psbts", s),

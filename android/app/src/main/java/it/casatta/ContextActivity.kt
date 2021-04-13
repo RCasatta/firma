@@ -102,7 +102,7 @@ open class ContextActivity : AppCompatActivity() {
     }
 
     fun savePSBT(psbt: Data.StringEncoding) {
-        val opt = Options.SavePSBTOptions(psbt)
+        val opt = Options.SavePsbtOptions(psbt)
         callMethod("save_psbt", opt)
     }
 

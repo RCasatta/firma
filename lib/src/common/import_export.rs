@@ -34,7 +34,7 @@ impl Context {
             Kind::WalletSignature => self.write(&from_value::<WalletSignature>(c)?)?,
             Kind::MasterSecret => self.write(&from_value::<MasterSecret>(c)?)?,
             Kind::DescriptorPublicKey => self.write(&from_value::<DescriptorPublicKey>(c)?)?,
-            Kind::PSBT => self.write(&from_value::<Psbt>(c)?)?,
+            Kind::Psbt => self.write(&from_value::<Psbt>(c)?)?,
         }
         Ok(value)
     }

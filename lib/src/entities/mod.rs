@@ -1,7 +1,7 @@
 pub mod identifier;
 pub mod persisted;
 
-use crate::{psbt_from_base64, BitcoinPSBT, DaemonOpts, Result};
+use crate::{psbt_from_base64, BitcoinPsbt, DaemonOpts, Result};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::psbt::raw;
@@ -214,7 +214,7 @@ pub fn get_name_key() -> raw::ProprietaryKey {
     }
 }
 
-pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> Result<BitcoinPSBT> {
+pub fn psbt_from_rpc(psbt: &WalletCreateFundedPsbtResult, name: &str) -> Result<BitcoinPsbt> {
     let (_, mut psbt_with_name) = psbt_from_base64(&psbt.psbt)?;
 
     psbt_with_name
@@ -277,7 +277,7 @@ impl_traits!(MasterSecret, false, Kind::MasterSecret);
 impl_traits!(Wallet, false, Kind::Wallet);
 impl_traits!(WalletIndexes, true, Kind::WalletIndexes);
 impl_traits!(DescriptorPublicKey, false, Kind::DescriptorPublicKey);
-impl_traits!(Psbt, true, Kind::PSBT);
+impl_traits!(Psbt, true, Kind::Psbt);
 
 #[cfg(test)]
 mod tests {

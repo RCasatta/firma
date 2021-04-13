@@ -81,7 +81,7 @@ fn rust_call(c_str: &CStr) -> Result<CString> {
             serde_json::to_value(result)?
         }
         "save_psbt" => {
-            let opts: SavePSBTOptions = serde_json::from_value(args)?;
+            let opts: SavePsbtOptions = serde_json::from_value(args)?;
             let result = context.save_psbt_options(&opts)?;
             serde_json::to_value(result)?
         }

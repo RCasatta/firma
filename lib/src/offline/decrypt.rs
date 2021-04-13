@@ -5,17 +5,17 @@ use log::warn;
 use rand::{thread_rng, Rng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fmt::Debug;
-use std::path::PathBuf;
+use std::path::Path;
 
 pub type EncryptionKey = [u8; 32];
 
-//TODO  use it only internally, use export in API
-pub fn decrypt<T>(path: &PathBuf, encryption_key: &Option<StringEncoding>) -> Result<T>
+//TODO use it only internally, use export in API
+pub fn decrypt<T>(path: &Path, encryption_key: &Option<StringEncoding>) -> Result<T>
 where
     T: Serialize + DeserializeOwned + Debug,
 {
     let file_content = std::fs::read(path)
-        .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path.clone(), e.to_string()))?;
+        .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path.to_path_buf(), e.to_string()))?;
     let maybe_encrypted: MaybeEncrypted<T> = serde_json::from_slice(&file_content)?;
     match (maybe_encrypted, encryption_key.clone()) {
         (MaybeEncrypted::Plain(value), None) => Ok(value),

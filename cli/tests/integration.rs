@@ -113,7 +113,7 @@ fn integration_test() {
     let create_tx = firma_2of2
         .online_create_tx(recipients, &psbt_name, &name_2of2)
         .unwrap();
-    let psbt_file_str = firma_2of2.path_str(Kind::PSBT, &create_tx.psbt_name);
+    let psbt_file_str = firma_2of2.path_str(Kind::Psbt, &create_tx.psbt_name);
 
     //let sign_a_wrong = firma_2of2.offline_sign(psbt_file_str, psbt_file_str);
     //assert_eq!(sign_a_wrong.unwrap_err().to_string(),Error::WrongKeyFileName.to_string());
@@ -250,7 +250,7 @@ fn integration_test() {
     assert!(keys.iter().any(|k| k.id.name == r2.id.name));
     let list_wallets = firma_2of2.offline_list(Kind::Wallet, None).unwrap();
     assert!(list_wallets.wallets.iter().any(|w| w.id.name == name_2of2));
-    let list_psbt = firma_2of2.offline_list(Kind::PSBT, None).unwrap();
+    let list_psbt = firma_2of2.offline_list(Kind::Psbt, None).unwrap();
     assert_eq!(list_psbt.psbts.len(), 2);
     let result = firma_2of3.online_rescan(&name_2of3); // TODO test restore a wallet, find funds with rescan
     assert!(result.is_ok());
@@ -324,7 +324,9 @@ impl FirmaCommand {
         }
         assert!(
             output.status.success(),
-            format!("online subcmd:{} args:{:?}", subcmd, args)
+            "online subcmd:{} args:{:?}",
+            subcmd,
+            args
         );
         let value: Value = serde_json::from_slice(&output.stdout).unwrap();
         println!("{}", to_string_pretty(&value).unwrap());
@@ -453,10 +455,10 @@ impl FirmaCommand {
 
         assert!(
             output.status.success(),
-            format!(
-                "offline subcmd:{} args:{:?} encryption_key:{:?}",
-                subcmd, args, encryption_key
-            )
+            "offline subcmd:{} args:{:?} encryption_key:{:?}",
+            subcmd,
+            args,
+            encryption_key
         );
 
         let value: Value = serde_json::from_slice(&output.stdout)?;

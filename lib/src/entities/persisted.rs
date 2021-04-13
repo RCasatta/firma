@@ -5,7 +5,7 @@ use crate::offline::descriptor::{parse_descriptor_with_checksum, ExtendedDescrip
 use crate::offline::sign::get_psbt_name;
 use crate::offline::sign_wallet::WALLET_SIGN_DERIVATION;
 use crate::{
-    check_compatibility, psbt_from_base64, psbt_to_base64, BitcoinPSBT, Error, Identifier, Kind,
+    check_compatibility, psbt_from_base64, psbt_to_base64, BitcoinPsbt, Error, Identifier, Kind,
     Result,
 };
 use bitcoin::secp256k1::{Secp256k1, Signing};
@@ -216,23 +216,23 @@ impl MasterSecret {
 }
 
 impl Psbt {
-    pub fn psbt(&self) -> Result<BitcoinPSBT> {
+    pub fn psbt(&self) -> Result<BitcoinPsbt> {
         Ok(psbt_from_base64(&self.psbt)?.1)
     }
 
-    pub fn set_psbt(&mut self, psbt: &BitcoinPSBT) {
+    pub fn set_psbt(&mut self, psbt: &BitcoinPsbt) {
         self.psbt = psbt_to_base64(psbt).1;
     }
 }
 
-impl From<(&BitcoinPSBT, Network)> for Psbt {
-    fn from(psbt_and_network: (&BitcoinPSBT, Network)) -> Self {
+impl From<(&BitcoinPsbt, Network)> for Psbt {
+    fn from(psbt_and_network: (&BitcoinPsbt, Network)) -> Self {
         let (psbt, network) = psbt_and_network;
         let (_, base64) = psbt_to_base64(psbt);
         let name = get_psbt_name(psbt).expect("PSBT without name"); //TODO
         Psbt {
             psbt: base64,
-            id: Identifier::new(network, Kind::PSBT, &name),
+            id: Identifier::new(network, Kind::Psbt, &name),
         }
     }
 }

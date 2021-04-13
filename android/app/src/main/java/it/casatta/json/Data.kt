@@ -192,7 +192,7 @@ class Data {
         WALLET_SIGNATURE("WalletSignature"),
         MASTER_SECRET("MasterSecret"),
         DESCRIPTOR_PUBLIC_KEY("DescriptorPublicKey"),
-        PSBT("PSBT")
+        PSBT("Psbt")
     }
 }
 

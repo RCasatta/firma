@@ -37,7 +37,7 @@ impl Context {
                             Err(e) => debug!("can't read {} because {:?}", name, e),
                         }
                     }
-                    Kind::PSBT => {
+                    Kind::Psbt => {
                         debug!("read psbt json {:?}", name);
                         match self.read::<Psbt>(name) {
                             Ok(psbt_json) => list.psbts.push(psbt_json),

@@ -22,4 +22,4 @@ pub use serde_json;
 pub use structopt;
 
 pub type Result<R> = std::result::Result<R, Error>;
-pub type BitcoinPSBT = bitcoin::util::psbt::PartiallySignedTransaction;
+pub type BitcoinPsbt = bitcoin::util::psbt::PartiallySignedTransaction;

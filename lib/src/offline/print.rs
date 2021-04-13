@@ -11,7 +11,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
-type HDKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
+type HdKeypaths = BTreeMap<key::PublicKey, (Fingerprint, DerivationPath)>;
 
 /// Print details regarding a Partially Signed Bitcoin Transaction (PSBT) given as parameter.
 /// A `psbt_file` or a `psbt_base` should be specified.
@@ -61,7 +61,7 @@ impl OfflineContext {
 }
 
 pub fn pretty_print(
-    psbt: &BitcoinPSBT,
+    psbt: &BitcoinPsbt,
     network: Network,
     wallets: &[Wallet],
 ) -> Result<PsbtPrettyPrint> {
@@ -226,7 +226,7 @@ fn script_type(script: &Script) -> Option<usize> {
 
 /// returns a wallet name and a derivation iif the address parameter is the same as the one derived from the wallet
 fn wallet_with_path(
-    hd_keypaths: &HDKeypaths,
+    hd_keypaths: &HdKeypaths,
     wallets: &[Wallet],
     address: &Address,
 ) -> Option<(String, DerivationPath)> {

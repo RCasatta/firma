@@ -51,7 +51,7 @@ class Options {
         val verify_wallets_signatures: Boolean
     )
 
-    data class SavePSBTOptions(
+    data class SavePsbtOptions(
         val psbt: Data.StringEncoding
     )
 

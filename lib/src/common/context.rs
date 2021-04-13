@@ -125,8 +125,7 @@ impl Context {
     where
         T: Serialize + DeserializeOwned + Debug + WhichKind,
     {
-        Ok(Identifier::new(self.network, T::kind(), name)
-            .read(&self.datadir, &self.encryption_key)?)
+        Identifier::new(self.network, T::kind(), name).read(&self.datadir, &self.encryption_key)
     }
 
     pub fn write<T>(&self, value: &T) -> Result<()>
@@ -204,13 +203,13 @@ impl Context {
         Ok(())
     }
 
-    pub fn save_psbt_options(&self, opt: &SavePSBTOptions) -> Result<()> {
+    pub fn save_psbt_options(&self, opt: &SavePsbtOptions) -> Result<()> {
         info!("save_psbt_options {:?}", opt);
         let bytes = opt
             .psbt
             .as_bytes()
-            .map_err(|_| Error::PSBTBadStringEncoding(opt.psbt.kind()))?;
-        let mut psbt: BitcoinPSBT = deserialize(&bytes).map_err(Error::PSBTCannotDeserialize)?;
+            .map_err(|_| Error::PsbtBadStringEncoding(opt.psbt.kind()))?;
+        let mut psbt: BitcoinPsbt = deserialize(&bytes).map_err(Error::PsbtCannotDeserialize)?;
 
         self.save_psbt(&mut psbt)?;
         Ok(())
@@ -218,26 +217,26 @@ impl Context {
 
     /// psbts_dir is general psbts dir, name is extracted from PSBT
     /// if file exists a PSBT merge will be attempted
-    pub fn save_psbt(&self, psbt: &mut BitcoinPSBT) -> Result<String> {
+    pub fn save_psbt(&self, psbt: &mut BitcoinPsbt) -> Result<String> {
         debug!("save_psbt");
 
         let name = match get_psbt_name(psbt) {
             Some(name) => name,
             None => {
-                let opt = ListOptions { kind: Kind::PSBT };
+                let opt = ListOptions { kind: Kind::Psbt };
                 let psbts = self.list(&opt)?.psbts;
                 find_or_create(psbt, psbts)?
             }
         };
 
         debug!("psbt_name: {}", name);
-        let id = Identifier::new(self.network, Kind::PSBT, &name);
+        let id = Identifier::new(self.network, Kind::Psbt, &name);
         if let Ok(existing_psbt) = self.read::<Psbt>(&name) {
             info!("old psbt exist, merging together");
             let existing_psbt = existing_psbt.psbt()?;
             psbt.merge(existing_psbt.clone())?;
             if psbt == &existing_psbt {
-                return Err(Error::PSBTNotChangedAfterMerge);
+                return Err(Error::PsbtNotChangedAfterMerge);
             }
         }
         let psbt = psbt_to_base64(&psbt).1;
@@ -264,7 +263,7 @@ pub fn load_if_unloaded(client: &Client, wallet_name: &str) -> Result<()> {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct SavePSBTOptions {
+pub struct SavePsbtOptions {
     pub psbt: StringEncoding,
 }
 
