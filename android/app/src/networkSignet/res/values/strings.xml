@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Firma (signet)</string>
+    <string name="import_xprv">Import tprv</string>
+
+</resources>

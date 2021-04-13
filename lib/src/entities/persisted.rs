@@ -156,6 +156,7 @@ impl MasterSecret {
     }
 
     fn path(&self) -> DerivationPath {
+        //TODO copay multisig derivation, not sure
         let n = match self.key.network {
             Network::Bitcoin => "0",
             Network::Testnet => "1",

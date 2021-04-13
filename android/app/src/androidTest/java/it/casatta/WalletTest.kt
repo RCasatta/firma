@@ -36,11 +36,13 @@ class WalletTest : Common() {
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
             "testnet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
+            "signet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
             "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"
         )
         val importsText = mapOf(
             "mainnet" to "Import xprv",
             "testnet" to "Import tprv",
+            "signet" to "Import tprv",
             "regtest" to "Import tprv"
         )
         val network = getNetwork()
@@ -61,6 +63,7 @@ class WalletTest : Common() {
         val mainDescriptors = mapOf(
             "mainnet" to descriptorMainMainnet,
             "testnet" to descriptorMainTestnet,
+            "signet" to descriptorMainTestnet,
             "regtest" to descriptorMainTestnet
         )
 

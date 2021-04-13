@@ -55,16 +55,19 @@ class KeyTest : Common() {
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
             "testnet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
+            "signet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
             "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"
         )
         val xpubs = mapOf(
             "mainnet" to "[dd0847bb/48h/0h/0h/2h]xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*",
             "testnet" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*",
+            "signet" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*",
             "regtest" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*"
         )
         val importsText = mapOf(
             "mainnet" to "Import xprv",
             "testnet" to "Import tprv",
+            "signet" to "Import tprv",
             "regtest" to "Import tprv"
         )
         val network = getNetwork()
@@ -96,16 +99,19 @@ class KeyTest : Common() {
         val activity = activityRule.launchActivity(Intent())
         val keyName = "key${System.currentTimeMillis()}"
 
-        val expectedDescPubTestnet =
-            "[cabe32d7/48h/1h/0h/2h]tpubDERURuyFUBH1qfB38hVJFXRrG4fJ6SQS3jwixLAtvRAierc8pbmLF3wBWpiqeV4kXkCN2QvndGeo5wcWtNXCNymvSmBnWT9NgNcb2nbEWQv/0/*"
         val expectedDescPubMainnet =
             "[cabe32d7/48h/0h/0h/2h]xpub6DhVvf4GfRxVQZxcGTYFxwWPoL7GbXMe7nfP5Uhi5ZWbqvWdJsdJnwKkkcWiWbse2fBZn3RPiSjzpJwqNe8Zwqvv9DSjPqkkdUiegP97SVC/0/*"
+        val expectedDescPubTestnet =
+            "[cabe32d7/48h/1h/0h/2h]tpubDERURuyFUBH1qfB38hVJFXRrG4fJ6SQS3jwixLAtvRAierc8pbmLF3wBWpiqeV4kXkCN2QvndGeo5wcWtNXCNymvSmBnWT9NgNcb2nbEWQv/0/*"
+        val expectedDescPubSignet =
+            "[cabe32d7/48h/3h/0h/2h]tpubDEmpCZSfan5n7uG2HDe9CAh25JxgkGyvXGgXfPxQhaZ8wzqJ9bpJ6ASQkkwPyfHbTy7Ew4MWCzydicwfHSYC5hES6eNz1nC9ETLc92oBy2o/0/*"
         val expectedDescPubRegtest =
             "[cabe32d7/48h/2h/0h/2h]tpubDEANPi9ucM4k8g549b4f1NUjtisSJz9SaKPxfmvrj3nGJCd9HLn3bpmJu5PLEwLV4rDQqazjwN2rHacjH2W2wV93S9WABHXHJVgHuAAyVHr/0/*"
 
         val expectedXpub = mapOf(
             "mainnet" to expectedDescPubMainnet,
             "testnet" to expectedDescPubTestnet,
+            "signet" to expectedDescPubSignet,
             "regtest" to expectedDescPubRegtest
         )
         val mnemonic =
@@ -140,11 +146,14 @@ class KeyTest : Common() {
             "[9cf794b6/48h/0h/0h/2h]xpub6EcBbnjoWQyB2sm1nDpiqymb629pCQmprDp22QWU8NXp81YHzcm98duacrav2s1bw3kCryM6UTknRDJcxHCxkHX3fcXrmsKy6QRWpDDpTqS/0/*"
         val expectedDescPubTestnet =
             "[9cf794b6/48h/1h/0h/2h]tpubDF2XEjMTg94eFNAsX5jEK5nxA4Vs6VVjJQXgztKmSpGy5jiBNBgrmpqxcjTEzdnvfVG5U7SMLndPHJph9EHVMZie6HFYCt6XnXfFpwASqyq/0/*"
+        val expectedDescPubSignet =
+            "[9cf794b6/48h/3h/0h/2h]tpubDEhd7RmezfBKFpBSxMxhXYKqsW4E2dBVT7Jmm9N5YWkEHiNJ6izuzbMyZdYwhDk2x6GeCkcZEV7x86kGf9YawrKZGZ6v2c9txMJ1vjdz4J1/0/*"
         val expectedDescPubRegtest =
             "[9cf794b6/48h/2h/0h/2h]tpubDFKHxokA8JTGedRPmkFvCJ8CB2zqcHt3zuP7BwNarwZEkrhRnGpPzC9KkdtGj9KvYdf3hBU8N3CMa43yWMiLuB5W3f95TncHgSZtTaH5TTN/0/*"
         val expectedXpub = mapOf(
             "mainnet" to expectedDescPubMainnet,
             "testnet" to expectedDescPubTestnet,
+            "signet" to expectedDescPubSignet,
             "regtest" to expectedDescPubRegtest
         )
         val network = getNetwork()

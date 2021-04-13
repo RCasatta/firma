@@ -22,23 +22,28 @@ import org.junit.Assert
 
 open class Common {
 
+    // returns a network which is invalid in the given network
     fun invalidNetwork(network: String): String {
-        val validNetworks = arrayOf("mainnet", "testnet", "regtest")
-        Assert.assertTrue(validNetworks.contains(network))
+        isValidNetwork(network)
         when (network) {
             "mainnet" -> return "testnet"
             "testnet" -> return "mainnet"
+            "signet" -> return "mainnet"
             "regtest" -> return "mainnet"
         }
         return ""
+    }
+
+    private fun isValidNetwork(network: String) {
+        val validNetworks = arrayOf("mainnet", "testnet", "signet", "regtest")
+        Assert.assertTrue(validNetworks.contains(network))
     }
 
     fun getNetwork(): String {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
         Assert.assertTrue(appContext.packageName.startsWith("it.casatta"))
         val network = appContext.packageName.substring(11)
-        val validNetworks = arrayOf("mainnet", "testnet", "regtest")
-        Assert.assertTrue(validNetworks.contains(network))
+        isValidNetwork(network)
         return network
     }
 

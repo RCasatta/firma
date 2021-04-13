@@ -20,7 +20,7 @@ use structopt::StructOpt;
 
 #[derive(StructOpt, Debug, Clone, Serialize, Deserialize)]
 pub struct Context {
-    /// Network (bitcoin, testnet, regtest)
+    /// Network (bitcoin, testnet, regtest, signet)
     #[structopt(short, long, default_value = "testnet")]
     pub network: bitcoin::Network,
 

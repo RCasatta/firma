@@ -35,6 +35,11 @@ android {
             applicationIdSuffix ".testnet"
             versionNameSuffix "-testnet"
         }
+        networkSignet {
+            dimension "network"
+            applicationIdSuffix ".signet"
+            versionNameSuffix "-signet"
+        }
         networkRegtest {
             dimension "network"
             applicationIdSuffix ".regtest"
