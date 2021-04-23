@@ -1,3 +1,6 @@
+[![MIT license](https://img.shields.io/github/license/RCasatta/firma)](https://github.com/RCasatta/firma/blob/master/LICENSE)
+[![Crates](https://img.shields.io/crates/v/firma.svg)](https://crates.io/crates/firma)
+
 # Firma
 
 **WARNING - Early-stage software, do not use with real bitcoins.**

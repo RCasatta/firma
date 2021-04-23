@@ -1,3 +1,6 @@
+[![MIT license](https://img.shields.io/github/license/RCasatta/firma)](https://github.com/RCasatta/firma/blob/master/LICENSE)
+[![Crates](https://img.shields.io/crates/v/firma-cli.svg)](https://crates.io/crates/firma-cli)
+
 # Creating a 2of2 multisig wallet p2wsh
 
 During the following step we are going to create a multisig wallet 2of2 in testnet and we are going to sign and broadcast a transaction. 
