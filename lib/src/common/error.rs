@@ -1,6 +1,6 @@
 use crate::ErrorJson;
-use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::BlockHash;
+use core::fmt::Formatter;
 use miniscript::descriptor;
 use qr_code::types::QrError;
 use serde_json::Value;

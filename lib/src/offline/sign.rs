@@ -312,7 +312,7 @@ impl PsbtSigner {
     }
 }
 
-struct MessageToSign<'a> {
+pub struct MessageToSign<'a> {
     psbt: &'a BitcoinPsbt,
     cache: SigHashCache<&'a Transaction>,
 }

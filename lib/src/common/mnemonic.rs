@@ -18,9 +18,9 @@
 //! Mnemonic code for generating deterministic keys
 //! mnemonic in english
 //!
-use bitcoin::hashes::core::fmt::{Display, Formatter};
 use bitcoin::hashes::{sha256, sha512, Hash, HashEngine, Hmac, HmacEngine};
 use bitcoin::util::bip158::{BitStreamReader, BitStreamWriter};
+use core::fmt::{Display, Formatter};
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;

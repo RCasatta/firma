@@ -1,7 +1,7 @@
 use crate::offline::decrypt::{decrypt, EncryptionKey, MaybeEncrypted};
 use crate::{expand_tilde, Error, Result, StringEncoding};
-use bitcoin::hashes::core::fmt::Formatter;
 use bitcoin::Network;
+use core::fmt::Formatter;
 use log::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
