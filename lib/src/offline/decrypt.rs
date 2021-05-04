@@ -55,7 +55,7 @@ where
                 let mut nonce_bytes = [0u8; 12]; // Suggested 96 bits
                 thread_rng().fill(&mut nonce_bytes);
                 let nonce = GenericArray::from_slice(&nonce_bytes);
-                let plaintext = serde_json::to_vec(plaintext)?;
+                let plaintext = serde_json::to_vec(plaintext)?; // consider using serde_cbor::ser::to_vec_packed
                 let ciphertext = cipher.encrypt(&nonce, &plaintext[..])?;
                 let mut result = nonce_bytes.to_vec();
                 result.extend(ciphertext);

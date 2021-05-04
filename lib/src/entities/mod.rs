@@ -289,8 +289,10 @@ mod tests {
 
         let vec_json = serde_json::to_vec(&wallet).unwrap();
         let vec_cbor = serde_cbor::to_vec(&wallet).unwrap();
+        let vec_packed_cbor = serde_cbor::ser::to_vec_packed(&wallet).unwrap();
 
         assert_eq!(vec_json.len(), 704);
         assert_eq!(vec_cbor.len(), 682);
+        assert_eq!(vec_packed_cbor.len(), 632);
     }
 }

@@ -7,7 +7,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Message, Secp256k1, SignOnly};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::{Network, Script, SigHashType};
+use bitcoin::{Network, Script, SigHashType, Transaction};
 use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -251,10 +251,9 @@ impl PsbtSigner {
 
     fn sign_input(&mut self, script: &Script, input_index: usize) -> Result<()> {
         debug!("sign_input #{} script:{:?}", input_index, script);
+        let psbt_clone = self.psbt.clone();
+        let mut message_to_sign = MessageToSign::new(&psbt_clone);
         let input = &mut self.psbt.inputs[input_index];
-        let tx = &self.psbt.global.unsigned_tx;
-        let is_segwit = input.witness_utxo.is_some();
-        let mut sig_hash_cache = SigHashCache::new(tx);
         let my_fing = self.xprv.fingerprint(&self.secp);
 
         for (pubkey, (fing, child)) in input.bip32_derivation.iter() {
@@ -282,19 +281,10 @@ impl PsbtSigner {
                     "pubkey derived and expected differs even if fingerprint matches!".into(),
                 );
             }
-            let (hash, sighash);
-            if is_segwit {
-                let wutxo = input.witness_utxo.as_ref();
-                let value = wutxo.ok_or(Error::MissingWitnessUtxo)?.value;
-                sighash = input.sighash_type.unwrap_or(SigHashType::All);
-                hash = sig_hash_cache.signature_hash(input_index, script, value, sighash);
-            } else {
-                sighash = input.sighash_type.ok_or(Error::MissingSighash)?;
-                hash = tx.signature_hash(input_index, &script, sighash.as_u32());
-            };
-            let msg = &Message::from_slice(&hash.into_inner()[..])?;
+
+            let (sighash, msg) = message_to_sign.hash(input_index, &script)?;
             let key = &privkey.private_key.key;
-            let signature = self.secp.sign(msg, key);
+            let signature = self.secp.sign(&msg, key);
             let mut signature = signature.serialize_der().to_vec();
             signature.push(sighash.as_u32() as u8); // TODO how to properly do this?
             match input.partial_sigs.get(pubkey) {
@@ -319,6 +309,40 @@ impl PsbtSigner {
 
     fn pretty_print(&self, wallets: &[Wallet]) -> Result<PsbtPrettyPrint> {
         pretty_print(&self.psbt, self.network, wallets)
+    }
+}
+
+struct MessageToSign<'a> {
+    psbt: &'a BitcoinPsbt,
+    cache: SigHashCache<&'a Transaction>,
+}
+impl<'a> MessageToSign<'a> {
+    pub fn new(psbt: &'a BitcoinPsbt) -> Self {
+        MessageToSign {
+            psbt,
+            cache: SigHashCache::new(&psbt.global.unsigned_tx),
+        }
+    }
+    pub fn hash(&mut self, input_index: usize, script: &Script) -> Result<(SigHashType, Message)> {
+        let input = &self.psbt.inputs[input_index];
+        let (sig_hash_type, sig_hash);
+        if input.witness_utxo.is_some() {
+            let wutxo = input.witness_utxo.as_ref();
+            let value = wutxo.ok_or(Error::MissingWitnessUtxo)?.value;
+            sig_hash_type = input.sighash_type.unwrap_or(SigHashType::All);
+            sig_hash = self
+                .cache
+                .signature_hash(input_index, script, value, sig_hash_type);
+        } else {
+            sig_hash_type = input.sighash_type.ok_or(Error::MissingSighash)?;
+            sig_hash = self.psbt.global.unsigned_tx.signature_hash(
+                input_index,
+                script,
+                sig_hash_type.as_u32(),
+            );
+        }
+        let msg = Message::from_slice(&sig_hash.into_inner()[..])?;
+        Ok((sig_hash_type, msg))
     }
 }
 
