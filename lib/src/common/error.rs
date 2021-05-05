@@ -42,9 +42,7 @@ pub enum Error {
     Mnemonic(crate::common::mnemonic::Error),
     PsbtNotChangedAfterMerge,
     PsbtBadStringEncoding(String),
-    PsbtCannotDeserialize(bitcoin::consensus::encode::Error),
     MaybeEncryptedWrongState,
-    Encryption(aes_gcm_siv::aead::Error),
     EncryptionKeyNot32Bytes(usize),
     MissingEncryptionKey,
     InvalidMessageSignature,
@@ -53,6 +51,7 @@ pub enum Error {
     WalletAlreadyExistsInNode(String),
     WalletSignatureNotVerified,
     WrongKeyType,
+    MissingUtxoAndNotFinalized,
 
     // External
     BitcoinRpc(bitcoincore_rpc::Error),
@@ -79,6 +78,8 @@ pub enum Error {
     MiniscriptDescriptor(descriptor::DescriptorKeyParseError),
     MiniscriptConversion(descriptor::ConversionError),
     Bmp(qr_code::bmp_monochrome::BmpError),
+    Encryption(aes_gcm_siv::aead::Error),
+    PsbtCannotDeserialize(bitcoin::consensus::encode::Error),
 }
 
 macro_rules! impl_error {
@@ -182,6 +183,9 @@ impl fmt::Display for Error {
                 "The wallet signature did not verify with any of the key of the wallet"
             ),
             Error::WrongKeyType => write!(f, "Expected another key type"),
+            Error::MissingUtxoAndNotFinalized => {
+                write!(f, "witness_utxo and non_witness_utxo are both None")
+            }
 
             Error::BitcoinRpc(e) => write!(f, "{:?}", e),
             Error::Serde(e) => write!(f, "{:?}", e),

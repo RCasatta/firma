@@ -128,7 +128,8 @@ impl PsbtSigner {
                         let witness_utxo = input
                             .clone()
                             .witness_utxo
-                            .expect("both witness_utxo and non_witness_utxo are none");
+                            .ok_or(Error::MissingUtxoAndNotFinalized)?;
+
                         let script = match input.clone().redeem_script {
                             Some(script) => {
                                 if witness_utxo.script_pubkey != script.to_p2sh() {
@@ -177,8 +178,8 @@ impl PsbtSigner {
         }
         let signed = self.psbt.inputs != initial_inputs;
         Ok(SignResult {
-            added_paths,
             signed,
+            added_paths,
         })
     }
 

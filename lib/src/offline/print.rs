@@ -7,7 +7,7 @@ use bitcoin::consensus::serialize;
 use bitcoin::secp256k1::{Secp256k1, Signature};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use bitcoin::util::key;
-use bitcoin::{Address, Amount, Network, OutPoint, Script, SignedAmount, TxOut};
+use bitcoin::{Address, Amount, Network, OutPoint, Script, SignedAmount};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::PathBuf;
@@ -68,66 +68,88 @@ pub fn pretty_print(
     wallets: &[Wallet],
 ) -> Result<PsbtPrettyPrint> {
     let mut result = PsbtPrettyPrint::default();
-    let mut previous_outputs: Vec<TxOut> = vec![];
+    let mut previous_outputs = vec![];
     let mut output_values: Vec<u64> = vec![];
     let tx = &psbt.global.unsigned_tx;
     let vouts: Vec<OutPoint> = tx.input.iter().map(|el| el.previous_output).collect();
     for (i, input) in psbt.inputs.iter().enumerate() {
-        let previous_output = match (&input.non_witness_utxo, &input.witness_utxo) {
-            (_, Some(val)) => val,
-            (Some(prev_tx), None) => {
+        let is_finalized = input.final_script_sig.is_some() || input.final_script_witness.is_some();
+        let previous_output = match (&input.non_witness_utxo, &input.witness_utxo, is_finalized) {
+            (_, _, true) => None,
+            (_, Some(val), _) => Some(val),
+            (Some(prev_tx), None, _) => {
                 let outpoint = *vouts.get(i).ok_or(Error::MissingOutpoint)?;
                 assert_eq!(prev_tx.txid(), outpoint.txid);
-                prev_tx
-                    .output
-                    .get(outpoint.vout as usize)
-                    .ok_or(Error::MissingTxout)?
+                Some(
+                    prev_tx
+                        .output
+                        .get(outpoint.vout as usize)
+                        .ok_or(Error::MissingTxout)?,
+                )
             }
-            _ => return Err("witness_utxo and non_witness_utxo are both None".into()),
+            _ => return Err(Error::MissingUtxoAndNotFinalized),
         };
-        previous_outputs.push(previous_output.clone());
+        previous_outputs.push(previous_output);
     }
-    let input_values: Vec<u64> = previous_outputs.iter().map(|o| o.value).collect();
+    let all_previous_known = previous_outputs.iter().all(Option::is_some);
     let mut balances = HashMap::new();
     let mut message_to_sign = MessageToSign::new(&psbt);
     let secp = Secp256k1::verification_only();
 
-    for (i, input) in tx.input.iter().enumerate() {
-        let addr = Address::from_script(&previous_outputs[i].script_pubkey, network)
-            .ok_or(Error::NonDefaultScript)?;
-        let keypaths = &psbt.inputs[i].bip32_derivation;
-        let signatures: HashSet<Fingerprint> = psbt.inputs[i]
-            .partial_sigs
-            .iter()
-            .filter(|(pk, signature)| {
-                // Verify the signature in the PSBT is valid
-                //TODO works only for v0_p2wsh
-                let script = psbt.inputs[i].witness_script.as_ref().unwrap();
-                let (_, message) = message_to_sign.hash(i, script).unwrap();
-                let signature = Signature::from_der(&signature[..signature.len() - 1]).unwrap(); // remove sig_hash_type
-                match secp.verify(&message, &signature, &pk.key) {
-                    Ok(_) => true,
-                    Err(_) => {
-                        result.info.push(
-                            "Signatures: one or more signature in the psbt is not valid"
-                                .to_string(),
-                        );
-                        false
-                    }
-                }
-            })
-            .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
-            .collect();
+    let mut signatures: HashSet<Fingerprint>;
+    let mut value: Option<Amount>;
+    let mut wallet_if_any: Option<(String, DerivationPath)>;
 
-        let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
-        if let Some((wallet, _)) = &wallet_if_any {
-            *balances.entry(wallet.clone()).or_insert(0i64) -= previous_outputs[i].value as i64
+    for (i, input) in tx.input.iter().enumerate() {
+        match previous_outputs[i] {
+            Some(previous_output) => {
+                let addr = Address::from_script(&previous_output.script_pubkey, network)
+                    .ok_or(Error::NonDefaultScript)?;
+                let keypaths = &psbt.inputs[i].bip32_derivation;
+                signatures = psbt.inputs[i]
+                    .partial_sigs
+                    .iter()
+                    .filter(|(pk, signature)| {
+                        // Verify the signature in the PSBT is valid
+                        //TODO works only for v0_p2wsh
+                        let script = psbt.inputs[i].witness_script.as_ref().unwrap();
+                        let (_, message) = message_to_sign.hash(i, script).unwrap();
+                        let signature =
+                            Signature::from_der(&signature[..signature.len() - 1]).unwrap(); // remove sig_hash_type
+                        match secp.verify(&message, &signature, &pk.key) {
+                            Ok(_) => true,
+                            Err(_) => {
+                                result.info.push(
+                                    "Signatures: one or more signature in the psbt is not valid"
+                                        .to_string(),
+                                );
+                                false
+                            }
+                        }
+                    })
+                    .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
+                    .collect();
+
+                wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
+                if let Some((wallet, _)) = &wallet_if_any {
+                    *balances.entry(wallet.clone()).or_insert(0i64) -= previous_output.value as i64
+                }
+                value = Some(Amount::from_sat(previous_output.value));
+            }
+            None => {
+                signatures = HashSet::new();
+                value = None;
+                wallet_if_any = None;
+            }
         }
+
         let txin = entities::TxIn {
             outpoint: input.previous_output.to_string(),
             signatures,
             common: TxCommonInOut {
-                value: Amount::from_sat(previous_outputs[i].value).to_string(),
+                value: value
+                    .map(|a| a.to_string())
+                    .unwrap_or_else(|| "N/A".to_string()),
                 wallet_with_path: wallet_if_any.map(|(w, p)| format!("[{}]{}", w, p)),
             },
         };
@@ -181,9 +203,9 @@ pub fn pretty_print(
     }
 
     // Detect unnecessary input heuristic
-    if previous_outputs.len() > 1 {
-        if let Some(smallest_input) = input_values.iter().min() {
-            if output_values.iter().any(|value| value < smallest_input) {
+    if previous_outputs.len() > 1 && all_previous_known {
+        if let Some(smallest_input) = previous_outputs.iter().map(|o| o.unwrap().value).min() {
+            if output_values.iter().any(|value| *value < smallest_input) {
                 result.info.push("Privacy: smallest output is smaller then smallest input https://en.bitcoin.it/wiki/Privacy#Unnecessary_input_heuristic".to_string());
             }
         }
@@ -192,6 +214,7 @@ pub fn pretty_print(
     // Detect script reuse
     let input_scripts: HashSet<Script> = previous_outputs
         .iter()
+        .filter_map(|o| o.as_ref())
         .map(|o| o.script_pubkey.clone())
         .collect();
     if tx
@@ -204,10 +227,21 @@ pub fn pretty_print(
         );
     }
 
-    let fee = input_values.iter().sum::<u64>() - output_values.iter().sum::<u64>();
+    let fee = if all_previous_known {
+        Some(
+            previous_outputs
+                .iter()
+                .map(|o| o.unwrap().value)
+                .sum::<u64>()
+                - output_values.iter().sum::<u64>(),
+        )
+    } else {
+        None
+    };
+
     let tx_vbytes = tx.get_weight() / 4;
     let estimated_tx_vbytes = estimate_weight(psbt).ok().map(|e| e / 4);
-    let estimated_fee_rate = estimated_tx_vbytes.map(|e| fee as f64 / e as f64);
+    let estimated_fee_rate = fee.and_then(|fee| estimated_tx_vbytes.map(|e| fee as f64 / e as f64));
 
     result.size = Size {
         estimated: estimated_tx_vbytes,
@@ -216,7 +250,9 @@ pub fn pretty_print(
     };
     result.fee = Fee {
         absolute: fee,
-        absolute_fmt: Amount::from_sat(fee).to_string(),
+        absolute_fmt: fee
+            .map(|fee| Amount::from_sat(fee).to_string())
+            .unwrap_or_else(|| "N/A".to_string()),
         rate: estimated_fee_rate,
     };
 
@@ -329,7 +365,7 @@ mod tests {
         assert_eq!("Privacy: outputs have different script types https://en.bitcoin.it/wiki/Privacy#Sending_to_a_different_script_type", result.info[0]);
         assert_eq!("Privacy: outputs have different precision https://en.bitcoin.it/wiki/Privacy#Round_numbers", result.info[1]);
 
-        assert_eq!(result.fee.absolute, 381);
+        assert_eq!(result.fee.absolute, Some(381));
 
         dbg!(result);
     }
@@ -353,5 +389,22 @@ mod tests {
         assert!(result
             .info
             .contains(&"Signatures: one or more signature in the psbt is not valid".to_string()));
+    }
+
+    #[test]
+    fn test_pretty_print_wrong_sig_p2pk_and_v0_p2psh() {
+        // Test vector from bip-174
+        // P2PKH input and one P2SH-P2WPKH
+        let psbt_base64 = "cHNidP8BAKACAAAAAqsJSaCMWvfEm4IS9Bfi8Vqz9cM9zxU4IagTn4d6W3vkAAAAAAD+////qwlJoIxa98SbghL0F+LxWrP1wz3PFTghqBOfh3pbe+QBAAAAAP7///8CYDvqCwAAAAAZdqkUdopAu9dAy+gdmI5x3ipNXHE5ax2IrI4kAAAAAAAAGXapFG9GILVT+glechue4O/p+gOcykWXiKwAAAAAAAEHakcwRAIgR1lmF5fAGwNrJZKJSGhiGDR9iYZLcZ4ff89X0eURZYcCIFMJ6r9Wqk2Ikf/REf3xM286KdqGbX+EhtdVRs7tr5MZASEDXNxh/HupccC1AaZGoqg7ECy0OIEhfKaC3Ibi1z+ogpIAAQEgAOH1BQAAAAAXqRQ1RebjO4MsRwUPJNPuuTycA5SLx4cBBBYAFIXRNTfy4mVAWjTbr6nj3aAfuCMIAAAA";
+        let (_, psbt) = psbt_from_base64(&psbt_base64).unwrap();
+
+        // non_witness_utxo is missing in test-vector, got it from testnet
+        //let tx =  deserialize( &Vec::<u8>::from_hex("0200000001268171371edff285e937adeea4b37b78000c0566cbb3ad64641713ca42171bf6000000006a473044022070b2245123e6bf474d60c5b50c043d4c691a5d2435f09a34a7662a9dc251790a022001329ca9dacf280bdf30740ec0390422422c81cb45839457aeb76fc12edd95b3012102657d118d3357b8e0f4c2cd46db7b39f6d9c38d9a70abcb9b2de5dc8dbfe4ce31feffffff02d3dff505000000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac00e1f5050000000017a9143545e6e33b832c47050f24d3eeb93c9c03948bc787b32e1300").unwrap()).unwrap();
+        //psbt.inputs[0].non_witness_utxo = Some(tx);
+
+        let result = pretty_print(&psbt, Network::Testnet, &[]).unwrap();
+        assert_eq!(result.inputs.len(), 2);
+        let signatures: usize = result.inputs.iter().map(|i| i.signatures.len()).sum();
+        assert_eq!(signatures, 0);
     }
 }

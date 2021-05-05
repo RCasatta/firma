@@ -142,7 +142,7 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of2 = firma_2of2.online_balance(&name_2of2).unwrap();
-    let expected = fund_2of2 - sign_a.fee.absolute; // since sending to myself deduct just the fee
+    let expected = fund_2of2 - sign_a.fee.absolute.unwrap(); // since sending to myself deduct just the fee
     assert_eq!(expected, balance_2of2.confirmed.satoshi);
 
     // create a tx from firma 2of2 with rounded amount but same script types, check privacy analysis
@@ -190,7 +190,7 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3 = firma_2of3.online_balance(&name_2of3).unwrap();
-    let expected = fund_2of3 - value_sent - sign_a.fee.absolute;
+    let expected = fund_2of3 - value_sent - sign_a.fee.absolute.unwrap();
     assert_eq!(expected, balance_2of3.confirmed.satoshi);
 
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 1 and 2
@@ -213,7 +213,7 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_2 = firma_2of3.online_balance(&name_2of3).unwrap();
-    let expected = balance_2of3.confirmed.satoshi - value_sent - sign_a.fee.absolute;
+    let expected = balance_2of3.confirmed.satoshi - value_sent - sign_a.fee.absolute.unwrap();
     assert_eq!(expected, balance_2of3_2.confirmed.satoshi);
 
     // create a tx from firma 2of3 wallet and send back to bitcoind with keys 0 and 2
@@ -238,7 +238,7 @@ fn integration_test() {
     assert!(sent_tx.broadcasted);
     bitcoind.client.generate_to_address(1, &address).unwrap();
     let balance_2of3_3 = firma_2of3.online_balance(&name_2of3).unwrap();
-    let expected = balance_2of3_2.confirmed.satoshi - value_sent - sign_a.fee.absolute;
+    let expected = balance_2of3_2.confirmed.satoshi - value_sent - sign_a.fee.absolute.unwrap();
     assert_eq!(expected, balance_2of3_3.confirmed.satoshi);
 
     let coins_output = firma_2of3.online_list_coins(&name_2of3).unwrap();

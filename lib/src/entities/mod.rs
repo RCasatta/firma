@@ -115,7 +115,7 @@ pub struct PsbtPrettyPrint {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 pub struct Fee {
-    pub absolute: u64,
+    pub absolute: Option<u64>,
     pub absolute_fmt: String,
     pub rate: Option<f64>,
 }

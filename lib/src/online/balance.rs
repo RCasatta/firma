@@ -14,7 +14,7 @@ impl OnlineContext {
             _ => Some(am.into()),
         };
         let confirmed: BalanceSatBtc = balances.watchonly.trusted.into();
-        let balance = BalanceOutput { pending, confirmed };
+        let balance = BalanceOutput { confirmed, pending };
         Ok(balance)
     }
 }
