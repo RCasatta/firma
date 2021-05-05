@@ -386,7 +386,7 @@ impl OfflineContext {
     }
 }
 
-fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
+pub fn to_p2pkh(pubkey_hash: &[u8]) -> Script {
     Builder::new()
         .push_opcode(opcodes::all::OP_DUP)
         .push_opcode(opcodes::all::OP_HASH160)

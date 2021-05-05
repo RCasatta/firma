@@ -1,8 +1,10 @@
 use crate::list::ListOptions;
 use crate::offline::decrypt::decrypt;
 use crate::offline::descriptor::{derive_address, DeriveAddressOptions};
+use crate::offline::sign::MessageToSign;
 use crate::*;
 use bitcoin::consensus::serialize;
+use bitcoin::secp256k1::{Secp256k1, Signature};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, Fingerprint};
 use bitcoin::util::key;
 use bitcoin::{Address, Amount, Network, OutPoint, Script, SignedAmount, TxOut};
@@ -87,6 +89,8 @@ pub fn pretty_print(
     }
     let input_values: Vec<u64> = previous_outputs.iter().map(|o| o.value).collect();
     let mut balances = HashMap::new();
+    let mut message_to_sign = MessageToSign::new(&psbt);
+    let secp = Secp256k1::verification_only();
 
     for (i, input) in tx.input.iter().enumerate() {
         let addr = Address::from_script(&previous_outputs[i].script_pubkey, network)
@@ -95,8 +99,26 @@ pub fn pretty_print(
         let signatures: HashSet<Fingerprint> = psbt.inputs[i]
             .partial_sigs
             .iter()
+            .filter(|(pk, signature)| {
+                // Verify the signature in the PSBT is valid
+                //TODO works only for v0_p2wsh
+                let script = psbt.inputs[i].witness_script.as_ref().unwrap();
+                let (_, message) = message_to_sign.hash(i, script).unwrap();
+                let signature = Signature::from_der(&signature[..signature.len() - 1]).unwrap(); // remove sig_hash_type
+                match secp.verify(&message, &signature, &pk.key) {
+                    Ok(_) => true,
+                    Err(_) => {
+                        result.info.push(
+                            "Signatures: one or more signature in the psbt is not valid"
+                                .to_string(),
+                        );
+                        false
+                    }
+                }
+            })
             .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
             .collect();
+
         let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
         if let Some((wallet, _)) = &wallet_if_any {
             *balances.entry(wallet.clone()).or_insert(0i64) -= previous_outputs[i].value as i64
@@ -261,7 +283,7 @@ fn wallet_with_path(
 #[cfg(test)]
 mod tests {
     use crate::offline::print::{biggest_dividing_pow, pretty_print, script_type};
-    use crate::{psbt_from_base64, Wallet};
+    use crate::{psbt_from_base64, Psbt, Wallet};
     use bitcoin::Network;
 
     #[test]
@@ -310,5 +332,26 @@ mod tests {
         assert_eq!(result.fee.absolute, 381);
 
         dbg!(result);
+    }
+
+    #[test]
+    fn test_pretty_print_wrong_sig() {
+        let bytes = include_bytes!("../../test_data/sign/psbt_testnet.1.signed.json");
+        let psbt_json: Psbt = serde_json::from_slice(bytes).unwrap();
+        let (_, mut psbt) = psbt_from_base64(&psbt_json.psbt).unwrap();
+        let result = pretty_print(&psbt, Network::Testnet, &[]).unwrap();
+        assert_eq!(result.inputs.len(), 1);
+        let signatures: usize = result.inputs.iter().map(|i| i.signatures.len()).sum();
+        assert_eq!(signatures, 1);
+
+        // changing 1 byte in the signature
+        (*psbt.inputs[0].partial_sigs.iter_mut().next().unwrap().1)[10] += 1;
+        let result = pretty_print(&psbt, Network::Testnet, &[]).unwrap();
+        assert_eq!(result.inputs.len(), 1);
+        let signatures: usize = result.inputs.iter().map(|i| i.signatures.len()).sum();
+        assert_eq!(signatures, 0);
+        assert!(result
+            .info
+            .contains(&"Signatures: one or more signature in the psbt is not valid".to_string()));
     }
 }
