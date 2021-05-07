@@ -111,20 +111,21 @@ pub fn pretty_print(
                     .iter()
                     .filter(|(pk, signature)| {
                         // Verify the signature in the PSBT is valid
-                        //TODO works only for v0_p2wsh
-                        let script = psbt.inputs[i].witness_script.as_ref().unwrap();
-                        let (_, message) = message_to_sign.hash(i, script).unwrap();
-                        let signature =
-                            Signature::from_der(&signature[..signature.len() - 1]).unwrap(); // remove sig_hash_type
-                        match secp.verify(&message, &signature, &pk.key) {
-                            Ok(_) => true,
-                            Err(_) => {
-                                result.info.push(
-                                    "Signatures: one or more signature in the psbt is not valid"
-                                        .to_string(),
-                                );
+                        //TODO at the moment it checks only for v0_p2wsh
+                        if psbt.inputs[i].witness_script.is_some() {
+                            let script = psbt.inputs[i].witness_script.as_ref().unwrap();
+                            let (_, message) = message_to_sign.hash(i, script).unwrap();
+                            let signature =
+                                Signature::from_der(&signature[..signature.len() - 1]).unwrap(); // remove sig_hash_type
+                            if secp.verify(&message, &signature, &pk.key).is_ok() {
+                                true
+                            } else {
+                                let msg = "Signatures: A signature in the psbt is not valid";
+                                result.info.push(msg.to_string());
                                 false
                             }
+                        } else {
+                            true
                         }
                     })
                     .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
@@ -388,7 +389,7 @@ mod tests {
         assert_eq!(signatures, 0);
         assert!(result
             .info
-            .contains(&"Signatures: one or more signature in the psbt is not valid".to_string()));
+            .contains(&"Signatures: A signature in the psbt is not valid".to_string()));
     }
 
     #[test]

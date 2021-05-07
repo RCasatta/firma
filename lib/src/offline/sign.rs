@@ -114,66 +114,61 @@ impl PsbtSigner {
         for (i, input) in self.psbt.inputs.clone().iter().enumerate() {
             debug!("sign input #{} {:?}", i, input);
             let is_segwit = input.witness_utxo.is_some();
+            let non_witness_utxo = input
+                .non_witness_utxo
+                .as_ref()
+                .ok_or(Error::MissingPrevoutTx)?;
+            let prevout = self.psbt.global.unsigned_tx.input[i].previous_output;
+            if non_witness_utxo.txid() != prevout.txid {
+                return Err(Error::MismatchPrevoutHash);
+            }
+            if is_segwit {
+                let witness_utxo = input
+                    .clone()
+                    .witness_utxo
+                    .ok_or(Error::MissingUtxoAndNotFinalized)?;
 
-            match input.non_witness_utxo.as_ref() {
-                None => {
-                    return Err(Error::MissingPrevoutTx);
-                }
-                Some(non_witness_utxo) => {
-                    let prevout = self.psbt.global.unsigned_tx.input[i].previous_output;
-                    if non_witness_utxo.txid() != prevout.txid {
-                        return Err(Error::MismatchPrevoutHash);
-                    }
-                    if is_segwit {
-                        let witness_utxo = input
-                            .clone()
-                            .witness_utxo
-                            .ok_or(Error::MissingUtxoAndNotFinalized)?;
-
-                        let script = match input.clone().redeem_script {
-                            Some(script) => {
-                                if witness_utxo.script_pubkey != script.to_p2sh() {
-                                    return Err("witness_utxo script_pubkey doesn't match the redeem script converted to p2sh".into());
-                                }
-                                script
-                            }
-                            None => witness_utxo.script_pubkey,
-                        };
-                        if script.is_v0_p2wpkh() {
-                            let script = to_p2pkh(&script.as_bytes()[2..]);
-                            if !script.is_p2pkh() {
-                                return Err("it is not a p2pkh script".into());
-                            }
-                            self.sign_input(&script, i)?;
-                        } else {
-                            let wit_script = input
-                                .clone()
-                                .witness_script
-                                .expect("witness_script is none");
-                            if script != wit_script.to_v0_p2wsh() {
-                                return Err(
-                                    "script and witness script to v0 p2wsh doesn't match".into()
-                                );
-                            }
-                            self.sign_input(&wit_script, i)?;
+                let script = match input.clone().redeem_script {
+                    Some(script) => {
+                        if witness_utxo.script_pubkey != script.to_p2sh() {
+                            return Err("witness_utxo script_pubkey doesn't match the redeem script converted to p2sh".into());
                         }
-                    } else {
-                        let script_pubkey = non_witness_utxo.output[prevout.vout as usize]
-                            .clone()
-                            .script_pubkey;
-                        match input.redeem_script.clone() {
-                            Some(redeem_script) => {
-                                if script_pubkey != redeem_script.to_p2sh() {
-                                    return Err("script_pubkey does not match the redeem script converted to p2sh".into());
-                                }
-                                self.sign_input(&redeem_script, i)?;
-                            }
-                            None => {
-                                self.sign_input(&script_pubkey, i)?;
-                            }
-                        };
+                        script
                     }
+                    None => witness_utxo.script_pubkey,
+                };
+                if script.is_v0_p2wpkh() {
+                    let script = to_p2pkh(&script.as_bytes()[2..]);
+                    if !script.is_p2pkh() {
+                        return Err("it is not a p2pkh script".into());
+                    }
+                    self.sign_input(&script, i)?;
+                } else {
+                    let wit_script = input
+                        .clone()
+                        .witness_script
+                        .expect("witness_script is none");
+                    if script != wit_script.to_v0_p2wsh() {
+                        return Err("script and witness script to v0 p2wsh doesn't match".into());
+                    }
+                    self.sign_input(&wit_script, i)?;
                 }
+            } else {
+                let script_pubkey = non_witness_utxo.output[prevout.vout as usize]
+                    .clone()
+                    .script_pubkey;
+                match input.redeem_script.clone() {
+                    Some(redeem_script) => {
+                        if script_pubkey != redeem_script.to_p2sh() {
+                            let m = "script_pubkey differs from redeem script converted to p2sh";
+                            return Err(m.into());
+                        }
+                        self.sign_input(&redeem_script, i)?;
+                    }
+                    None => {
+                        self.sign_input(&script_pubkey, i)?;
+                    }
+                };
             }
         }
         let signed = self.psbt.inputs != initial_inputs;
