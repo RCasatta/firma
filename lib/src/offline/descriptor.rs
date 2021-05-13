@@ -55,6 +55,7 @@ pub fn derive_address(network: Network, opt: &DeriveAddressOptions) -> Result<Ge
 #[cfg(test)]
 mod tests {
     use crate::offline::descriptor::*;
+    use bitcoin::util::bip32::Error::InvalidChildNumber;
     use bitcoin::Network;
 
     const DESCRIPTOR: &str = "wsh(multi(2,tpubD6NzVbkrYhZ4YfG9CySHqKHFbaLcD7hSDyqRUtCmMKNim5fkiJtTnFeqKsRHMHSK5ddFrhqRr3Ghv1JtuWkBzikuBqKu1xCpjQ9YxoPGgqU/0/*,tpubD6NzVbkrYhZ4WpudNKLizFbGzpsG3jkLF7mc8Vfh1fTDbbBPjDP29My6TaLncaS8VeDPcaNMdUkybucr8Kz9CHSdAtvxnaXyBxPRocefdXN/0/*))#5wstxmwd";
@@ -76,12 +77,8 @@ mod tests {
 
         assert_eq!("m/0/0", derived_address.path.to_string());
         opts.index = 2147483648;
-        assert_eq!(
-            derive_address(Network::Testnet, &opts)
-                .unwrap_err()
-                .to_string(),
-            "InvalidChildNumber(2147483648)"
-        );
+        let err = derive_address(Network::Testnet, &opts);
+        assert_matches!(err, Err(Error::Bip32(InvalidChildNumber(2147483648))));
     }
 
     #[test]

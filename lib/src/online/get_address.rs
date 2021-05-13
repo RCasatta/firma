@@ -1,5 +1,7 @@
 use crate::offline::descriptor::DeriveAddressOptions;
+use crate::offline::sign_wallet::verify_wallet_internal;
 use crate::*;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoincore_rpc::RpcApi;
 use log::info;
 use structopt::StructOpt;
@@ -13,6 +15,9 @@ pub struct GetAddressOptions {
     /// Explicitly specify address derivation index (by default taken from .firma and incremented)
     #[structopt(long)]
     pub index: Option<u32>,
+
+    #[structopt(long)]
+    pub verify_wallet: bool,
 }
 
 impl OnlineContext {
@@ -20,6 +25,12 @@ impl OnlineContext {
         let client = self.make_client(&opt.wallet_name)?;
         let wallet: Wallet = self.read(&opt.wallet_name)?;
         let mut indexes: WalletIndexes = self.read(&opt.wallet_name)?;
+
+        if opt.verify_wallet {
+            let wallet_signature: WalletSignature = self.read(&opt.wallet_name)?;
+            let secp = Secp256k1::verification_only();
+            let _ = verify_wallet_internal(&secp, &wallet, &wallet_signature, self.network)?;
+        }
 
         let index = opt.index.unwrap_or(indexes.main);
         let descriptor = wallet.descriptor;

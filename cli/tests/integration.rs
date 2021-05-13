@@ -44,10 +44,6 @@ fn integration_test() {
         r_err.unwrap_err().to_string(),
         Error::DiceValueErr(0, 20).to_string()
     );
-    let r3 = firma_2of2
-        .offline_restore("r4", "xprv", &r1.key.to_string())
-        .unwrap();
-    assert_eq!(r3.key, r1.key);
     let key_names = vec![r1.id.name.to_string(), r2.id.name.to_string()];
 
     let created_2of2_wallet = firma_2of2
@@ -61,6 +57,12 @@ fn integration_test() {
             .to_string(),
         "Wallet n2of2 already exists in the bitcoin node"
     );
+    let _result = firma_2of2.offline_sign_wallet(&name_2of2).unwrap();
+
+    let r3 = firma_2of2
+        .offline_restore("r3", "xprv", &r1.key.to_string())
+        .unwrap();
+    assert_eq!(r3.key, r1.key);
 
     // create firma 2of3 wallet
     let name_2of3 = "n2of3".to_string();
@@ -549,6 +551,13 @@ impl FirmaCommand {
             ],
             None,
         );
+        let value = map_json_error(result)?;
+        let output = from_value(value)?;
+        Ok(output)
+    }
+
+    pub fn offline_sign_wallet(&self, wallet_name: &str) -> Result<WalletSignature> {
+        let result = self.offline("sign-wallet", vec!["--wallet-name", wallet_name], None);
         let value = map_json_error(result)?;
         let output = from_value(value)?;
         Ok(output)

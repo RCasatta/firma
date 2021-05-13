@@ -11,6 +11,7 @@ use crate::{
 use bitcoin::secp256k1::{Secp256k1, Signing};
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::{secp256k1, Network};
+use log::debug;
 use miniscript::descriptor::{DescriptorXKey, Wildcard};
 use miniscript::{Descriptor, ForEachKey};
 use serde::{Deserialize, Serialize};
@@ -39,6 +40,8 @@ pub struct WalletSignature {
 pub struct MasterSecret {
     pub id: Identifier,
     pub key: ExtendedPrivKey,
+    pub network: Network, // ExtendedPrivKey is not enough since regtest is the same as testnet
+    pub fingerprint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mnemonic: Option<Mnemonic>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -90,7 +93,12 @@ impl Wallet {
         let secp = Secp256k1::verification_only();
         let mut keys = vec![];
         for k in self.extract_desc_pub_keys()? {
+            debug!("extract_wallet_sign_keys descriptor_pub_key:{} ", k);
             let key = k.derive(WALLET_SIGN_DERIVATION).derive_public_key(&secp)?;
+            debug!(
+                "extract_wallet_sign_keys public_key:{} WALLET_SIGN_DERIVATION:{}",
+                key, WALLET_SIGN_DERIVATION
+            );
             keys.push(key);
         }
         Ok(keys)
@@ -134,9 +142,12 @@ impl DescriptorPublicKey {
 impl MasterSecret {
     pub fn from_xprv(network: Network, key: ExtendedPrivKey, name: &str) -> Result<Self> {
         check_compatibility(network, key.network)?;
+        let fingerprint = key.fingerprint(&Secp256k1::signing_only()).to_string();
 
         Ok(MasterSecret {
             key,
+            network,
+            fingerprint,
             mnemonic: None,
             dice: None,
             id: Identifier::new(network, Kind::MasterSecret, name),
@@ -146,9 +157,12 @@ impl MasterSecret {
     pub fn new(network: Network, mnemonic: Mnemonic, name: &str) -> Result<Self> {
         let seed = mnemonic.to_seed(None);
         let key = ExtendedPrivKey::new_master(network, &seed.0)?;
+        let fingerprint = key.fingerprint(&Secp256k1::signing_only()).to_string();
 
         Ok(MasterSecret {
             key,
+            network,
+            fingerprint,
             mnemonic: Some(mnemonic),
             dice: None,
             id: Identifier::new(network, Kind::MasterSecret, name),
@@ -157,7 +171,7 @@ impl MasterSecret {
 
     fn path(&self) -> DerivationPath {
         //TODO copay multisig derivation, not sure
-        let n = match self.key.network {
+        let n = match self.network {
             Network::Bitcoin => "0",
             Network::Testnet => "1",
             Network::Regtest => "2",
@@ -168,6 +182,7 @@ impl MasterSecret {
     }
 
     pub fn as_desc_prv_key<T: Signing>(&self, secp: &Secp256k1<T>) -> Result<ExtendedPrivKey> {
+        debug!("Using path: {}", self.path());
         Ok(self.key.derive_priv(&secp, &self.path())?)
     }
 

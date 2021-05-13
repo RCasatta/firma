@@ -55,20 +55,20 @@ class KeyTest : Common() {
         val xprvs = mapOf(
             "mainnet" to "xprv9s21ZrQH143K2qwMASoVWNtTp23waKvSFEQELUbKKkpiH8c7YL56Uc4zDWrTgyeUrMsDxEt7CuGg3PZBwdygrMa3b4KTSowCQ7LEv48AaRQ",
             "testnet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
-            "signet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
-            "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"
+            "regtest" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF",
+            "signet" to "tprv8ZgxMBicQKsPd9TeAdPADNnSyH9SSUUbTVeFszDE23Ki6TBB5nCefAdHkK8Fm3qMQR6sHwA56zqRmKmxnHk37JkiFzvncDqoKmPWubu7hDF"
         )
         val xpubs = mapOf(
             "mainnet" to "[dd0847bb/48h/0h/0h/2h]xpub6En6P3aEhpmH9DqU9QpiMEL94QWDsNTVnVW8gqi6W2TBU7z4kPDenHLrNkzihcYhEvkRehZfC67uF1Sn8oqq9Q7nxnHPPEL96vawmCQZgVp/0/*",
             "testnet" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*",
-            "signet" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*",
-            "regtest" to "[d90c6a4f/48h/1h/0h/2h]tpubDFk5MPbkQ9zKfgmmLkS9buF12Enr2JiWyDfwucm7oxwM5Y3uDWrzEJ4Q8VQbQwXoFTz9A7QTTHDr8soGzYoJoWKtfxn8vfHtquFv8poghnf/0/*"
+            "regtest" to "[d90c6a4f/48h/2h/0h/2h]tpubDFeFLK8vQySAay9YBtJYXezAd1gv9SQKz4LaivdHymkuomrZ7erMVWHk6aigz1u9NwdK5qKWmn8UKra7B4MY1HF78XRVYcU7TNvRxLeXnEc/0/*",
+            "signet" to "[d90c6a4f/48h/3h/0h/2h]tpubDFFWnN94Aa2jNHkFFNFoDRvzR5xHwv7koLxoWtEMAxCcsyceiMyW2vVEZodutVMd8cnKZMk5aiBzygExQQSwPe7moeu2qx63jFrh177ZYBD/0/*"
         )
         val importsText = mapOf(
             "mainnet" to "Import xprv",
             "testnet" to "Import tprv",
-            "signet" to "Import tprv",
-            "regtest" to "Import tprv"
+            "regtest" to "Import tprv",
+            "signet" to "Import tprv"
         )
         val network = getNetwork()
 

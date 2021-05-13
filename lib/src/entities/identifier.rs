@@ -60,7 +60,10 @@ impl FromStr for Kind {
             "Psbt" => Ok(Kind::Psbt),
             _ => Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("({}) valid values are: wallets, keys, psbts", s),
+                format!(
+                    "({}) valid values are: Wallet, WalletSignature, MasterSecret, Psbt",
+                    s
+                ),
             )),
         }
     }

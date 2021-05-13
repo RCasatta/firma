@@ -2,9 +2,7 @@ package it.casatta
 
 import android.app.Activity
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -15,7 +13,6 @@ import kotlinx.android.synthetic.main.activity_key.delete
 import kotlinx.android.synthetic.main.activity_key.items
 import kotlinx.android.synthetic.main.activity_key.select
 import kotlinx.android.synthetic.main.activity_key.view_qr
-import java.nio.charset.Charset
 
 class KeyActivity : ContextActivity() {
     private val mapper: ObjectMapper = ObjectMapper().registerModule(KotlinModule())
@@ -27,7 +24,7 @@ class KeyActivity : ContextActivity() {
         setContentView(R.layout.activity_key)
 
         val keyString = intent.getStringExtra(C.KEY)
-        val keyJson = mapper.readValue(keyString, PrivateMasterKey::class.java)
+        val keyJson = mapper.readValue(keyString, MasterSecret::class.java)
         val keyTitle = "key: ${keyJson.id.name}"
         title = keyTitle
 

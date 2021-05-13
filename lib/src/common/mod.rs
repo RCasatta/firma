@@ -26,16 +26,18 @@ impl log::Log for SimpleLogger {
     }
 
     fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            let file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open("/tmp/firma.log")
-                .expect("can't open log");
-            let mut stream = BufWriter::new(file);
-            stream
-                .write_all(format!("{} - {}\n", record.level(), record.args()).as_bytes())
-                .expect("can't write log");
+        if let Some(path) = record.module_path() {
+            if self.enabled(record.metadata()) && path.contains("firma") {
+                let file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open("/tmp/firma.log")
+                    .expect("can't open log");
+                let mut stream = BufWriter::new(file);
+                stream
+                    .write_all(format!("{} - {}\n", record.level(), record.args()).as_bytes())
+                    .expect("can't write log");
+            }
         }
     }
 

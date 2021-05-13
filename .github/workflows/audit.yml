@@ -17,3 +17,8 @@ jobs:
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  bitcoin_master:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2

@@ -56,7 +56,7 @@ It is based on:
 
 You need:
 * [Bitcoin core 0.20.1](https://bitcoincore.org/)
-* [rust](https://www.rust-lang.org/) (MSRV  >= 1.41.0).
+* [rust](https://www.rust-lang.org/) (MSRV  >= 1.49.0).
 
 ### Install from crates
 

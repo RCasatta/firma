@@ -98,6 +98,7 @@ impl OnlineContext {
         let get_addr_opts = GetAddressOptions {
             wallet_name: opt.wallet_name.to_string(),
             index: None,
+            verify_wallet: false,
         };
 
         let change_address = self.get_address(&get_addr_opts)?.address;

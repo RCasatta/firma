@@ -62,7 +62,7 @@ class Data {
     )
 
     data class ListOutput(
-        val master_secrets: List<PrivateMasterKey>,
+        val master_secrets: List<MasterSecret>,
         val wallets: List<WalletJson>,
         val psbts: List<PsbtJson>,
         val wallets_signatures: List<WalletSignature>
@@ -74,8 +74,10 @@ class Data {
         val network: String
     )
 
-    data class PrivateMasterKey(
+    data class MasterSecret(
         val id: Identifier,
+        val fingerprint: String,
+        val network: String,
         val key: String,
         val mnemonic: String?,
         val dice: Dice?

@@ -1,5 +1,9 @@
 //#![warn(missing_docs)]
 
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+
 pub mod common;
 pub mod entities;
 pub mod offline;

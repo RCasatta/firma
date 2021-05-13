@@ -3,12 +3,13 @@ use crate::online::WalletNameOptions;
 use crate::*;
 use bitcoin::secp256k1::recovery::{RecoverableSignature, RecoveryId};
 use bitcoin::secp256k1::{Message, Secp256k1, Signing, Verification};
+use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::util::misc::signed_msg_hash;
 use bitcoin::{Address, Network, PrivateKey, PublicKey};
 use log::debug;
 use std::str::FromStr;
 
-pub const WALLET_SIGN_DERIVATION: u32 = u32::max_value() >> 1;
+pub const WALLET_SIGN_DERIVATION: u32 = u32::MAX >> 1;
 
 impl OfflineContext {
     pub fn verify_wallet(&self, opt: &WalletNameOptions) -> Result<VerifyWalletResult> {
@@ -23,15 +24,29 @@ impl OfflineContext {
         let secp = Secp256k1::signing_only();
         let wallet: Wallet = self.read(&opt.wallet_name)?;
         let message = &wallet.descriptor;
+        debug!("sign_wallet descriptor: {}", message);
         let desc_pub_keys: Vec<PublicKey> = wallet.extract_wallet_sign_keys()?;
+        debug!(
+            "sign_wallet desc_pub_keys: {}",
+            desc_pub_keys
+                .iter()
+                .map(|p| p.to_string())
+                .collect::<Vec<String>>()
+                .join(",")
+        );
 
         // search a key that is in the wallet descriptor
         let kind = Kind::MasterSecret;
         let list_opt = ListOptions { kind };
-        debug!("list_opt {:?}", list_opt);
+        debug!("sign_wallet list_opt {:?}", list_opt);
         let available_keys = self.list(&list_opt)?;
         let master_private_key = find_key(&secp, &available_keys, &desc_pub_keys)?;
+        debug!("sign_wallet using {}", master_private_key.id.name);
         let key = master_private_key.as_wallet_sign_prv_key(&secp)?;
+        let pub_key = master_private_key.as_wallet_sign_pub_key(&secp)?;
+        debug!("sign_wallet using {}", pub_key);
+        let match_pub = ExtendedPubKey::from_private(&secp, &key);
+        assert_eq!(pub_key, match_pub.public_key);
 
         let signature = sign_message_with_key(&secp, &key.private_key, message)?;
 
@@ -57,11 +72,13 @@ fn find_key<'a, T: Signing>(
 ) -> Result<&'a MasterSecret> {
     for key in available_keys.master_secrets.iter() {
         let k = key.as_wallet_sign_pub_key(&secp)?;
+        debug!("find_key key:{} -> sign_pub_key:{}", key.id.name, k);
         if desc_pub_keys.contains(&k) {
+            debug!("find_key found pubkey {} of key {}", k, key.id.name);
             return Ok(key);
         }
     }
-    Err("There is No private key participating in the wallet available".into())
+    Err("There is no private key participating in the wallet available".into())
 }
 
 pub fn verify_wallet_internal<T: Verification>(
@@ -74,10 +91,12 @@ pub fn verify_wallet_internal<T: Verification>(
     let message = &wallet.descriptor;
 
     for desc_pub_key in desc_pub_keys {
+        debug!("verify_wallet_internal desc_pub_key:{}", desc_pub_key);
         let pubkey = desc_pub_key
             .derive(WALLET_SIGN_DERIVATION)
             .derive_public_key(&secp)
             .unwrap(); //TODO
+        debug!("verify_wallet_internal pubkey:{}", pubkey);
         let master_address = Address::p2pkh(&pubkey, network);
         let verified =
             verify_message_with_address(&secp, &master_address, &signature.signature, message)?;
@@ -182,8 +201,10 @@ mod tests {
     use crate::offline::random::RandomOptions;
     use crate::offline::sign_wallet::{sign_message, verify_message};
     use crate::online::WalletNameOptions;
-    use crate::Wallet;
+    use crate::{Error, Wallet};
     use bitcoin::secp256k1::Secp256k1;
+    use bitcoin::util::bip32::ExtendedPubKey;
+    use bitcoin::Network;
 
     /*
     $ bitcoin-cli signmessagewithprivkey "KwQoPt6dL91fxRBWdt4nkCVrfo4ipeLcaD4ZCLntoTPhKGNgGqGm" ciao
@@ -210,6 +231,26 @@ mod tests {
     }
 
     #[test]
+    fn test_sign_key() {
+        let secp = Secp256k1::signing_only();
+        for network in [
+            Network::Bitcoin,
+            Network::Testnet,
+            Network::Signet,
+            Network::Regtest,
+        ]
+        .iter()
+        {
+            let context = TestContext::with_network(*network);
+            let master_private_key = context.create_key(&RandomOptions::new_random()).unwrap();
+            let key = master_private_key.as_wallet_sign_prv_key(&secp).unwrap();
+            let pub_key = master_private_key.as_wallet_sign_pub_key(&secp).unwrap();
+            let match_pub = ExtendedPubKey::from_private(&secp, &key);
+            assert_eq!(pub_key, match_pub.public_key);
+        }
+    }
+
+    #[test]
     fn test_sign_verify() {
         let context = TestContext::default();
         let key = context.create_key(&RandomOptions::new_random()).unwrap();
@@ -221,7 +262,8 @@ mod tests {
             .import_json(serde_json::to_value(wallet).unwrap())
             .unwrap();
 
-        let _ = context.verify_wallet(&wallet_name_opt).unwrap_err();
+        let err = context.verify_wallet(&wallet_name_opt);
+        assert_matches!(err, Err(Error::FileNotFoundOrCorrupt(..)));
         let mut signature = context.sign_wallet(&wallet_name_opt).unwrap();
         let result = context.verify_wallet(&wallet_name_opt).unwrap();
         assert!(result.verified, "valid signature did not verify");
@@ -244,10 +286,7 @@ mod tests {
         context
             .import_json(serde_json::to_value(signature).unwrap())
             .unwrap();
-        let result = context.verify_wallet(&wallet_name_opt);
-        assert!(
-            result.is_err(),
-            "signature of another wallet verified successfully"
-        );
+        let err = context.verify_wallet(&wallet_name_opt);
+        assert_matches!(err, Err(Error::WalletSignatureNotVerified));
     }
 }

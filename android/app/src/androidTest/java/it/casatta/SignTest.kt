@@ -37,13 +37,21 @@ class SignTest : Common() {
             val bobTprv = "tprv8ZgxMBicQKsPetwSbvkSob1PLvNeBzHftBgG61S37ywMpsCnKMkUhPbKp7FyZDsU2QvMqbF797DRqmwedPQnR5qqmUBkFVb7iNeKcEZv3ck"
             val bobKeyName = "bob_sign_test"
             val walletName = "alice-and-bob"
-            //val descriptor = "wsh(multi(2,tpubD6NzVbkrYhZ4YhgpmoJrX8fAmFFNCdhEj68qECiPz98iNZ9e3Tm9v3XD3fzHZfBoLqeSm9oLtighoeijQ9jGAFm9raQ4JqHZ1N4BHyaBz6Y/0/*,tpubD6NzVbkrYhZ4YMyEVaR3CzfVuwtaMKUaTVH3NXULYFjkfMTYwka4stDBzHhHkxd4MEMVgyyEV1WBCrpwde72w8LzjAE6oRLARBAiCD8cGQV/0/*))#wss3kl0z"
-            val descriptor = "wsh(multi(2,[a2ebe04e/48h/1h/0h/2h]tpubDEXDRpvW2srXCSjAvC36zYkSE3jxT1wf7JXDo35Ln4NZpmaMNhq8o9coH9U9BQ5bAN4WDGxXV9d426iYKGorFF5wvv4Wv63cZsCotiXGGkD/0/*,[1f5e43d8/48'/1'/0'/2']tpubDFU4parcXvV8tBYt4rS4a8rGNF1DA32DCnRfhzVL6b3MSiDomV95rv9mb7W7jAPMTohyEYpbhVS8FbmTsuQsFRxDWPJX2ZFEeRPMFz3R1gh/0/*))#szg2xsau"
+
+            val descriptorTestnet = "wsh(multi(2,[a2ebe04e/48h/1h/0h/2h]tpubDEXDRpvW2srXCSjAvC36zYkSE3jxT1wf7JXDo35Ln4NZpmaMNhq8o9coH9U9BQ5bAN4WDGxXV9d426iYKGorFF5wvv4Wv63cZsCotiXGGkD/0/*,[1f5e43d8/48h/1h/0h/2h]tpubDFU4parcXvV8tBYt4rS4a8rGNF1DA32DCnRfhzVL6b3MSiDomV95rv9mb7W7jAPMTohyEYpbhVS8FbmTsuQsFRxDWPJX2ZFEeRPMFz3R1gh/0/*))#szg2xsau"
+            val descriptorRegtest = "wsh(multi(2,[a2ebe04e/48h/2h/0h/2h]tpubDEoXfSqDRRJFXEcdY79uofXX9PyHqqtqkBC9eXC4FPe44TJBsYAJuiCbA1DrDcoaCJkN1aaZ3RnSumew63UkpMJcH7gyGLLtfiCvwF5ZL5X/0/*,[1f5e43d8/48h/2h/0h/2h]tpubDFbyLQiBtV76xWVZ9kXqDsfoDrvDmv3ArtjHWnGjpU7EwHHki9gSwxLzBfLMJSNffZyDUQi2oVt6pT5rm1xdMLgCm2fLVC4JWDERzj1m31d/0/*))#defgep24"
+            val descriptorSignet = "wsh(multi(2,[a2ebe04e/48h/3h/0h/2h]tpubDFhhuZn1fNgEBeEUhCXTTLwNSJdCzXPpkthruKtmzhQEYrM3PG5qwcU49UgYbM3Z4NfWXRnZ3jGktQrzgAXLHNH7jT1pfPahPRF2mqXNA7F/0/*,[1f5e43d8/48h/3h/0h/2h]tpubDFgfPsrLVybxBmvMMMVHmuHnZswyx8zoY3RnCVNG9uFzd1AobsK8t9mepvxwnGNdKgmJruQKFGR9kFCKMFiSCv7jBL4nRbes9g5QsDPR6re/0/*))#hx5cqxgt"
+            val descriptor = mapOf(
+                "testnet" to descriptorTestnet,
+                "regtest" to descriptorRegtest,
+                "signet" to descriptorSignet
+            )
+
             val identifier = Data.Identifier(Data.Kind.WALLET, walletName, Network.TYPE)
 
             val wallet = Data.WalletJson(
                 identifier,
-                descriptor,
+                descriptor[network]!!,
                 1835680
             )
             val walletString = mapper.writeValueAsString(wallet)
