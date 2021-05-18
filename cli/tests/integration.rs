@@ -10,8 +10,6 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
-mod bitcoind;
-
 pub fn rnd_string() -> String {
     thread_rng().sample_iter(&Alphanumeric).take(20).collect()
 }
@@ -21,8 +19,9 @@ fn integration_test() {
     init_logger();
     let mut rng = rand::thread_rng();
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
+    let bitcoind_exe = env::var("BITCOIND_EXE").expect("env BITCOIND_EXE required for tests");
 
-    let mut bitcoind = bitcoind::BitcoinD::new();
+    let mut bitcoind = bitcoind::BitcoinD::new(bitcoind_exe).unwrap();
 
     // fund the bitcoind default wallet
     let address = bitcoind.client.get_new_address(None, None).unwrap();
@@ -285,8 +284,7 @@ fn integration_test() {
     assert_eq!(d1.get("key").unwrap().as_str().unwrap(), e1.key.to_string());
 
     // stop bitcoind
-    bitcoind.client.stop().unwrap();
-    let ecode = bitcoind.wait().unwrap();
+    let ecode = bitcoind.stop().unwrap();
     assert!(ecode.success());
 }
 
