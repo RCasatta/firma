@@ -27,4 +27,4 @@ path = "src/offline/main.rs"
 assert_matches = "1.5.0"
 tempfile = "3.1.0"
 rand = "0.7.3"
-bitcoind = "0.4.0"
+bitcoind = { version = "0.12.0", features = ["0_21_1"] }

@@ -1,5 +1,6 @@
 use bitcoin::{Address, Amount, Txid};
 use bitcoincore_rpc::{Client, RpcApi};
+use bitcoind::downloaded_exe_path;
 use firma::bitcoin::Network;
 use firma::*;
 use rand::distributions::Alphanumeric;
@@ -19,7 +20,10 @@ fn integration_test() {
     init_logger();
     let mut rng = rand::thread_rng();
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
-    let bitcoind_exe = env::var("BITCOIND_EXE").expect("env BITCOIND_EXE required for tests");
+    let bitcoind_exe = env::var("BITCOIND_EXE")
+        .ok()
+        .or_else(|| downloaded_exe_path())
+        .expect("version feature or env BITCOIND_EXE is required for tests");
 
     let mut bitcoind = bitcoind::BitcoinD::new(bitcoind_exe).unwrap();
 
@@ -32,9 +36,9 @@ fn integration_test() {
     // create firma 2of2 wallet
     let name_2of2 = "n2of2".to_string();
     let firma_2of2 = FirmaCommand::new(&firma_exe_dir).unwrap();
-    let cookie_file_str = format!("{}", bitcoind.cookie_file.display());
+    let cookie_file_str = format!("{}", bitcoind.params.cookie_file.display());
     firma_2of2
-        .online_connect(&bitcoind.url, &cookie_file_str)
+        .online_connect(&bitcoind.rpc_url(), &cookie_file_str)
         .unwrap();
     let r1 = firma_2of2.offline_random("r1", None).unwrap();
     let r2 = firma_2of2.offline_dice("r2", vec![2u32; 59], 20).unwrap();
@@ -67,7 +71,7 @@ fn integration_test() {
     let name_2of3 = "n2of3".to_string();
     let firma_2of3 = FirmaCommand::new(&firma_exe_dir).unwrap();
     firma_2of3
-        .online_connect(&bitcoind.url, &cookie_file_str)
+        .online_connect(&bitcoind.rpc_url(), &cookie_file_str)
         .unwrap();
     let mut vec = vec![];
     for i in 0..3 {
