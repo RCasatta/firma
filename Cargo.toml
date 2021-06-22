@@ -7,5 +7,4 @@ members = [
 
 
 [patch.crates-io]
-bitcoin = { git ="https://github.com/RCasatta/rust-bitcoin", branch="proprietary_key", features = [ "use-serde", "secp-recovery" ] }
 miniscript = { git="https://github.com/RCasatta/rust-miniscript/", branch="export_error"}
