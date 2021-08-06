@@ -10,7 +10,7 @@
    * cd cli
    * update cli/Cargo.toml, remove "-dev" suffix in version
    * change firma lib dep from path to x.y.z
-   * BITCOIND_EXE=/usr/local/bin/bitcoind cargo test  
+   * cargo test  
    * git add -u && git commit -m "bump cli to version x.y.z"
    * cargo publish
 3) firma android   
