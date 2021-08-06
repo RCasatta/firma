@@ -1,6 +1,6 @@
 [package]
 name = "firma"
-version = "0.20.0-dev"
+version = "0.20.0"
 authors = ["Riccardo Casatta <riccardo@casatta.it>"]
 edition = "2018"
 license = "MIT"
