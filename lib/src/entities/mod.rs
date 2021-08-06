@@ -1,12 +1,12 @@
 pub mod identifier;
 pub mod persisted;
 
+use crate::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use crate::{psbt_from_base64, BitcoinPsbt, DaemonOpts, Result};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::psbt::raw;
 use bitcoin::{bech32, Address, Amount, OutPoint, Txid};
-use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;
@@ -178,7 +178,7 @@ impl StringEncoding {
             StringEncoding::Base64(s) => base64::decode(s)?,
             StringEncoding::Hex(s) => hex::decode(s)?,
             StringEncoding::Bech32(s) => {
-                let (_, vec_u5) = bech32::decode(s)?;
+                let (_, vec_u5, _) = bech32::decode(s)?;
                 Vec::<u8>::from_base32(&vec_u5)?
             }
             StringEncoding::Plain(s) => s.as_bytes().to_vec(),

@@ -4,7 +4,3 @@ members = [
     "lib",
     "cli",
 ]
-
-
-[patch.crates-io]
-miniscript = { git="https://github.com/RCasatta/rust-miniscript/", branch="export_error"}

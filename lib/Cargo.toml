@@ -12,9 +12,8 @@ keywords = ["sign", "bitcoin", "cold", "offline"]
 
 [dependencies]
 hex = "0.4.2"
-bitcoin = { version = "0.26.2", features = [ "use-serde", "secp-recovery" ] }
-#bitcoin = { git ="https://github.com/RCasatta/rust-bitcoin", branch="proprietary_key", features = [ "use-serde", "secp-recovery" ] }
-bitcoincore-rpc = "0.13.0"
+bitcoin = { version = "0.27", features = [ "use-serde", "secp-recovery" ] }
+core-rpc = "0.14.0"
 base64 = "0.13.0"
 num-bigint = "0.3.1"
 qr_code = { version= "1.1.0", features = ["bmp"] }
@@ -22,10 +21,9 @@ structopt = "0.3.20" # can't rexport https://github.com/TeXitoi/structopt/issues
 log = "0.4.11"
 serde = { version = "1.0.117", features = [ "derive" ] }
 serde_json = "1.0.59"
-dirs-next = "2.0.0"
+home = "0.5.3"
 rand = "0.7.3"
-miniscript = "5.1.0"
-#miniscript = { path="../../rust-miniscript" }
+miniscript = "6.0.0"
 aes-gcm-siv = "0.10.0"
 tempfile = "3.1.0"
 

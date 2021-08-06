@@ -1,8 +1,6 @@
 use crate::*;
-use bitcoincore_rpc::bitcoincore_rpc_json::{
-    ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince,
-};
 use bitcoincore_rpc::RpcApi;
+use bitcoincore_rpc_json::{ImportMultiOptions, ImportMultiRequest, ImportMultiRescanSince};
 use log::debug;
 use log::info;
 use structopt::StructOpt;

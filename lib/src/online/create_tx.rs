@@ -1,10 +1,10 @@
 use crate::online::get_address::GetAddressOptions;
 use crate::*;
 use bitcoin::{Address, Amount, OutPoint};
-use bitcoincore_rpc::bitcoincore_rpc_json::{
+use bitcoincore_rpc::RpcApi;
+use bitcoincore_rpc_json::{
     CreateRawTransactionInput, GetTransactionResultDetailCategory, WalletCreateFundedPsbtOptions,
 };
-use bitcoincore_rpc::RpcApi;
 use log::{debug, info};
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;

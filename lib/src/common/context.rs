@@ -92,7 +92,7 @@ impl DaemonOpts {
             None => self.url.to_string(),
         };
         debug!("creating client with url {}", url);
-        let client = Client::new(url, Auth::CookieFile(self.cookie_file.clone()))?;
+        let client = Client::new(&url, Auth::CookieFile(self.cookie_file.clone()))?;
         let node_genesis = client.get_block_hash(0)?;
         let firma_genesis = genesis_block(network).block_hash();
         if node_genesis != firma_genesis {
@@ -271,7 +271,7 @@ pub struct SavePsbtOptions {
 pub fn expand_tilde<P: AsRef<Path>>(path_user_input: P) -> Result<PathBuf> {
     let p = path_user_input.as_ref();
     if p.starts_with("~") {
-        let mut home_dir = dirs_next::home_dir().ok_or(Error::CannotRetrieveHomeDir)?;
+        let mut home_dir = home::home_dir().ok_or(Error::CannotRetrieveHomeDir)?;
         if p == Path::new("~") {
             Ok(home_dir)
         } else if home_dir == Path::new("/").to_path_buf() {
