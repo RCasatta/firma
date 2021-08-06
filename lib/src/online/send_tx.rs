@@ -38,7 +38,7 @@ impl OnlineContext {
         let client = self.make_client(&opt.wallet_name)?;
         let mut psbts = vec![];
         for psbt_name in opt.psbts_name.iter() {
-            let json: Psbt = self.read(&psbt_name)?;
+            let json: Psbt = self.read(psbt_name)?;
             psbts.push(json.psbt);
         }
         psbts.extend(opt.psbts.clone());

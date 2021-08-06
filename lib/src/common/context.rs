@@ -239,7 +239,7 @@ impl Context {
                 return Err(Error::PsbtNotChangedAfterMerge);
             }
         }
-        let psbt = psbt_to_base64(&psbt).1;
+        let psbt = psbt_to_base64(psbt).1;
         let psbt_json = Psbt { id, psbt };
         self.write(&psbt_json)?;
         debug!("finish");

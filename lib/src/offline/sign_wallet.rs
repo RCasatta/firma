@@ -71,7 +71,7 @@ fn find_key<'a, T: Signing>(
     desc_pub_keys: &[PublicKey],
 ) -> Result<&'a MasterSecret> {
     for key in available_keys.master_secrets.iter() {
-        let k = key.as_wallet_sign_pub_key(&secp)?;
+        let k = key.as_wallet_sign_pub_key(secp)?;
         debug!("find_key key:{} -> sign_pub_key:{}", key.id.name, k);
         if desc_pub_keys.contains(&k) {
             debug!("find_key found pubkey {} of key {}", k, key.id.name);
@@ -94,12 +94,12 @@ pub fn verify_wallet_internal<T: Verification>(
         debug!("verify_wallet_internal desc_pub_key:{}", desc_pub_key);
         let pubkey = desc_pub_key
             .derive(WALLET_SIGN_DERIVATION)
-            .derive_public_key(&secp)
+            .derive_public_key(secp)
             .unwrap(); //TODO
         debug!("verify_wallet_internal pubkey:{}", pubkey);
         let master_address = Address::p2pkh(&pubkey, network);
         let verified =
-            verify_message_with_address(&secp, &master_address, &signature.signature, message)?;
+            verify_message_with_address(secp, &master_address, &signature.signature, message)?;
         debug!(
             "with master_address {} verified {}",
             master_address, verified
@@ -122,7 +122,7 @@ fn sign_message_with_key<T: Signing>(
     private_key: &PrivateKey,
     message: &str,
 ) -> Result<String> {
-    let hash = signed_msg_hash(&message);
+    let hash = signed_msg_hash(message);
     debug!("Signed message hash:{}", hash);
     let message = Message::from_slice(&hash[..])?; // Can never panic because it's the right size.
 
@@ -147,8 +147,8 @@ pub fn sign_message<T: Signing>(
     private_key: &str,
     message: &str,
 ) -> Result<String> {
-    let private_key = PrivateKey::from_wif(&private_key)?;
-    sign_message_with_key(&secp, &private_key, message)
+    let private_key = PrivateKey::from_wif(private_key)?;
+    sign_message_with_key(secp, &private_key, message)
 }
 
 fn verify_message_with_address<T: Verification>(
@@ -165,7 +165,7 @@ fn verify_message_with_address<T: Verification>(
         .map_err(|_| Error::InvalidMessageSignature)?;
     let recsig = RecoverableSignature::from_compact(&sig[1..], recid)
         .map_err(|_| Error::InvalidMessageSignature)?;
-    let hash = signed_msg_hash(&message);
+    let hash = signed_msg_hash(message);
     let msg = Message::from_slice(&hash[..]).unwrap(); // Can never panic because it's the right size.
 
     let pubkey = PublicKey {
@@ -190,8 +190,8 @@ fn verify_message<T: Verification>(
     signature: &str,
     message: &str,
 ) -> Result<bool> {
-    let address = Address::from_str(&address)?;
-    verify_message_with_address(&secp, &address, signature, message)
+    let address = Address::from_str(address)?;
+    verify_message_with_address(secp, &address, signature, message)
 }
 
 // json contains signature, the address and descriptor of the address!

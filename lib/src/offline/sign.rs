@@ -213,7 +213,7 @@ impl PsbtSigner {
 
             for input in self.psbt.inputs.iter_mut() {
                 if let Some(ref witness_script) = input.witness_script {
-                    let script_keys = extract_pub_keys(&witness_script)?;
+                    let script_keys = extract_pub_keys(witness_script)?;
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             input
@@ -227,7 +227,7 @@ impl PsbtSigner {
 
             for output in self.psbt.outputs.iter_mut() {
                 if let Some(ref witness_script) = output.witness_script {
-                    let script_keys = extract_pub_keys(&witness_script)?;
+                    let script_keys = extract_pub_keys(witness_script)?;
                     for key in script_keys {
                         if keys.contains_key(&key) {
                             output
@@ -278,7 +278,7 @@ impl PsbtSigner {
                 );
             }
 
-            let (sighash, msg) = message_to_sign.hash(input_index, &script)?;
+            let (sighash, msg) = message_to_sign.hash(input_index, script)?;
             let key = &privkey.private_key.key;
             let signature = self.secp.sign(&msg, key);
             let mut signature = signature.serialize_der().to_vec();

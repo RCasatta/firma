@@ -93,7 +93,7 @@ pub fn pretty_print(
     }
     let all_previous_known = previous_outputs.iter().all(Option::is_some);
     let mut balances = HashMap::new();
-    let mut message_to_sign = MessageToSign::new(&psbt);
+    let mut message_to_sign = MessageToSign::new(psbt);
     let secp = Secp256k1::verification_only();
 
     let mut signatures: HashSet<Fingerprint>;
@@ -131,7 +131,7 @@ pub fn pretty_print(
                     .filter_map(|(k, _)| keypaths.get(k).map(|v| v.0))
                     .collect();
 
-                wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
+                wallet_if_any = wallet_with_path(keypaths, wallets, &addr);
                 if let Some((wallet, _)) = &wallet_if_any {
                     *balances.entry(wallet.clone()).or_insert(0i64) -= previous_output.value as i64
                 }
@@ -161,7 +161,7 @@ pub fn pretty_print(
         let addr =
             Address::from_script(&output.script_pubkey, network).ok_or(Error::NonDefaultScript)?;
         let keypaths = &psbt.outputs[i].bip32_derivation;
-        let wallet_if_any = wallet_with_path(keypaths, &wallets, &addr);
+        let wallet_if_any = wallet_with_path(keypaths, wallets, &addr);
         if let Some((wallet, _)) = &wallet_if_any {
             *balances.entry(wallet.clone()).or_insert(0i64) += output.value as i64
         }

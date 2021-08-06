@@ -113,7 +113,7 @@ fn calculate_key(
     network: Network,
     name: &str,
 ) -> Result<MasterSecret> {
-    let acc = multiply_dice_launches(&launches, faces);
+    let acc = multiply_dice_launches(launches, faces);
 
     let sec = acc.to_bytes_be();
     let mnemonic = Mnemonic::new(&sec)?;

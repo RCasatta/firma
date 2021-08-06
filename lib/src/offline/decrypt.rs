@@ -56,7 +56,7 @@ where
                 thread_rng().fill(&mut nonce_bytes);
                 let nonce = GenericArray::from_slice(&nonce_bytes);
                 let plaintext = serde_json::to_vec(plaintext)?; // consider using serde_cbor::ser::to_vec_packed
-                let ciphertext = cipher.encrypt(&nonce, &plaintext[..])?;
+                let ciphertext = cipher.encrypt(nonce, &plaintext[..])?;
                 let mut result = nonce_bytes.to_vec();
                 result.extend(ciphertext);
                 Ok(MaybeEncrypted::Encrypted(StringEncoding::new_base64(
@@ -74,8 +74,8 @@ where
                 let cipher = get_cipher(encryption_key);
                 let ciphertext = ciphertext.as_bytes()?;
                 let nonce_bytes = &ciphertext[0..12];
-                let nonce = GenericArray::from_slice(&nonce_bytes);
-                let plaintext = cipher.decrypt(&nonce, &ciphertext[12..])?;
+                let nonce = GenericArray::from_slice(nonce_bytes);
+                let plaintext = cipher.decrypt(nonce, &ciphertext[12..])?;
                 let result = serde_json::from_slice(&plaintext)?;
                 Ok(MaybeEncrypted::Plain(result))
             }
@@ -85,7 +85,7 @@ where
 
 fn get_cipher(encryption_key: &EncryptionKey) -> Aes256GcmSiv {
     let encryption_key = GenericArray::from_slice(&encryption_key[..]);
-    Aes256GcmSiv::new(&encryption_key)
+    Aes256GcmSiv::new(encryption_key)
 }
 
 #[cfg(test)]

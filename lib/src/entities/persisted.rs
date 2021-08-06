@@ -183,7 +183,7 @@ impl MasterSecret {
 
     pub fn as_desc_prv_key<T: Signing>(&self, secp: &Secp256k1<T>) -> Result<ExtendedPrivKey> {
         debug!("Using path: {}", self.path());
-        Ok(self.key.derive_priv(&secp, &self.path())?)
+        Ok(self.key.derive_priv(secp, &self.path())?)
     }
 
     pub fn as_wallet_sign_prv_key<T: Signing>(
@@ -202,7 +202,7 @@ impl MasterSecret {
         secp: &Secp256k1<T>,
     ) -> Result<bitcoin::PublicKey> {
         let k = self.as_wallet_sign_prv_key(secp)?;
-        let xpub = ExtendedPubKey::from_private(&secp, &k);
+        let xpub = ExtendedPubKey::from_private(secp, &k);
         Ok(xpub.public_key)
     }
 
@@ -226,7 +226,7 @@ impl MasterSecret {
     }
 
     pub fn fingerprint<S: secp256k1::Signing>(&self, secp: &Secp256k1<S>) -> Fingerprint {
-        self.key.fingerprint(&secp)
+        self.key.fingerprint(secp)
     }
 }
 
