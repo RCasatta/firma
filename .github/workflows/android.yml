@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [i686-linux-android, x86_64-linux-android, armv7-linux-androideabi, aarch64-linux-android]
+        target: [ i686-linux-android, x86_64-linux-android, armv7-linux-androideabi, aarch64-linux-android ]
 
     steps:
       - uses: actions/checkout@v2
@@ -100,7 +100,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [21,25,28]
+        api: [ 21, 28 ]
     steps:
       - uses: actions/checkout@v2
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
