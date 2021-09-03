@@ -17,7 +17,7 @@
    * update android/app/build.gradle versionCode and versionName to version 1.y
    * from lib `NDK=/Users/casatta/android-ndk-r21d HOST=darwin-x86_64 ./build-android/all.sh`
    * from Android Studio run UI tests (delete storage data from device if used for manual tests)
-   * from Android Studio "Generate Signed App" for networkTestnetRelease (requires keystore password)
+   * from Android Studio "Generate Signed App" for networkTestnetRelease (requires keystore password) select BOTH signature checkbox
    * git add -u && git commit -m "bump android to version 1.y"
 4) github
    * git push github branch, wait CI pass
