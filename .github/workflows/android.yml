@@ -18,7 +18,7 @@ jobs:
         target: [ i686-linux-android, x86_64-linux-android, armv7-linux-androideabi, aarch64-linux-android ]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v2
         with:
@@ -27,10 +27,8 @@ jobs:
             ~/.cargo/git
             target
           key: cache-android-lib-${{ matrix.target }}-${{ env.ANDROID_NDK_VER }}--${{ hashFiles('**/Cargo.toml','**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
           target: ${{ matrix.target }}
       - name: Setup Android NDK
         id: setup-ndk
@@ -52,7 +50,7 @@ jobs:
       matrix:
         network: [Testnet, Mainnet, Regtest]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup cache
         uses: actions/cache@v2
         with:
@@ -102,7 +100,7 @@ jobs:
       matrix:
         api: [ 21, 28 ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
       - uses: actions/download-artifact@v2
         with:
