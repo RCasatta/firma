@@ -191,8 +191,8 @@ mod test {
 
         let mut test_count = 0;
 
-        for t in 0..tests.len() {
-            let values = tests[t].as_array().unwrap();
+        for t in tests {
+            let values = t.as_array().unwrap();
             let data = Vec::from_hex(values[0].as_str().unwrap()).unwrap();
             let m = values[1].as_str().unwrap();
             let mnemonic = Mnemonic::from_str(m).unwrap();
@@ -208,7 +208,7 @@ mod test {
 
                 let private_key = ExtendedPrivKey::new_master(Network::Bitcoin, &seed.0).unwrap();
 
-                let key = private_key.clone();
+                let key = private_key;
 
                 assert_eq!(key.to_string(), pk);
                 test_count += 1;

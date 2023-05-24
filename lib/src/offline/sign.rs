@@ -557,7 +557,7 @@ mod tests {
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.signed.json");
         let (_, psbt_2) = extract_psbt(bytes);
         let bytes = include_bytes!("../../test_data/sign/psbt_testnet.2.key");
-        let mut psbt_to_sign = orig.clone();
+        let mut psbt_to_sign = orig;
         let key: crate::MasterSecret = serde_json::from_slice(bytes).unwrap();
 
         let err = test_sign(&mut psbt_to_sign, &psbt_2, &key.key);
@@ -574,7 +574,7 @@ mod tests {
         assert_eq!(psbt_1, psbt_complete);
         assert_eq!(
             psbt_to_base64(&psbt_1).1,
-            base64::encode(&psbt_complete_bytes)
+            base64::encode(psbt_complete_bytes)
         );
     }
 }

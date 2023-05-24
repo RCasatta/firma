@@ -157,7 +157,7 @@ fn verify_message_with_address<T: Verification>(
     signature: &str,
     message: &str,
 ) -> Result<bool> {
-    let sig = base64::decode(&signature)?;
+    let sig = base64::decode(signature)?;
     if sig.len() != 65 {
         return Err(Error::InvalidMessageSignature);
     }
@@ -254,7 +254,7 @@ mod tests {
     fn test_sign_verify() {
         let context = TestContext::default();
         let key = context.create_key(&RandomOptions::new_random()).unwrap();
-        let wallet = Wallet::new_random(1, &vec![key.clone()]);
+        let wallet = Wallet::new_random(1, &vec![key]);
         let wallet_name_opt: WalletNameOptions = wallet.id.name.as_str().into();
 
         // manually importing the wallet, because context.create_wallet needs the node, not available in unit tests
@@ -269,7 +269,7 @@ mod tests {
         assert!(result.verified, "valid signature did not verify");
 
         let path = signature.id.as_path_buf(&context.datadir, false).unwrap();
-        std::fs::remove_file(&path).unwrap();
+        std::fs::remove_file(path).unwrap();
         let _ = context.verify_wallet(&wallet_name_opt).unwrap_err();
 
         let key_2 = context.create_key(&RandomOptions::new_random()).unwrap();

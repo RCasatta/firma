@@ -164,7 +164,7 @@ impl Context {
         let path = self.daemon_opts_path()?;
         debug!("writing daemon_opts in {:?}", path);
         let bytes = serde_json::to_vec(&daemon_opts)?;
-        std::fs::write(&path, &bytes)
+        std::fs::write(&path, bytes)
             .map_err(|e| crate::Error::FileNotFoundOrCorrupt(path, e.to_string()))?;
         Ok(daemon_opts)
     }
@@ -347,9 +347,9 @@ pub mod tests {
             context.write_keys(&key).is_err(),
             "can overwrite key material"
         );
-        let key_read: MasterSecret = context.read(&key_name).unwrap();
+        let key_read: MasterSecret = context.read(key_name).unwrap();
         assert_eq!(key, key_read);
-        let _: DescriptorPublicKey = context.read(&key_name).unwrap();
+        let _: DescriptorPublicKey = context.read(key_name).unwrap();
     }
 
     #[test]

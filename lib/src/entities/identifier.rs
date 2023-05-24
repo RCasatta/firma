@@ -113,7 +113,7 @@ impl Identifier {
         let mut path = expand_tilde(datadir)?;
         path.push(self.network.to_string());
         path.push(self.kind.dir());
-        path.push(self.name.to_string());
+        path.push(&self.name);
         if create_if_missing && !path.exists() {
             fs::create_dir_all(&path)?;
             debug!("created {:?}", path);
@@ -161,7 +161,7 @@ impl Identifier {
             Some(encryption_key) => plain.encrypt(encryption_key)?,
         };
         let content = serde_json::to_vec_pretty(&data)?;
-        std::fs::write(&path, &content)?;
+        std::fs::write(&path, content)?;
         Ok(())
     }
 }

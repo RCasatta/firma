@@ -277,17 +277,11 @@ mod tests {
 
     #[test]
     fn test_multiply_dice_launches() {
-        assert_eq!(multiply_dice_launches(&vec![6, 6], 6), BigUint::from(35u32));
-        assert_eq!(multiply_dice_launches(&vec![6], 6), BigUint::from(5u32));
-        assert_eq!(
-            multiply_dice_launches(&vec![10, 10], 10),
-            BigUint::from(99u32)
-        );
-        assert_eq!(
-            multiply_dice_launches(&vec![1, 1, 1], 2),
-            BigUint::from(0u32)
-        );
-        assert_eq!(multiply_dice_launches(&vec![2], 2), BigUint::from(1u32));
+        assert_eq!(multiply_dice_launches(&[6, 6], 6), BigUint::from(35u32));
+        assert_eq!(multiply_dice_launches(&[6], 6), BigUint::from(5u32));
+        assert_eq!(multiply_dice_launches(&[10, 10], 10), BigUint::from(99u32));
+        assert_eq!(multiply_dice_launches(&[1, 1, 1], 2), BigUint::from(0u32));
+        assert_eq!(multiply_dice_launches(&[2], 2), BigUint::from(1u32));
     }
 
     #[test]
@@ -305,7 +299,7 @@ mod tests {
         let bytes = include_bytes!("../../test_data/dice/priv2.key");
         let expected: MasterSecret = serde_json::from_slice(bytes).unwrap();
         let calculated =
-            calculate_key(&vec![2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
+            calculate_key(&[2, 3, 4, 5, 6, 7, 8, 9], 256, Network::Bitcoin, "name").unwrap();
         assert_eq!(
             calculated.fingerprint(&secp).to_string(),
             expected.fingerprint(&secp).to_string()

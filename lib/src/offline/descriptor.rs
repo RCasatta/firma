@@ -24,7 +24,7 @@ impl DeriveAddressOptions {
 pub fn parse_descriptor_with_checksum(descriptor: &str) -> Result<ExtendedDescriptor> {
     // checksum not supported at the moment, stripping out
     // TODO check
-    let end = descriptor.find('#').unwrap_or_else(|| descriptor.len());
+    let end = descriptor.find('#').unwrap_or(descriptor.len());
     let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
         descriptor[..end].parse()?;
     Ok(descriptor)
@@ -92,7 +92,7 @@ mod tests {
                 name: "azz".to_string(),
                 network: Network::Testnet,
             },
-            descriptor: desc.to_string(),
+            descriptor: desc,
             created_at_height: 0,
         };
         let vec1 = wallet.extract_desc_pub_keys().unwrap();

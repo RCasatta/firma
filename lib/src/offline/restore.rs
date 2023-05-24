@@ -133,6 +133,6 @@ mod tests {
         };
         let _ = regtest_context.restore(&restore_opts).unwrap();
         let list = regtest_context.list(&list_options).unwrap();
-        assert!(list.master_secrets.iter().any(|a| &a.id.name == &key_name));
+        assert!(list.master_secrets.iter().any(|a| a.id.name == key_name));
     }
 }

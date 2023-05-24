@@ -22,7 +22,7 @@ fn integration_test() {
     let firma_exe_dir = env::var("FIRMA_EXE_DIR").unwrap_or("../target/debug/".to_string());
     let bitcoind_exe = env::var("BITCOIND_EXE")
         .ok()
-        .or_else(|| downloaded_exe_path())
+        .or_else(downloaded_exe_path)
         .expect("version feature or env BITCOIND_EXE is required for tests");
 
     let mut bitcoind = bitcoind::BitcoinD::new(bitcoind_exe).unwrap();
@@ -590,7 +590,7 @@ impl FirmaCommand {
 fn client_send_to_address(client: &Client, address: &Address, satoshi: u64) -> Result<Txid> {
     Ok(client
         .send_to_address(
-            &address,
+            address,
             Amount::from_sat(satoshi),
             None,
             None,

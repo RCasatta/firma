@@ -75,10 +75,7 @@ pub struct Dice {
 impl Wallet {
     pub fn extract_desc_pub_keys(&self) -> Result<Vec<miniscript::DescriptorPublicKey>> {
         let mut desc_pub_keys = vec![];
-        let end = self
-            .descriptor
-            .find('#')
-            .unwrap_or_else(|| self.descriptor.len());
+        let end = self.descriptor.find('#').unwrap_or(self.descriptor.len());
         let descriptor: miniscript::Descriptor<miniscript::DescriptorPublicKey> =
             self.descriptor[..end].parse().unwrap();
         if let Descriptor::Wsh(miniscript) = descriptor {
