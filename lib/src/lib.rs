@@ -4,9 +4,6 @@
 #[macro_use]
 extern crate assert_matches;
 
-pub extern crate core_rpc as bitcoincore_rpc;
-use bitcoincore_rpc::core_rpc_json as bitcoincore_rpc_json;
-
 pub mod common;
 pub mod entities;
 pub mod offline;

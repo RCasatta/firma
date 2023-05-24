@@ -1,5 +1,5 @@
 use bitcoin::{Address, Amount, Txid};
-use bitcoincore_rpc::{Client, RpcApi};
+use bitcoind::bitcoincore_rpc::{Client, RpcApi};
 use bitcoind::downloaded_exe_path;
 use firma::bitcoin::Network;
 use firma::*;

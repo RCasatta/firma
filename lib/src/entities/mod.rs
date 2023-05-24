@@ -1,12 +1,12 @@
 pub mod identifier;
 pub mod persisted;
 
-use crate::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use crate::{psbt_from_base64, BitcoinPsbt, DaemonOpts, Result};
 use bitcoin::bech32::FromBase32;
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin::util::psbt::raw;
 use bitcoin::{bech32, Address, Amount, OutPoint, Txid};
+use bitcoincore_rpc::bitcoincore_rpc_json::WalletCreateFundedPsbtResult;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;

@@ -13,7 +13,7 @@ keywords = ["sign", "bitcoin", "cold", "offline"]
 [dependencies]
 hex = "0.4.2"
 bitcoin = { version = "0.27", features = [ "use-serde", "secp-recovery" ] }
-core-rpc = "0.14.0"
+bitcoincore-rpc = "0.14.0"
 base64 = "0.13.0"
 num-bigint = "0.3.1"
 qr_code = { version= "1.1.0", features = ["bmp"] }
