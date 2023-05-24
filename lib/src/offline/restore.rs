@@ -89,7 +89,7 @@ mod tests {
             kind: Kind::MasterSecret,
         };
         let list = context.list(&list_options).unwrap();
-        assert!(list.master_secrets.iter().any(|a| &a.id.name == key_name));
+        assert!(list.master_secrets.iter().any(|a| a.id.name == key_name));
 
         /*
         // TODO add restore mnemonic

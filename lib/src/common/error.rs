@@ -241,7 +241,7 @@ impl ToJson for Error {
         let value = ErrorJson {
             error: self.to_string(),
         };
-        serde_json::to_value(&value).unwrap() // safe to unwrap, ErrorJson does not contain map with non string keys
+        serde_json::to_value(value).unwrap() // safe to unwrap, ErrorJson does not contain map with non string keys
     }
 }
 
@@ -250,6 +250,6 @@ impl ToJson for QrError {
         let value = ErrorJson {
             error: self.to_string(),
         };
-        serde_json::to_value(&value).unwrap() // safe to unwrap, ErrorJson does not contain map with non string keys
+        serde_json::to_value(value).unwrap() // safe to unwrap, ErrorJson does not contain map with non string keys
     }
 }
