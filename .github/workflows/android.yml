@@ -97,7 +97,7 @@ jobs:
           path: android/app/build/outputs/apk/network${{ matrix.network }}/debug/app-network${{ matrix.network }}-debug.apk
 
   android-test:
-    runs-on: macos-10.15  # has hardware acceleration, emulator much faster
+    runs-on: macos-11
     needs: android-lib
     strategy:
       fail-fast: false
