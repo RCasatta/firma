@@ -42,7 +42,7 @@ jobs:
       - run: echo "NDK=${{ steps.setup-ndk.outputs.ndk-path }}" >> $GITHUB_ENV
       - run: cd lib && ./build-android/${{ matrix.target }}.sh
       - name: Upload libs
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: lib_${{ matrix.target }}
           path: target/${{ matrix.target }}/${{ env.DEBUG }}/libfirma.so
@@ -91,7 +91,7 @@ jobs:
           cd android
           ./gradlew assembleNetwork${{ matrix.network }}
       - name: Upload apk
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: apk_${{ matrix.network }}
           path: android/app/build/outputs/apk/network${{ matrix.network }}/debug/app-network${{ matrix.network }}-debug.apk
@@ -124,7 +124,7 @@ jobs:
           arch: x86
           script: cd android && ./gradlew connectedCheck --stacktrace
       - name: Upload test reports
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
           name: tests_report_${{ matrix.api }}
