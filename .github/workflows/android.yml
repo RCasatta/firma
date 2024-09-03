@@ -70,19 +70,19 @@ jobs:
           ndk-version: ${{ env.ANDROID_NDK_VER }}
       - run: echo "ndk.dir=${{ steps.setup-ndk.outputs.ndk-path }}" >> ${{ github.workspace }}/android/local.properties
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: lib_i686-linux-android
       - run: mv libfirma.so android/app/src/main/jniLibs/x86/
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: lib_x86_64-linux-android
       - run: mv libfirma.so android/app/src/main/jniLibs/x86_64/
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: lib_armv7-linux-androideabi
       - run: mv libfirma.so android/app/src/main/jniLibs/armeabi-v7a/
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: lib_aarch64-linux-android
       - run: mv libfirma.so android/app/src/main/jniLibs/arm64-v8a/
@@ -106,7 +106,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - run: mkdir -p android/app/src/main/jniLibs/{x86,x86_64,armeabi-v7a,arm64-v8a}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4.1.7
         with:
           name: lib_i686-linux-android
       - run: mv libfirma.so android/app/src/main/jniLibs/x86/
